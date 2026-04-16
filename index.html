@@ -224,6 +224,28 @@ textarea{resize:vertical;min-height:68px;}
 /* risk bar */
 .risk-bg{background:var(--surface2);border-radius:2px;height:4px;margin-top:5px;overflow:hidden;}
 .risk-fill{height:100%;border-radius:2px;transition:width .6s ease;}
+
+/* ── SYNC BUTTON ── */
+.sync-btn{display:inline-flex;align-items:center;gap:6px;padding:6px 13px;border-radius:var(--r);border:1px solid var(--accent2);background:rgba(0,212,255,.08);color:var(--accent);font-family:var(--font-m);font-size:11px;cursor:pointer;transition:all .2s;white-space:nowrap;}
+.sync-btn:hover{background:rgba(0,212,255,.15);box-shadow:0 0 12px rgba(0,212,255,.2);}
+.sync-btn:disabled{opacity:.5;cursor:not-allowed;}
+.sync-btn.rithmic-sync{border-color:var(--purple);background:rgba(179,136,255,.08);color:var(--purple);}
+.sync-btn.rithmic-sync:hover{background:rgba(179,136,255,.15);}
+.sync-icon{display:inline-block;font-size:13px;transition:transform .15s;}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.sync-btn.syncing .sync-icon{animation:spin .7s linear infinite;}
+.sync-btn.syncing{pointer-events:none;}
+
+/* last synced */
+.last-sync{font-size:10px;color:var(--text3);display:flex;align-items:center;gap:5px;}
+.last-sync.ok{color:var(--green);opacity:.7;}
+.last-sync.err{color:var(--red);opacity:.8;}
+
+/* sync result flash */
+@keyframes flashGreen{0%{background:rgba(0,230,118,.12)}100%{background:transparent}}
+@keyframes flashRed{0%{background:rgba(255,68,68,.12)}100%{background:transparent}}
+.flash-ok{animation:flashGreen .8s ease-out;}
+.flash-err{animation:flashRed .8s ease-out;}
 </style>
 </head>
 <body>
@@ -260,6 +282,15 @@ textarea{resize:vertical;min-height:68px;}
   <div class="topbar">
     <div class="topbar-title" id="topTitle">Dashboard</div>
     <div id="accBadge" style="display:none;" class="acc-badge"><span>●</span> <span id="badgeName">Live</span></div>
+    <div id="lastSyncWrap" style="display:none;">
+      <div class="last-sync" id="lastSyncLabel">
+        <span id="lastSyncIcon">○</span>
+        <span id="lastSyncText">Never synced</span>
+      </div>
+    </div>
+    <button id="syncBtn" class="sync-btn" style="display:none;" onclick="manualSync()" title="Reload all fills from API">
+      <span class="sync-icon">↻</span> Sync Now
+    </button>
     <button class="btn" onclick="nav('import')">↑ Import CSV</button>
     <button class="btn primary" onclick="openTradeModal()">+ Log Trade</button>
   </div>
@@ -1204,6 +1235,14 @@ function renderSetupTable(){
 /* ══════════════════════════════════════════════
    API CONNECTION — TRADOVATE + RITHMIC
 ══════════════════════════════════════════════ */
+
+// In-memory token (never written to localStorage for security)
+let apiToken = null;
+let apiTokenExpiry = null;
+let apiBase = '';
+let lastSyncedAt = null;
+let knownFillIds = new Set(trades.filter(t=>t.fillId).map(t=>t.fillId));
+
 function switchBrokerTab(broker){
   activeBrokerTab=broker;
   document.querySelectorAll('.broker-tab').forEach(t=>t.classList.remove('active'));
@@ -1229,18 +1268,68 @@ function openConnectModal(){
   document.getElementById('connectModal').classList.add('open');
 }
 
+/* ── SYNC UI HELPERS ── */
+function setSyncVisible(visible, type='tradovate'){
+  document.getElementById('syncBtn').style.display=visible?'':'none';
+  document.getElementById('lastSyncWrap').style.display=visible?'':'none';
+  const btn=document.getElementById('syncBtn');
+  if(type==='rithmic') btn.classList.add('rithmic-sync');
+  else btn.classList.remove('rithmic-sync');
+}
+
+function setSyncing(on){
+  const btn=document.getElementById('syncBtn');
+  if(on){
+    btn.classList.add('syncing'); btn.disabled=true;
+    btn.innerHTML='<span class="sync-icon">↻</span> Syncing…';
+    setLastSyncLabel('','○','Fetching from API…');
+  } else {
+    btn.classList.remove('syncing'); btn.disabled=false;
+    btn.innerHTML='<span class="sync-icon">↻</span> Sync Now';
+  }
+}
+
+function setSyncSuccess(newCount){
+  setSyncing(false);
+  lastSyncedAt=new Date();
+  const t=lastSyncedAt.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const msg=newCount>0?`${newCount} new fill${newCount!==1?'s':''} · ${t}`:`Up to date · ${t}`;
+  setLastSyncLabel('ok','✓',msg);
+  document.getElementById('connLbl').textContent='Synced '+t;
+  if(newCount>0){
+    toast(`↻ Synced ${newCount} new fill${newCount!==1?'s':''}  ✓`,'success');
+    const c=document.querySelector('.content');
+    c.classList.remove('flash-ok','flash-err'); void c.offsetWidth; c.classList.add('flash-ok');
+  }
+}
+
+function setSyncError(msg){
+  setSyncing(false);
+  setLastSyncLabel('err','✕','Failed: '+msg);
+  toast('Sync error: '+msg,'error');
+  const c=document.querySelector('.content');
+  c.classList.remove('flash-ok','flash-err'); void c.offsetWidth; c.classList.add('flash-err');
+}
+
+function setLastSyncLabel(state,icon,text){
+  const lbl=document.getElementById('lastSyncLabel');
+  lbl.className='last-sync'+(state==='ok'?' ok':state==='err'?' err':'');
+  document.getElementById('lastSyncIcon').textContent=icon;
+  document.getElementById('lastSyncText').textContent=text;
+}
+
+
 async function connectAPI(){
   const broker=activeBrokerTab;
   if(broker==='manual'){
     connection={broker:'manual',connected:false};
     localStorage.setItem('ef_connection',JSON.stringify(connection));
     updateConnUI(false,'Manual Mode','');
+    setSyncVisible(false);
     closeM('connectModal');
     toast('Manual mode active — log trades or import CSV','info');
     return;
   }
-
-  // Gather credentials
   let user='',pass='',extra={};
   if(broker==='tradovate'||broker==='topstep'){
     user=document.getElementById(broker==='tradovate'?'tv-user':'ts-user')?.value||'';
@@ -1252,11 +1341,8 @@ async function connectAPI(){
     extra={system:document.getElementById('r-sys').value,env:document.getElementById('r-env').value,fcm:document.getElementById('r-fcm').value};
   }
   if(!user||!pass){toast('Enter credentials','error');return;}
-
-  // Set connecting state
   setConnecting();
   closeM('connectModal');
-
   if(broker==='rithmic') await connectRithmic(user,pass,extra);
   else await connectTradovate(broker,user,pass,extra);
 }
@@ -1264,111 +1350,211 @@ async function connectAPI(){
 function setConnecting(){
   document.getElementById('connDot').className='conn-dot connecting';
   document.getElementById('connName').textContent='CONNECTING...';
-  document.getElementById('connLbl').textContent='Please wait...';
+  document.getElementById('connLbl').textContent='Please wait…';
 }
 
-/* ── TRADOVATE ── */
-async function connectTradovate(broker,user,pass,extra){
-  /* ─────────────────────────────────────────────────────────────
-   REAL TRADOVATE IMPLEMENTATION — swap simulation below:
-
-   const base = extra.env==='live'
-     ? 'https://live.tradovateapi.com/v1'
-     : 'https://demo.tradovateapi.com/v1';
-
-   const res = await fetch(`${base}/auth/accesstokenrequest`, {
-     method:'POST',
-     headers:{'Content-Type':'application/json'},
-     body: JSON.stringify({
-       name: user,
-       password: pass,
-       appId: 'EDGEFLOW',
-       appVersion: '1.0.0',
-       cid: parseInt(extra.cid),
-       sec: 'YOUR_APP_SECRET',
-       deviceId: 'edgeflow-' + Date.now()
-     })
-   });
-   const data = await res.json();
-   if(!data.accessToken) { toast('Auth failed: ' + (data.errorText||'Check credentials'), 'error'); return; }
-
-   // Then poll fills:
-   // setInterval(async () => {
-   //   const fills = await fetch(`${base}/fill/list`, {
-   //     headers: { 'Authorization': 'Bearer ' + data.accessToken }
-   //   }).then(r=>r.json());
-   //   fills.forEach(fill => ingestAPIFill(fill, 'tradovate'));
-   // }, 5000);
-  ───────────────────────────────────────────────────────────── */
-
-  await sleep(1800); // simulate handshake
-  const names={tradovate:'Tradovate',topstep:'TopstepX'};
+/* ══════════════════════════════════════════════
+   TRADOVATE — AUTH + FULL SYNC
+══════════════════════════════════════════════ */
+async function connectTradovate(broker, user, pass, extra){
   const env=extra.env||'demo';
+  apiBase=env==='live'
+    ? 'https://live.tradovateapi.com/v1'
+    : 'https://demo.tradovateapi.com/v1';
+
+  const authResult=await tradovateAuth(user, pass, extra.cid, env);
+  if(!authResult.ok){
+    document.getElementById('connDot').className='conn-dot error';
+    document.getElementById('connName').textContent='AUTH FAILED';
+    document.getElementById('connLbl').textContent=authResult.error;
+    toast('Auth failed: '+authResult.error,'error');
+    return;
+  }
+  apiToken=authResult.token;
+  apiTokenExpiry=authResult.expiry;
+
+  const names={tradovate:'Tradovate',topstep:'TopstepX'};
   const label=`${names[broker]||broker} ${env.toUpperCase()}`;
   connection={broker,user,env,connected:true,connectedAt:new Date().toISOString(),type:'tradovate'};
   localStorage.setItem('ef_connection',JSON.stringify(connection));
   updateConnUI(true,label,'tradovate');
-  toast(`✓ Connected to ${label} — auto-syncing every 5s`,'success');
+  setSyncVisible(true,'tradovate');
+  toast(`✓ Connected to ${label} — loading fills…`,'success');
+  await manualSync();
   startPoll('tradovate');
   startPriceFeed();
 }
 
-/* ── RITHMIC ── */
-async function connectRithmic(user,pass,extra){
-  /* ─────────────────────────────────────────────────────────────
-   REAL RITHMIC R|PROTOCOL IMPLEMENTATION:
+async function tradovateAuth(user, pass, cid, env){
+  /* ── REAL AUTH — uncomment when you have Tradovate API credentials ──
+  try {
+    const res = await fetch(`${apiBase}/auth/accesstokenrequest`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name: user, password: pass,
+        appId: 'EDGEFLOW', appVersion: '1.0.0',
+        cid: parseInt(cid),
+        sec: 'YOUR_APP_SECRET',   // Tradovate → Settings → API Access
+        deviceId: 'edgeflow-web'
+      })
+    });
+    const data = await res.json();
+    if(data.errorText) return {ok:false, error:data.errorText};
+    return {ok:true, token:data.accessToken, expiry:Date.now()+(data.expirationTime*1000)};
+  } catch(e){ return {ok:false, error:e.message}; }
+  ─────────────────────────────────────────────────────────────── */
+  await sleep(1500);
+  if(!user||!pass) return {ok:false,error:'Missing credentials'};
+  return {ok:true, token:'sim_'+Date.now(), expiry:Date.now()+3600000};
+}
 
-   Rithmic uses a WebSocket + Protobuf (proto3) binary protocol.
-   Library: rithmic-js or custom implementation.
+async function ensureTokenFresh(){
+  if(!apiToken) return false;
+  if(apiTokenExpiry && Date.now()>apiTokenExpiry-300000){
+    toast('Refreshing session…','info');
+    const r=await tradovateAuth(connection.user,'',connection.cid,connection.env);
+    if(!r.ok){toast('Token refresh failed — reconnect','error');return false;}
+    apiToken=r.token; apiTokenExpiry=r.expiry;
+  }
+  return true;
+}
 
+/* ── MANUAL SYNC — triggered by "↻ Sync Now" button ── */
+async function manualSync(){
+  if(!connection||!connection.connected){
+    toast('Not connected — connect in the sidebar first','error');
+    return;
+  }
+  if(connection.broker==='rithmic'){await rithmicManualSync();return;}
+
+  setSyncing(true);
+  const fresh=await ensureTokenFresh();
+  if(!fresh){setSyncing(false);return;}
+
+  /* ── REAL TRADOVATE FILL FETCH — uncomment with real token ────
+  try {
+    const res = await fetch(`${apiBase}/fill/list`, {
+      headers: { 'Authorization': 'Bearer ' + apiToken }
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status}`);
+    const fills = await res.json();
+    let newCount=0;
+    fills.forEach(fill=>{
+      const fillId=String(fill.id);
+      if(knownFillIds.has(fillId)) return;
+      const trade=mapTradovateFill(fill);
+      if(trade){trades.unshift(trade);knownFillIds.add(fillId);newCount++;}
+    });
+    saveTrades(); refreshAll();
+    setSyncSuccess(newCount);
+  } catch(err){ setSyncError(err.message); }
+  ─────────────────────────────────────────────────────────────── */
+
+  // SIMULATION — delete this block when using real credentials:
+  await sleep(800+Math.random()*600);
+  try {
+    const fills=simulateBatchFills('tradovate');
+    let nc=0;
+    fills.forEach(f=>{if(!knownFillIds.has(f.fillId)){trades.unshift(f);knownFillIds.add(f.fillId);nc++;}});
+    if(nc>0){saveTrades();refreshAll();}
+    setSyncSuccess(nc);
+  } catch(e){setSyncError(e.message);}
+}
+
+/* ── MAP TRADOVATE FILL → EDGEFLOW TRADE RECORD ── */
+function mapTradovateFill(fill){
+  try {
+    const sym=resolveContractSymbol(fill.contractId)||'NQ';
+    const dir=fill.action==='Buy'?'LONG':'SHORT';
+    const date=fill.timestamp
+      ? new Date(fill.timestamp).toISOString()
+      : `${fill.tradeDate.year}-${String(fill.tradeDate.month).padStart(2,'0')}-${String(fill.tradeDate.day).padStart(2,'0')}`;
+    return {
+      id:'tv_'+fill.id, fillId:String(fill.id),
+      symbol:sym, direction:dir,
+      entry:fill.price, exit:fill.price,
+      contracts:fill.qty, pnl:0,
+      date, setup:'', notes:'', emotions:[],
+      source:'api', broker:'tradovate'
+    };
+  } catch(e){return null;}
+}
+
+function resolveContractSymbol(contractId){
+  const map={1:'NQ',2:'ES',3:'MNQ',4:'MES',5:'CL',6:'GC'};
+  return map[contractId]||'NQ';
+}
+
+/* ── BATCH FILL SIMULATOR (delete in production) ── */
+function simulateBatchFills(type){
+  const count=Math.floor(Math.random()*4);
+  const fills=[];
+  const syms=['NQ','ES','MNQ'];
+  for(let i=0;i<count;i++){
+    const sym=syms[Math.floor(Math.random()*syms.length)];
+    const dir=Math.random()>.5?'LONG':'SHORT';
+    const base=sym==='NQ'?21400:sym==='ES'?5800:21400;
+    const en=base+(Math.random()*40-20);
+    const ex=en+(dir==='LONG'?1:-1)*(Math.random()*80-20);
+    const qty=Math.floor(Math.random()*3)+1;
+    const tv=TICK[sym]||5;
+    const pnl=parseFloat(((dir==='LONG'?ex-en:en-ex)*qty*(tv/0.25)).toFixed(2));
+    const fid='fill_'+Date.now()+'_'+i;
+    fills.push({
+      id:fid,fillId:fid,symbol:sym,direction:dir,
+      entry:parseFloat(en.toFixed(2)),exit:parseFloat(ex.toFixed(2)),
+      contracts:qty,pnl,date:new Date().toISOString(),
+      setup:'',notes:'',emotions:[],source:'api',broker:type
+    });
+  }
+  return fills;
+}
+
+/* ══════════════════════════════════════════════
+   RITHMIC — CONNECT + MANUAL SYNC
+══════════════════════════════════════════════ */
+async function connectRithmic(user, pass, extra){
+  /* ── REAL RITHMIC WEBSOCKET ───────────────────────────────────
    const wsUrl = extra.env==='live'
      ? 'wss://rprotocol.rithmic.com:443'
      : 'wss://rituz00100.rithmic.com:443';
-
    const ws = new WebSocket(wsUrl);
    ws.binaryType = 'arraybuffer';
-
-   ws.onopen = () => {
-     // Send RequestLogin (template_id: 10)
-     const loginMsg = encodeLoginRequest({
-       user_msg:    ['EDGEFLOW'],
-       template_id: 10,
-       user_name:   user,
-       password:    pass,
-       app_name:    'EDGEFLOW',
-       app_version: '1.0',
-       system_name: extra.system,
-       infra_type:  extra.env==='live' ? 1 : 0,
-       fcm_id:      extra.fcm||''
-     });
-     ws.send(loginMsg);
+   ws.onopen = () => ws.send(encodeLoginRequest({
+     user_name:user, password:pass,
+     system_name:extra.system, fcm_id:extra.fcm||'',
+     template_id:10, infra_type:extra.env==='live'?1:0
+   }));
+   ws.onmessage = ev => {
+     const msg=decodeRithmicMessage(ev.data);
+     if(msg.template_id===11&&msg.rp_code[0]==='0') subscribeOrderFills(ws);
+     if(msg.template_id===351) ingestRithmicFill(msg);
    };
-
-   ws.onmessage = (event) => {
-     const msg = decodeRithmicMessage(event.data);
-     if(msg.template_id === 11) { // ResponseLogin
-       if(msg.rp_code[0] === '0') {
-         // Authenticated — subscribe to order plant
-         subscribeOrderFills(ws);
-       }
-     }
-     if(msg.template_id === 351) { // OrderNotice (fill)
-       ingestAPIFill(msg, 'rithmic');
-     }
-   };
-
-   Protobuf schemas: github.com/SystenceInvestments/rithmic-api
-  ───────────────────────────────────────────────────────────── */
-
-  await sleep(2200);
+   Schemas: github.com/SystenceInvestments/rithmic-api
+  ─────────────────────────────────────────────────────────────── */
+  await sleep(2000);
   const sysName=extra.system||'Rithmic';
   const label=`${sysName} ${extra.env==='live'?'LIVE':'PAPER'}`;
   connection={broker:'rithmic',user,system:extra.system,env:extra.env,connected:true,connectedAt:new Date().toISOString(),type:'rithmic'};
   localStorage.setItem('ef_connection',JSON.stringify(connection));
   updateConnUI(true,label,'rithmic');
-  toast(`🔷 Rithmic connected: ${label} — streaming fills`,'success');
+  setSyncVisible(true,'rithmic');
+  toast(`🔷 Rithmic connected: ${label} — fetching history…`,'success');
+  await rithmicManualSync();
   startPoll('rithmic');
   startPriceFeed();
+}
+
+async function rithmicManualSync(){
+  setSyncing(true);
+  /* REAL: request snapshot via template_id 304 (RequestPnLPositionSnapshot)
+     or replay fills from order_plant with historical time range. */
+  await sleep(1000+Math.random()*500);
+  const fills=simulateBatchFills('rithmic');
+  let nc=0;
+  fills.forEach(f=>{if(!knownFillIds.has(f.fillId)){trades.unshift(f);knownFillIds.add(f.fillId);nc++;}});
+  if(nc>0){saveTrades();refreshAll();}
+  setSyncSuccess(nc);
 }
 
 function updateConnUI(connected,name,type){
@@ -1386,47 +1572,42 @@ function updateConnUI(connected,name,type){
 
 function disconnectAPI(){
   if(pollTimer)clearInterval(pollTimer);
-  connection=null;localStorage.removeItem('ef_connection');
+  connection=null; apiToken=null; apiTokenExpiry=null; apiBase=''; lastSyncedAt=null;
+  localStorage.removeItem('ef_connection');
   updateConnUI(false,'','');
+  setSyncVisible(false);
   closeM('connectModal');
   toast('Disconnected','error');
 }
 
-/* ── POLLING / FILL INJECTION ── */
+/* ── BACKGROUND POLL (silent — toast only on new fills, no spinner) ── */
 function startPoll(type){
   if(pollTimer)clearInterval(pollTimer);
-  pollTimer=setInterval(()=>{
-    /* REAL: fetch new fills from broker API / WebSocket buffer */
-    if(Math.random()<0.04) simulateFill(type);
+  pollTimer=setInterval(async()=>{
+    if(!connection||!connection.connected) return;
+    /* REAL: same fetch as manualSync but incremental — filter by timestamp > lastSyncedAt */
+    const fills=simulateBatchFills(type);
+    let nc=0;
+    fills.forEach(f=>{
+      if(!knownFillIds.has(f.fillId)){trades.unshift(f);knownFillIds.add(f.fillId);nc++;}
+    });
+    if(nc>0){
+      saveTrades();refreshAll();
+      const last=trades[0];
+      const lf=document.getElementById('lastFillInfo');
+      lf.textContent=`${last.direction} ${last.symbol} ${fpnl(last.pnl)}`;
+      lf.style.color=last.pnl>=0?'var(--green)':'var(--red)';
+      document.getElementById('lastFillBar').style.display='';
+      toast(`${type==='rithmic'?'🔷':'🔗'} Fill: ${last.direction} ${last.symbol} ${fpnl(last.pnl)}`,last.pnl>=0?'success':'error');
+      const t=new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+      setLastSyncLabel('ok','✓','Auto-synced · '+t);
+      document.getElementById('connLbl').textContent='Last fill · '+t;
+      lastSyncedAt=new Date();
+    }
   },5000);
 }
 
-function simulateFill(type){
-  const syms=['NQ','ES','MNQ'];
-  const sym=syms[Math.floor(Math.random()*syms.length)];
-  const dir=Math.random()>.5?'LONG':'SHORT';
-  const base=sym==='NQ'?21400:sym==='ES'?5800:21400;
-  const en=base+(Math.random()*40-20);
-  const ex=en+(dir==='LONG'?1:-1)*(Math.random()*60-15);
-  const qty=Math.floor(Math.random()*3)+1;
-  const tv=TICK[sym]||5;
-  const pnl=parseFloat(((dir==='LONG'?ex-en:en-ex)*qty*(tv/0.25)).toFixed(2));
-  const t={
-    id:Date.now().toString(),symbol:sym,direction:dir,
-    entry:parseFloat(en.toFixed(2)),exit:parseFloat(ex.toFixed(2)),
-    contracts:qty,pnl,date:new Date().toISOString(),
-    setup:'',notes:'',emotions:[],source:'api',
-    broker:type
-  };
-  trades.unshift(t);saveTrades();refreshAll();
-  document.getElementById('lastFillBar').style.display='';
-  const lf=document.getElementById('lastFillInfo');
-  lf.textContent=`${dir} ${sym} ${fpnl(pnl)}`;
-  lf.style.color=pnl>=0?'var(--green)':'var(--red)';
-  toast(`${type==='rithmic'?'🔷':'🔗'} Fill: ${dir} ${sym} ${fpnl(pnl)}`,pnl>=0?'success':'error');
-}
-
-/* ── LIVE PRICES (simulated) ── */
+/* ── LIVE PRICES (simulated tick) ── */
 function startPriceFeed(){
   let nq=21450,es=5820;
   document.getElementById('liveLabel').textContent='LIVE';
@@ -1436,6 +1617,7 @@ function startPriceFeed(){
     document.getElementById('esP').textContent=es.toFixed(2);
   },1500);
 }
+
 
 /* ══════════════════════════════════════════════
    CSV IMPORT
