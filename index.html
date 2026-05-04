@@ -262,6 +262,10 @@ textarea{resize:vertical;min-height:72px;}
 /* ── MONTH SUMMARY ── */
 .month-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
 
+/* ── PULL TO REFRESH ── */
+.ptr-indicator{position:fixed;top:-56px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:9px 18px;font-family:var(--font-d);font-size:12px;font-weight:700;color:var(--accent);z-index:9998;white-space:nowrap;box-shadow:var(--shadow);transition:top .18s ease,opacity .18s;}
+.ptr-indicator.ready{color:var(--green);}
+
 /* ── HAMBURGER ── */
 .hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;padding:6px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0;}
 .hamburger span{display:block;height:2px;background:var(--text2);border-radius:2px;transition:all .22s;}
@@ -293,6 +297,7 @@ textarea{resize:vertical;min-height:72px;}
 </style>
 </head>
 <body>
+<div class="ptr-indicator" id="ptrIndicator">↓ Pull to refresh</div>
 <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <div class="app">
 
@@ -459,7 +464,7 @@ textarea{resize:vertical;min-height:72px;}
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn primary" onclick="exportBackup()">↓ Export Backup</button>
-          <button class="btn" onclick="document.getElementById('jsonIn').click()">↑ Import Backup</button>
+          <label for="jsonIn" class="btn" style="cursor:pointer;">↑ Import Backup</label>
           <button class="btn" onclick="triggerImport()">↑ Import CSV</button>
           <button class="btn danger" onclick="confirmClear()">🗑 Clear All Data</button>
         </div>
@@ -597,9 +602,9 @@ textarea{resize:vertical;min-height:72px;}
       </div>
 
       <!-- Local backup option -->
-      <button class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;" onclick="document.getElementById('jsonIn').click();closeM('startupModal')">
+      <label for="jsonIn" class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;display:flex;cursor:pointer;">
         ↑ Import Backup File
-      </button>
+      </label>
 
       <!-- Skip -->
       <button class="btn" style="width:100%;justify-content:center;color:var(--text3);border-color:transparent;background:transparent;" onclick="closeM('startupModal')">
@@ -630,8 +635,8 @@ textarea{resize:vertical;min-height:72px;}
   <div class="drop-overlay-sub">Release to load your CSV file</div>
 </div>
 
-<input type="file" id="csvIn" accept=".csv,.txt" style="display:none" onchange="handleFiles(this.files)">
-<input type="file" id="jsonIn" accept=".json" style="display:none" onchange="handleJsonImport(this.files)">
+<input type="file" id="csvIn" accept=".csv,.txt" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;pointer-events:none;" onchange="handleFiles(this.files)">
+<input type="file" id="jsonIn" accept=".json" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;pointer-events:none;" onchange="handleJsonImport(this.files)">
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -1543,6 +1548,7 @@ function exportBackup(){
 
 function handleJsonImport(files){
   if(!files||!files.length)return;
+  closeM('startupModal');
   const reader=new FileReader();
   reader.onload=ev=>{
     try{
@@ -1661,6 +1667,45 @@ document.addEventListener('visibilitychange',()=>{
 });
 
 /* ══════════════════════════════════════════════
+   PULL TO REFRESH
+══════════════════════════════════════════════ */
+function setupPullToRefresh(){
+  const el=document.getElementById('mainContent');
+  const ind=document.getElementById('ptrIndicator');
+  const threshold=72;
+  let startY=0,dragging=false;
+
+  el.addEventListener('touchstart',e=>{
+    if(el.scrollTop===0)startY=e.touches[0].clientY,dragging=true;
+  },{passive:true});
+
+  el.addEventListener('touchmove',e=>{
+    if(!dragging)return;
+    const dy=e.touches[0].clientY-startY;
+    if(dy<=0){ind.style.top='-56px';return;}
+    const pull=Math.min(dy*0.45,threshold);
+    ind.style.top=(pull-40)+'px';
+    if(dy>=threshold){ind.textContent='↑ Release to refresh';ind.classList.add('ready');}
+    else{ind.textContent='↓ Pull to refresh';ind.classList.remove('ready');}
+  },{passive:true});
+
+  el.addEventListener('touchend',e=>{
+    if(!dragging)return;
+    dragging=false;
+    const dy=e.changedTouches[0].clientY-startY;
+    if(dy>=threshold){
+      ind.textContent='⟳ Refreshing…';
+      ind.style.top='14px';
+      setTimeout(()=>location.reload(),350);
+    } else {
+      ind.style.top='-56px';
+      ind.classList.remove('ready');
+    }
+    startY=0;
+  },{passive:true});
+}
+
+/* ══════════════════════════════════════════════
    SIDEBAR TOGGLE (mobile)
 ══════════════════════════════════════════════ */
 function toggleSidebar(){
@@ -1715,6 +1760,7 @@ function init(){
   renderAcctOpts();
   renderDashboard();
   window.addEventListener('resize',()=>{const ft=filteredTrades();if(equityChart)drawEquity(ft);if(wlChart)drawWL(calcStats(ft));});
+  setupPullToRefresh();
   setTimeout(openStartupModal, 400);
 }
 init();
