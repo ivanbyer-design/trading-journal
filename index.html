@@ -183,6 +183,29 @@ tr:hover td{background:rgba(200,149,108,.04);}
 .dp-trade-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:10px;color:var(--text3);font-family:var(--font-d);font-weight:600;}
 .dp-trade-acct{font-size:9px;font-family:var(--font-d);font-weight:700;padding:2px 7px;border-radius:20px;margin-top:5px;display:inline-block;}
 
+/* ── TRADE DETAIL PANEL ── */
+.trade-panel{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--surface);border-left:1px solid var(--border);z-index:510;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-8px 0 32px rgba(0,0,0,.3);}
+.trade-panel.open{transform:translateX(0);}
+.tp-hdr{padding:18px 20px 14px;border-bottom:1px solid var(--border);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+.tp-sym{font-family:var(--font-d);font-size:20px;font-weight:900;line-height:1;}
+.tp-meta{display:flex;align-items:center;gap:7px;margin-top:5px;}
+.tp-close{width:28px;height:28px;border-radius:var(--r-sm);border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tp-close:hover{color:var(--text);}
+.tp-body{flex:1;overflow-y:auto;padding:0 0 20px;}
+.tp-body::-webkit-scrollbar{width:4px;}
+.tp-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+.tp-section{padding:14px 18px;border-bottom:1px solid var(--border);}
+.tp-section-title{font-family:var(--font-d);font-size:9px;font-weight:800;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
+.tp-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.tp-s{background:var(--surface2);border-radius:var(--r-sm);padding:10px 12px;}
+.tp-s-lbl{font-size:8px;color:var(--text3);letter-spacing:.8px;text-transform:uppercase;margin-bottom:4px;font-family:var(--font-d);font-weight:700;}
+.tp-s-val{font-family:var(--font-d);font-size:15px;font-weight:800;}
+.tp-diagram-wrap{padding:16px 18px;border-bottom:1px solid var(--border);}
+.tp-field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
+.tp-field:last-child{margin-bottom:0;}
+.tp-img-preview{width:100%;border-radius:var(--r-sm);margin-top:8px;display:none;border:1px solid var(--border);}
+.tp-emo-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
+
 /* ── DROP OVERLAY ── */
 .drop-overlay{position:fixed;inset:0;background:rgba(200,149,108,.07);border:3px dashed var(--accent);border-radius:var(--r);z-index:9000;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;backdrop-filter:blur(3px);}
 .drop-overlay.active{display:flex;}
@@ -456,6 +479,18 @@ textarea{resize:vertical;min-height:72px;}
   </div>
 </div>
 
+<!-- ══ TRADE DETAIL PANEL ══ -->
+<div class="trade-panel" id="tradePanel">
+  <div class="tp-hdr">
+    <div>
+      <div class="tp-sym" id="tpSym">—</div>
+      <div class="tp-meta" id="tpMeta"></div>
+    </div>
+    <button class="tp-close" onclick="closeTradePanel()">×</button>
+  </div>
+  <div class="tp-body" id="tpBody"></div>
+</div>
+
 <!-- ══ ACCOUNT EDIT MODAL ══ -->
 <div class="overlay" id="acctEditModal">
   <div class="modal">
@@ -627,6 +662,7 @@ function nav(id){
   const titles={dashboard:'Dashboard',trades:'Trade Log',settings:'Settings'};
   document.getElementById('topTitle').textContent=titles[id]||id;
   closeDayPanel();
+  closeTradePanel();
   if(id==='dashboard')renderDashboard();
   if(id==='trades')renderTrades();
   if(id==='settings'){
@@ -986,7 +1022,7 @@ function renderRecentTrades(ft){
 function tradeRowHTML(t){
   const c=t.pnl>=0?'var(--green)':'var(--red)';
   const acct=t.account||'Default';
-  return`<tr>
+  return`<tr style="cursor:pointer" onclick="openTradeDetail('${t.id}')">
     <td style="font-family:var(--font-d)">${fdate(t.date)}</td>
     <td style="color:var(--text3)">${ftime(t.date)}</td>
     <td><span style="font-family:var(--font-d);font-size:10px;font-weight:700;color:${acctColor(acct)}">${acct}</span></td>
@@ -1089,7 +1125,7 @@ function openDayPanel(key){
     document.getElementById('dpTrades').innerHTML=dayTrades.map(t=>{
       const pc=t.pnl>=0?'var(--green)':'var(--red)';
       const acct=t.account||'Default';
-      return`<div class="dp-trade ${t.pnl>=0?'win':'loss'}">
+      return`<div class="dp-trade ${t.pnl>=0?'win':'loss'}" style="cursor:pointer" onclick="openTradeDetail('${t.id}')">
         <div class="dp-trade-top">
           <span class="dp-trade-sym">${t.symbol} <span style="font-size:10px;font-weight:500;color:var(--text3)">×${t.contracts}</span></span>
           <span class="dp-trade-pnl" style="color:${pc}">${fpnl(t.pnl)}</span>
@@ -1188,6 +1224,176 @@ function saveTrade(){
 
 function togEmo(el,e){el.classList.toggle('sel');if(el.classList.contains('sel'))emotions.push(e);else emotions=emotions.filter(x=>x!==e);}
 function closeM(id){document.getElementById(id).classList.remove('open');}
+
+/* ══════════════════════════════════════════════
+   TRADE DETAIL PANEL
+══════════════════════════════════════════════ */
+let activeTradePanelId=null;
+
+function patchTrade(id,changes){
+  const idx=trades.findIndex(t=>t.id===id);
+  if(idx===-1)return;
+  Object.assign(trades[idx],changes);
+  saveTrades();
+}
+
+function drawTradeDiagram(t){
+  const W=384,H=160;
+  const lo=Math.min(t.entry,t.exit),hi=Math.max(t.entry,t.exit);
+  const pad=(hi-lo)||Math.max(t.entry*.001,1);
+  const rangeMin=lo-pad*1.8,rangeMax=hi+pad*1.8;
+  const range=rangeMax-rangeMin;
+
+  function py(price){return H-((price-rangeMin)/range*(H-20))-10;}
+
+  const entryY=py(t.entry),exitY=py(t.exit);
+  const win=t.pnl>=0;
+  const fillColor=win?'rgba(120,194,106,.18)':'rgba(212,99,90,.18)';
+  const strokeColor=win?'#78c26a':'#d4635a';
+  const axisColor='rgba(150,130,110,.2)';
+  const textColor='#9a8a78';
+
+  // Price axis ticks
+  const tickCount=6;
+  let ticks='';
+  for(let i=0;i<=tickCount;i++){
+    const price=rangeMin+(range*i/tickCount);
+    const y=py(price);
+    ticks+=`<line x1="48" y1="${y}" x2="${W}" y2="${y}" stroke="${axisColor}" stroke-width="1"/>`;
+    ticks+=`<text x="44" y="${y+4}" text-anchor="end" font-size="9" fill="${textColor}" font-family="DM Mono,monospace">${price.toFixed(2)}</text>`;
+  }
+
+  // Filled zone between entry and exit
+  const zoneTop=Math.min(entryY,exitY),zoneH=Math.abs(exitY-entryY)||2;
+  const zone=`<rect x="52" y="${zoneTop}" width="${W-60}" height="${zoneH}" fill="${fillColor}" rx="2"/>`;
+
+  // Entry line
+  const entryLine=`
+    <line x1="52" y1="${entryY}" x2="${W}" y2="${entryY}" stroke="${strokeColor}" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/>
+    <text x="${W-4}" y="${entryY-4}" text-anchor="end" font-size="9" fill="${strokeColor}" font-family="DM Mono,monospace" font-weight="600">ENTRY ${t.entry.toFixed(2)}</text>`;
+
+  // Exit line
+  const exitLine=`
+    <line x1="52" y1="${exitY}" x2="${W}" y2="${exitY}" stroke="${strokeColor}" stroke-width="2"/>
+    <text x="${W-4}" y="${exitY-4}" text-anchor="end" font-size="9" fill="${strokeColor}" font-family="DM Mono,monospace" font-weight="600">EXIT ${t.exit.toFixed(2)}</text>`;
+
+  // Arrow
+  const arrowX=W/2;const arrowDir=t.direction==='LONG'?(exitY<entryY?'↑':'↓'):(exitY<entryY?'↑':'↓');
+  const midY=(entryY+exitY)/2;
+  const arrow=zoneH>16?`<text x="${arrowX}" y="${midY+5}" text-anchor="middle" font-size="14" fill="${strokeColor}" opacity=".6">${arrowDir}</text>`:'';
+
+  // Move label
+  const pts=Math.abs(t.exit-t.entry).toFixed(2);
+  const moveLabel=`<text x="${arrowX}" y="${H-2}" text-anchor="middle" font-size="9" fill="${textColor}" font-family="DM Mono,monospace">${pts} pts · ${fpnl(t.pnl)}</text>`;
+
+  return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible">${ticks}${zone}${entryLine}${exitLine}${arrow}${moveLabel}</svg>`;
+}
+
+function openTradeDetail(id){
+  const t=trades.find(x=>x.id===id);
+  if(!t)return;
+  activeTradePanelId=id;
+
+  const acct=t.account||'Default';
+  const color=acctColor(acct);
+  const win=t.pnl>=0;
+  const pnlColor=win?'var(--green)':'var(--red)';
+  const pts=Math.abs(t.exit-t.entry).toFixed(2);
+  const ticks=(Math.abs(t.exit-t.entry)/0.25).toFixed(0);
+  const sym=document.getElementById('tpSym');
+  sym.textContent=t.symbol;
+  sym.style.color=color;
+
+  document.getElementById('tpMeta').innerHTML=`
+    <span class="tag tag-${t.direction.toLowerCase()}" style="font-size:10px">${t.direction}</span>
+    <span style="font-size:10px;font-family:var(--font-d);color:${color};font-weight:700">${acct}</span>
+    <span style="font-size:10px;color:var(--text3);font-family:var(--font-d)">${fdate(t.date)}</span>`;
+
+  const emoList=['😤 Revenge','😌 Calm','😰 FOMO','💪 Confident','😴 Tired','🎯 Disciplined'];
+  const curEmos=t.emotions||[];
+
+  document.getElementById('tpBody').innerHTML=`
+    <!-- Diagram -->
+    <div class="tp-diagram-wrap">
+      <div class="tp-section-title">Trade Diagram</div>
+      ${drawTradeDiagram(t)}
+    </div>
+
+    <!-- Stats -->
+    <div class="tp-section">
+      <div class="tp-section-title">Trade Stats</div>
+      <div class="tp-stats">
+        <div class="tp-s"><div class="tp-s-lbl">Net P&L</div><div class="tp-s-val" style="color:${pnlColor}">${fpnl(t.pnl)}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Contracts</div><div class="tp-s-val">${t.contracts}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Duration</div><div class="tp-s-val" style="font-size:12px">${t.duration||'—'}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Entry</div><div class="tp-s-val" style="font-size:13px">${t.entry.toFixed(2)}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Exit</div><div class="tp-s-val" style="font-size:13px">${t.exit.toFixed(2)}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Move</div><div class="tp-s-val" style="font-size:13px;color:${pnlColor}">${pts} pts</div></div>
+      </div>
+      <div style="margin-top:8px;font-size:10px;color:var(--text3);font-family:var(--font-d)">
+        Entry ${ftime(t.date)}${t.exitDate?' · Exit '+ftime(t.exitDate):''} · ${ticks} ticks
+      </div>
+    </div>
+
+    <!-- Notes & Setup -->
+    <div class="tp-section">
+      <div class="tp-section-title">Notes</div>
+      <div class="tp-field">
+        <label>Setup / Strategy</label>
+        <input type="text" value="${(t.setup||'').replace(/"/g,'&quot;')}" placeholder="e.g. Break & Retest, VWAP Reclaim"
+          onblur="patchTrade('${id}',{setup:this.value})">
+      </div>
+      <div class="tp-field">
+        <label>Trade Notes</label>
+        <textarea rows="4" placeholder="What did you see? Why this trade? What would you do differently?"
+          onblur="patchTrade('${id}',{notes:this.value})">${t.notes||''}</textarea>
+      </div>
+    </div>
+
+    <!-- Emotions -->
+    <div class="tp-section">
+      <div class="tp-section-title">Emotional State</div>
+      <div class="tp-emo-wrap" id="tpEmoWrap">
+        ${emoList.map(e=>`<span class="stag${curEmos.includes(e)?' sel':''}" onclick="toggleTpEmo(this,'${id}','${e}')">${e}</span>`).join('')}
+      </div>
+    </div>
+
+    <!-- Screenshot -->
+    <div class="tp-section">
+      <div class="tp-section-title">Chart Screenshot</div>
+      <div class="tp-field">
+        <label>Image URL (paste TradingView screenshot link)</label>
+        <input type="url" id="tpImgUrl" value="${t.screenshot||''}" placeholder="https://..."
+          oninput="previewTpImg(this.value)"
+          onblur="patchTrade('${id}',{screenshot:this.value})">
+      </div>
+      <img id="tpImgPreview" class="tp-img-preview" src="${t.screenshot||''}"
+        style="display:${t.screenshot?'block':'none'}"
+        onerror="this.style.display='none'">
+    </div>`;
+
+  document.getElementById('tradePanel').classList.add('open');
+}
+
+function previewTpImg(url){
+  const img=document.getElementById('tpImgPreview');
+  if(!url){img.style.display='none';return;}
+  img.src=url;img.style.display='block';
+  img.onerror=()=>img.style.display='none';
+}
+
+function toggleTpEmo(el,id,emo){
+  el.classList.toggle('sel');
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  const emos=t.emotions||[];
+  const updated=el.classList.contains('sel')?[...emos,emo]:emos.filter(e=>e!==emo);
+  patchTrade(id,{emotions:updated});
+}
+
+function closeTradePanel(){
+  activeTradePanelId=null;
+  document.getElementById('tradePanel').classList.remove('open');
+}
 
 /* ══════════════════════════════════════════════
    GLOBAL DRAG & DROP
