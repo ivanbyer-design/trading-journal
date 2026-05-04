@@ -72,6 +72,8 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:
 .acct-check.on{background:var(--accent);border-color:var(--accent);color:#fff;}
 .acct-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
 .acct-drop-footer{padding:8px 14px;border-top:1px solid var(--border);}
+.acct-edit-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:12px;padding:2px 5px;border-radius:4px;line-height:1;transition:color .15s;}
+.acct-edit-btn:hover{color:var(--accent);}
 
 /* Buttons */
 .btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;white-space:nowrap;}
@@ -269,8 +271,9 @@ textarea{resize:vertical;min-height:72px;}
       <div class="acct-drop" id="acctDrop">
         <div class="acct-drop-header">Select Accounts</div>
         <div id="acctOpts"></div>
-        <div class="acct-drop-footer">
-          <button class="btn" style="width:100%;justify-content:center;font-size:10px;" onclick="openTradeModal()">+ Log Trade Manually</button>
+        <div class="acct-drop-footer" style="display:flex;flex-direction:column;gap:6px;">
+          <button class="btn primary" style="width:100%;justify-content:center;font-size:10px;" onclick="openAddAcct()">+ New Account</button>
+          <button class="btn" style="width:100%;justify-content:center;font-size:10px;" onclick="openTradeModal()">✎ Log Trade Manually</button>
         </div>
       </div>
     </div>
@@ -330,12 +333,6 @@ textarea{resize:vertical;min-height:72px;}
           <div class="card"><div class="card-header"><div class="card-title">Win / Loss</div></div><canvas id="wlC" height="150"></canvas></div>
         </div>
 
-        <!-- Recent trades (compact) -->
-        <div class="card" style="margin-bottom:0">
-          <div class="card-header"><div class="card-title">Recent Trades</div><button class="btn" onclick="nav('trades')">View All →</button></div>
-          <div id="recentTable"></div>
-        </div>
-
         <!-- CALENDAR section divider -->
         <div class="section-divider">
           <div class="section-divider-line"></div>
@@ -355,6 +352,12 @@ textarea{resize:vertical;min-height:72px;}
 
         <!-- Month summary -->
         <div style="margin-top:16px;" id="calSummaryWrap"></div>
+
+        <!-- Recent trades (compact) -->
+        <div class="card" style="margin-top:16px;margin-bottom:0">
+          <div class="card-header"><div class="card-title">Recent Trades</div><button class="btn" onclick="nav('trades')">View All →</button></div>
+          <div id="recentTable"></div>
+        </div>
 
       </div>
     </div>
@@ -453,6 +456,20 @@ textarea{resize:vertical;min-height:72px;}
   </div>
 </div>
 
+<!-- ══ ACCOUNT EDIT MODAL ══ -->
+<div class="overlay" id="acctEditModal">
+  <div class="modal">
+    <div class="modal-hdr"><div class="modal-title" id="acctEditTitle">New Account</div><button class="modal-close" onclick="closeM('acctEditModal')">×</button></div>
+    <div class="modal-body">
+      <div class="fg"><label>Account Name</label><input type="text" id="acctEditInput" placeholder="e.g. Apex-123, Live Account" onkeydown="if(event.key==='Enter')confirmAcctEdit()"></div>
+      <div class="form-actions">
+        <button class="btn" onclick="closeM('acctEditModal')">Cancel</button>
+        <button class="btn primary" onclick="confirmAcctEdit()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ DROP OVERLAY ══ -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-overlay-icon">☕</div>
@@ -481,6 +498,8 @@ let equityChart=null,wlChart=null;
 
 /* Account selector state */
 let selectedAccounts=new Set(); // empty = all
+let accountNames=JSON.parse(localStorage.getItem('ef_accounts')||'[]');
+let acctModalMode='',acctModalTarget='';
 let pendingImportText='';
 let pendingImportFilename='';
 
@@ -488,8 +507,10 @@ let pendingImportFilename='';
    ACCOUNT HELPERS
 ══════════════════════════════════════════════ */
 function allAccounts(){
-  return[...new Set(trades.map(t=>t.account||'Default').filter(Boolean))].sort();
+  const fromTrades=[...new Set(trades.map(t=>t.account||'Default').filter(Boolean))];
+  return[...new Set([...accountNames,...fromTrades])].sort();
 }
+function saveAccountNames(){localStorage.setItem('ef_accounts',JSON.stringify(accountNames));}
 function acctColor(name){
   const accounts=allAccounts();
   const idx=accounts.indexOf(name);
@@ -526,8 +547,11 @@ function renderAcctOpts(){
     html+=`<div class="acct-opt" onclick="toggleAcct('${a}')">
       <span class="acct-check ${on?'on':''}">✓</span>
       <span class="acct-dot" style="background:${color}"></span>
-      <span>${a}</span>
-      <span style="margin-left:auto;font-size:10px;color:var(--text3)">${count}</span>
+      <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${a}</span>
+      <span style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <span style="font-size:10px;color:var(--text3)">${count}</span>
+        <button class="acct-edit-btn" onclick="openRenameAcct(event,'${a.replace(/'/g,"\\'")}')" title="Rename">✎</button>
+      </span>
     </div>`;
   }
   document.getElementById('acctOpts').innerHTML=html;
@@ -547,6 +571,46 @@ function toggleAcct(name){
   }
   renderAcctOpts();
   refreshAll();
+}
+
+function openAddAcct(){
+  acctModalMode='add';acctModalTarget='';
+  document.getElementById('acctEditTitle').textContent='New Account';
+  document.getElementById('acctEditInput').value='';
+  document.getElementById('acctSelector').classList.remove('open');
+  document.getElementById('acctEditModal').classList.add('open');
+  setTimeout(()=>document.getElementById('acctEditInput').focus(),60);
+}
+
+function openRenameAcct(e,name){
+  e.stopPropagation();
+  acctModalMode='rename';acctModalTarget=name;
+  document.getElementById('acctEditTitle').textContent='Rename Account';
+  document.getElementById('acctEditInput').value=name;
+  document.getElementById('acctSelector').classList.remove('open');
+  document.getElementById('acctEditModal').classList.add('open');
+  setTimeout(()=>{const el=document.getElementById('acctEditInput');el.focus();el.select();},60);
+}
+
+function confirmAcctEdit(){
+  const val=document.getElementById('acctEditInput').value.trim();
+  if(!val){toast('Enter an account name','error');return;}
+  if(acctModalMode==='add'){
+    if(!accountNames.includes(val))accountNames.push(val);
+    saveAccountNames();
+    toast(`Account "${val}" created`,'success');
+  } else {
+    const old=acctModalTarget;
+    if(val===old){closeM('acctEditModal');return;}
+    trades.forEach(t=>{if((t.account||'Default')===old)t.account=val;});
+    const idx=accountNames.indexOf(old);
+    if(idx!==-1)accountNames[idx]=val;
+    if(selectedAccounts.has(old)){selectedAccounts.delete(old);selectedAccounts.add(val);}
+    saveTrades();saveAccountNames();
+    toast(`Renamed "${old}" → "${val}"`,'success');
+  }
+  closeM('acctEditModal');
+  renderAcctOpts();updateFileChips();refreshAll();
 }
 
 /* ══════════════════════════════════════════════
@@ -784,7 +848,7 @@ function saveSettings(){
 }
 function confirmClear(){
   if(confirm('Clear ALL trade data? This cannot be undone.'))
-  {trades=[];saveTrades();selectedAccounts.clear();updateFileChips();renderAcctOpts();refreshAll();toast('Data cleared','info');}
+  {trades=[];accountNames=[];saveTrades();saveAccountNames();selectedAccounts.clear();updateFileChips();renderAcctOpts();refreshAll();toast('Data cleared','info');}
 }
 
 /* ══════════════════════════════════════════════
