@@ -1710,8 +1710,8 @@ function parseImportedCSV(text){
   const dataRows=rows.slice(1);
 
   // Detect format
-  const hasEntry=findCol(hdrs,'entry','entry price','entryprice','open','open price','openprice')!==-1;
-  const hasExit=findCol(hdrs,'exit','exit price','exitprice','close','close price','closeprice')!==-1;
+  const hasEntry=findCol(hdrs,'entry','entry price','entryprice','open','open price','openprice','buyprice','buy price')!==-1;
+  const hasExit=findCol(hdrs,'exit','exit price','exitprice','close','close price','closeprice','sellprice','sell price')!==-1;
   const hasFillPrice=findCol(hdrs,'fill price','avg fill price','avgfillprice','fillprice','price','execution price','executionprice','trade price','tradeprice','average price','averageprice')!==-1;
   const hasAction=findCol(hdrs,'action','buy/sell','buysell','side','b/s','bs','type','ordertype')!==-1;
   const hasSym=findCol(hdrs,'symbol','contract','ticker','instrument','name')!==-1;
@@ -1750,23 +1750,30 @@ function parseImportedCSV(text){
   return{format,total:imported.length,imported:fresh.length,skipped:imported.length-fresh.length,headers:rawHdrs};
 }
 
-/* ── Parse pre-paired rows (NinjaTrader, generic) ── */
+/* ── Parse pre-paired rows (Tradovate Performance, NinjaTrader, generic) ── */
 function parsePairedRows(rows,hdrs){
   const result=[];
   rows.forEach((row,i)=>{
     const g=(...n)=>getCell(row,hdrs,...n);
-    const en=parseFloat(g('entry','entry price','entryprice','open','open price'));
-    const ex=parseFloat(g('exit','exit price','exitprice','close','close price'));
+    const buyPrice=parseFloat(g('buyprice','buy price','entry','entry price','entryprice','open','open price'));
+    const sellPrice=parseFloat(g('sellprice','sell price','exit','exit price','exitprice','close','close price'));
+    const en=buyPrice,ex=sellPrice;
     if(!en||!ex)return;
     const rawSym=g('symbol','contract','ticker','instrument','name');
     const sym=cleanSym(rawSym)||'NQ';
+    // Determine direction from timestamps if available, else from action column
+    const buyTs=parseTradeDate(g('boughttimestamp','bought timestamp','entrytime','entry time','entry date'));
+    const sellTs=parseTradeDate(g('soldtimestamp','sold timestamp','exittime','exit time','exit date'));
     const rawDir=g('direction','side','type','action','buy/sell').toUpperCase();
-    const dir=rawDir.includes('SHORT')||rawDir.includes('SELL')?'SHORT':'LONG';
-    const qty=parseInt(g('contracts','qty','quantity','size','filled','fill qty'))||1;
+    const dir=(rawDir.includes('SHORT')||rawDir.includes('SELL'))
+      ?'SHORT'
+      :(buyTs&&sellTs&&new Date(buyTs)>new Date(sellTs))?'SHORT':'LONG';
+    const qty=parseInt(g('qty','quantity','contracts','size','filled','fill qty'))||1;
     const tv=TICK[sym]||5;
     const rawPnl=g('pnl','p/l','net p/l','netpnl','profit','profit/loss','realized');
     const pnl=parsePnl(rawPnl)??parseFloat(((dir==='LONG'?ex-en:en-ex)*qty*(tv/0.25)).toFixed(2));
-    const date=parseTradeDate(g('date','datetime','time','timestamp','trade time','time executed','entry time'));
+    // Use boughtTimestamp (Tradovate) or generic date columns
+    const date=buyTs||parseTradeDate(g('date','datetime','time','timestamp','trade time','time executed','entry time'));
     result.push({id:Date.now()+'-'+i+'-'+Math.random().toString(36).slice(2),
       symbol:sym,direction:dir,entry:en,exit:ex,contracts:qty,pnl,date,
       setup:g('setup','strategy','setupname')||'',notes:g('notes','note','comment','comments')||'',
