@@ -467,7 +467,7 @@ textarea{resize:vertical;min-height:72px;}
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn primary" onclick="exportBackup()">↓ Export Backup</button>
-          <button class="btn" onclick="startImportBackup()">↑ Import Backup</button>
+          <label for="jsonIn" class="btn" style="cursor:pointer;">↑ Import Backup</label>
           <button class="btn" onclick="triggerImport()">↑ Import CSV</button>
           <button class="btn danger" onclick="confirmClear()">🗑 Clear All Data</button>
         </div>
@@ -605,40 +605,14 @@ textarea{resize:vertical;min-height:72px;}
       </div>
 
       <!-- Local backup option -->
-      <button class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;" onclick="startImportBackup()">
+      <label for="jsonIn" class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;display:flex;cursor:pointer;">
         ↑ Import Backup File
-      </button>
+      </label>
 
       <!-- Skip -->
       <button class="btn" style="width:100%;justify-content:center;color:var(--text3);border-color:transparent;background:transparent;" onclick="closeM('startupModal')">
         Continue without importing
       </button>
-    </div>
-  </div>
-</div>
-
-<!-- ══ PASTE IMPORT MODAL (PWA / iOS standalone) ══ -->
-<div class="overlay" id="pasteImportModal">
-  <div class="modal" style="max-width:460px;">
-    <div class="modal-hdr">
-      <div class="modal-title">Import Backup</div>
-      <button class="modal-close" onclick="closeM('pasteImportModal')">×</button>
-    </div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;font-family:var(--font-d);line-height:1.8;">
-        On this device, paste your backup JSON below. First export a backup on another device, open the file, select all the text, and copy it.
-      </p>
-      <button class="btn primary" style="width:100%;justify-content:center;margin-bottom:12px;" onclick="pasteFromClipboard()">
-        📋 Paste from Clipboard
-      </button>
-      <div class="fg">
-        <label>Or paste JSON manually</label>
-        <textarea id="pasteImportText" rows="7" placeholder='{"version":1,"trades":[...]}'></textarea>
-      </div>
-      <div class="form-actions">
-        <button class="btn" onclick="closeM('pasteImportModal')">Cancel</button>
-        <button class="btn primary" onclick="importFromPastedText()">Import</button>
-      </div>
     </div>
   </div>
 </div>
@@ -665,7 +639,7 @@ textarea{resize:vertical;min-height:72px;}
 </div>
 
 <input type="file" id="csvIn" accept=".csv,.txt" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;pointer-events:none;" onchange="handleFiles(this.files)">
-<input type="file" id="jsonIn" accept=".json" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;pointer-events:none;" onchange="handleJsonImport(this.files)">
+<input type="file" id="jsonIn" accept=".json" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;" onchange="handleJsonImport(this.files)">
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -1592,45 +1566,6 @@ async function exportBackup(){
   toast('Backup downloaded ✓','success');
 }
 
-function startImportBackup(){
-  closeM('startupModal');
-  if(isPWA()){
-    // File inputs are broken in iOS standalone — use paste modal instead
-    document.getElementById('pasteImportText').value='';
-    document.getElementById('pasteImportModal').classList.add('open');
-  } else {
-    document.getElementById('jsonIn').click();
-  }
-}
-
-async function pasteFromClipboard(){
-  try{
-    const text=await navigator.clipboard.readText();
-    if(!text){toast('Clipboard is empty','error');return;}
-    document.getElementById('pasteImportText').value=text;
-    toast('Pasted from clipboard','success');
-  }catch(e){
-    toast('Could not read clipboard — paste manually below','error');
-  }
-}
-
-function importFromPastedText(){
-  const text=document.getElementById('pasteImportText').value.trim();
-  if(!text){toast('Nothing to import','error');return;}
-  try{
-    const data=JSON.parse(text);
-    if(!Array.isArray(data.trades))throw new Error('Invalid backup');
-    const date=data.exportedAt?new Date(data.exportedAt).toLocaleDateString():'unknown date';
-    if(!confirm(`Merge ${data.trades.length} trades from backup (${date})?`))return;
-    const existingIds=new Set(trades.map(t=>t.id));
-    const fresh=data.trades.filter(t=>!existingIds.has(t.id));
-    trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
-    if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
-    saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
-    closeM('pasteImportModal');
-    toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} ✓`,'success');
-  }catch(e){toast('Invalid JSON — check your backup text','error');}
-}
 
 function handleJsonImport(files){
   if(!files||!files.length)return;
