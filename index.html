@@ -43,6 +43,11 @@ body{background:var(--bg);color:var(--text);font-family:var(--font-m);font-size:
 .nav-item:hover{color:var(--text);background:rgba(200,149,108,.06);}
 .nav-item.active{color:var(--accent);border-left-color:var(--accent);background:rgba(200,149,108,.08);}
 .nav-icon{font-size:14px;width:18px;text-align:center;}
+.logo-actions{display:flex;gap:5px;margin-top:10px;}
+.logo-action{flex:1;padding:7px 6px;border-radius:var(--r-sm);border:1px solid var(--border2);background:transparent;color:var(--text3);font-family:var(--font-d);font-size:10px;font-weight:800;cursor:pointer;transition:all .15s;text-align:center;letter-spacing:.3px;}
+.logo-action:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,149,108,.07);}
+.logo-action.accent{border-color:var(--accent);color:var(--accent);}
+.logo-action.accent:hover{background:rgba(200,149,108,.12);}
 .sidebar-footer{padding:14px;border-top:1px solid var(--border);}
 .import-btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:10px 12px;border-radius:var(--r);border:1.5px dashed var(--border2);background:transparent;color:var(--text3);font-family:var(--font-d);font-size:11px;font-weight:800;letter-spacing:.5px;cursor:pointer;transition:all .2s;}
 .import-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(200,149,108,.07);}
@@ -266,6 +271,10 @@ textarea{resize:vertical;min-height:72px;}
   <div class="logo">
     <div class="logo-text">EDGEFLOW</div>
     <div class="logo-sub">Trading Journal</div>
+    <div class="logo-actions">
+      <button class="logo-action" onclick="exportBackup()" title="Download a backup of all trades">↓ Export</button>
+      <button class="logo-action accent" onclick="openStartupModal()" title="Import a backup or sync from cloud">↑ Import</button>
+    </div>
   </div>
   <nav class="nav">
     <div class="nav-item active" onclick="nav('dashboard')"><span class="nav-icon">⬡</span> Dashboard</div>
@@ -529,6 +538,42 @@ textarea{resize:vertical;min-height:72px;}
     <button class="tp-close" onclick="closeTradePanel()">×</button>
   </div>
   <div class="tp-body" id="tpBody"></div>
+</div>
+
+<!-- ══ STARTUP / IMPORT MODAL ══ -->
+<div class="overlay" id="startupModal">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-hdr">
+      <div>
+        <div class="modal-title">Welcome back ☕</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:3px;font-family:var(--font-d)">EdgeFlow Trading Journal</div>
+      </div>
+      <button class="modal-close" onclick="closeM('startupModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:20px;font-family:var(--font-d);line-height:1.8;">
+        Would you like to load a backup before viewing your journal?
+      </p>
+
+      <!-- Cloud option — shown only when configured -->
+      <div id="startupCloudOpt" style="display:none;margin-bottom:10px;">
+        <button class="btn primary" style="width:100%;justify-content:center;padding:12px;" onclick="pullFromCloud();closeM('startupModal')">
+          ↓ Pull Latest from Cloud
+        </button>
+        <div id="startupLastSync" style="text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-d);margin-top:5px;"></div>
+      </div>
+
+      <!-- Local backup option -->
+      <button class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;" onclick="closeM('startupModal');setTimeout(()=>document.getElementById('jsonIn').click(),50)">
+        ↑ Import Backup File
+      </button>
+
+      <!-- Skip -->
+      <button class="btn" style="width:100%;justify-content:center;color:var(--text3);border-color:transparent;background:transparent;" onclick="closeM('startupModal')">
+        Continue without importing
+      </button>
+    </div>
+  </div>
 </div>
 
 <!-- ══ ACCOUNT EDIT MODAL ══ -->
@@ -1486,6 +1531,20 @@ function handleJsonImport(files){
 /* ══════════════════════════════════════════════
    CLOUD SYNC (GitHub Gist)
 ══════════════════════════════════════════════ */
+function openStartupModal(){
+  const cloudOpt=document.getElementById('startupCloudOpt');
+  const lastEl=document.getElementById('startupLastSync');
+  if(cloudCfg.token&&cloudCfg.gistId){
+    cloudOpt.style.display='block';
+    lastEl.textContent=cloudCfg.lastSync
+      ?`Last synced ${new Date(cloudCfg.lastSync).toLocaleDateString()} at ${new Date(cloudCfg.lastSync).toLocaleTimeString()}`
+      :'Never synced';
+  } else {
+    cloudOpt.style.display='none';
+  }
+  document.getElementById('startupModal').classList.add('open');
+}
+
 function saveCloudCfg(){
   cloudCfg.token=(document.getElementById('cfgGhToken').value||'').trim();
   cloudCfg.gistId=(document.getElementById('cfgGistId').value||'').trim();
@@ -1608,6 +1667,7 @@ function init(){
   renderAcctOpts();
   renderDashboard();
   window.addEventListener('resize',()=>{const ft=filteredTrades();if(equityChart)drawEquity(ft);if(wlChart)drawWL(calcStats(ft));});
+  setTimeout(openStartupModal, 400);
 }
 init();
 </script>
