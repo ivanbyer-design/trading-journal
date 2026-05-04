@@ -399,6 +399,8 @@ textarea{resize:vertical;min-height:72px;}
 
     <!-- ══ SETTINGS ══ -->
     <div class="panel" id="panel-settings">
+
+      <!-- Account Settings -->
       <div class="card" style="margin-bottom:12px;">
         <div class="card-header"><div class="card-title">Account Settings</div></div>
         <div class="form-grid" style="max-width:440px;">
@@ -406,13 +408,51 @@ textarea{resize:vertical;min-height:72px;}
           <div class="fg"><label>Daily Loss Limit ($)</label><input type="number" id="cfgDLL" value="1000" onchange="saveSettings()"></div>
         </div>
       </div>
-      <div class="card">
-        <div class="card-header"><div class="card-title">Data Management</div></div>
-        <div style="display:flex;gap:10px;">
+
+      <!-- Local Backup -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header"><div class="card-title">Local Backup</div></div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px;font-family:var(--font-d);line-height:1.8">
+          Export all trades to a JSON file you can re-import on any device.
+        </p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn primary" onclick="exportBackup()">↓ Export Backup</button>
+          <button class="btn" onclick="document.getElementById('jsonIn').click()">↑ Import Backup</button>
           <button class="btn" onclick="triggerImport()">↑ Import CSV</button>
           <button class="btn danger" onclick="confirmClear()">🗑 Clear All Data</button>
         </div>
       </div>
+
+      <!-- Cloud Sync -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Cloud Sync</div>
+          <div id="cloudBadge"></div>
+        </div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:16px;font-family:var(--font-d);line-height:1.8">
+          Sync across devices using a free GitHub account. Go to
+          <strong style="color:var(--text)">github.com → Settings → Developer settings → Personal access tokens</strong>
+          and create a token with the <span style="background:var(--surface2);padding:1px 7px;border-radius:4px;color:var(--accent);font-family:var(--font-m)">gist</span> scope. Paste it below.
+          Data is saved to a <strong style="color:var(--text)">private</strong> Gist only you can see.
+          Auto-syncs whenever you leave the tab.
+        </p>
+        <div style="max-width:560px;display:flex;flex-direction:column;gap:10px;">
+          <div class="fg">
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="cfgGhToken" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" onchange="saveCloudCfg()">
+          </div>
+          <div class="fg">
+            <label>Gist ID <span style="font-weight:400;color:var(--text3)">(auto-filled after first push — or paste an existing Gist ID to pull from another device)</span></label>
+            <input type="text" id="cfgGistId" placeholder="Auto-created on first push" onchange="saveCloudCfg()">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap;align-items:center;">
+          <button class="btn primary" onclick="pushToCloud()">↑ Push to Cloud</button>
+          <button class="btn" onclick="pullFromCloud()">↓ Pull from Cloud</button>
+          <span id="cloudLastSync" style="font-size:11px;color:var(--text3);font-family:var(--font-d)"></span>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -513,6 +553,7 @@ textarea{resize:vertical;min-height:72px;}
 </div>
 
 <input type="file" id="csvIn" accept=".csv,.txt" style="display:none" onchange="handleFiles(this.files)">
+<input type="file" id="jsonIn" accept=".json" style="display:none" onchange="handleJsonImport(this.files)">
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -534,6 +575,7 @@ let equityChart=null,wlChart=null;
 /* Account selector state */
 let selectedAccounts=new Set(); // empty = all
 let accountNames=JSON.parse(localStorage.getItem('ef_accounts')||'[]');
+let cloudCfg=JSON.parse(localStorage.getItem('ef_cloud')||'{}');
 let acctModalMode='',acctModalTarget='';
 let pendingImportText='';
 let pendingImportFilename='';
@@ -668,6 +710,7 @@ function nav(id){
   if(id==='settings'){
     document.getElementById('cfgBal').value=settings.startingBalance;
     document.getElementById('cfgDLL').value=settings.dailyLossLimit;
+    updateCloudUI();
   }
 }
 
@@ -1405,6 +1448,124 @@ function closeTradePanel(){
   document.addEventListener('dragover',e=>e.preventDefault());
   document.addEventListener('drop',e=>{e.preventDefault();n=0;document.getElementById('dropOverlay').classList.remove('active');if(e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);});
 })();
+
+/* ══════════════════════════════════════════════
+   LOCAL BACKUP
+══════════════════════════════════════════════ */
+function exportBackup(){
+  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames};
+  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+  toast('Backup downloaded ✓','success');
+}
+
+function handleJsonImport(files){
+  if(!files||!files.length)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    try{
+      const data=JSON.parse(ev.target.result);
+      if(!Array.isArray(data.trades))throw new Error('Invalid backup file');
+      const date=data.exportedAt?new Date(data.exportedAt).toLocaleDateString():'unknown date';
+      if(!confirm(`Merge ${data.trades.length} trades from backup (${date}) into your current data?`))return;
+      const existingIds=new Set(trades.map(t=>t.id));
+      const fresh=data.trades.filter(t=>!existingIds.has(t.id));
+      trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
+      if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
+      saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
+      toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} from backup`,'success');
+    }catch(e){toast('Invalid backup file','error');}
+  };
+  reader.readAsText(files[0]);
+  document.getElementById('jsonIn').value='';
+}
+
+/* ══════════════════════════════════════════════
+   CLOUD SYNC (GitHub Gist)
+══════════════════════════════════════════════ */
+function saveCloudCfg(){
+  cloudCfg.token=(document.getElementById('cfgGhToken').value||'').trim();
+  cloudCfg.gistId=(document.getElementById('cfgGistId').value||'').trim();
+  localStorage.setItem('ef_cloud',JSON.stringify(cloudCfg));
+}
+
+function updateCloudUI(){
+  const tokenEl=document.getElementById('cfgGhToken');
+  const gistEl=document.getElementById('cfgGistId');
+  const lastEl=document.getElementById('cloudLastSync');
+  const badge=document.getElementById('cloudBadge');
+  if(tokenEl)tokenEl.value=cloudCfg.token||'';
+  if(gistEl)gistEl.value=cloudCfg.gistId||'';
+  if(lastEl){
+    if(cloudCfg.lastSync){
+      const d=new Date(cloudCfg.lastSync);
+      lastEl.textContent=`Last synced ${d.toLocaleDateString()} at ${d.toLocaleTimeString()}`;
+    } else {lastEl.textContent='';}
+  }
+  if(badge){
+    if(cloudCfg.token&&cloudCfg.gistId)
+      badge.innerHTML=`<span style="font-family:var(--font-d);font-size:9px;font-weight:700;color:var(--green);letter-spacing:.5px">● CONNECTED</span>`;
+    else if(cloudCfg.token)
+      badge.innerHTML=`<span style="font-family:var(--font-d);font-size:9px;font-weight:700;color:var(--yellow);letter-spacing:.5px">● TOKEN SET</span>`;
+    else
+      badge.innerHTML=`<span style="font-family:var(--font-d);font-size:9px;font-weight:700;color:var(--text3);letter-spacing:.5px">○ NOT CONNECTED</span>`;
+  }
+}
+
+async function pushToCloud(){
+  const token=cloudCfg.token||(document.getElementById('cfgGhToken')?.value||'').trim();
+  if(!token){toast('Enter your GitHub token in Settings → Cloud Sync','error');nav('settings');return;}
+  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames},null,2);
+  const body=JSON.stringify({description:'EdgeFlow Trading Journal — Cloud Backup',public:false,files:{'edgeflow-data.json':{content:payload}}});
+  const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
+  try{
+    const gistId=cloudCfg.gistId;
+    const res=gistId
+      ?await fetch(`https://api.github.com/gists/${gistId}`,{method:'PATCH',headers,body})
+      :await fetch('https://api.github.com/gists',{method:'POST',headers,body});
+    if(!res.ok){const e=await res.json();throw new Error(e.message||`HTTP ${res.status}`);}
+    const gist=await res.json();
+    cloudCfg={...cloudCfg,token,gistId:gist.id,lastSync:new Date().toISOString()};
+    localStorage.setItem('ef_cloud',JSON.stringify(cloudCfg));
+    updateCloudUI();
+    toast('Pushed to cloud ✓','success');
+  }catch(e){toast('Cloud push failed: '+e.message.slice(0,60),'error');}
+}
+
+async function pullFromCloud(){
+  const{token,gistId}=cloudCfg;
+  if(!token||!gistId){toast('No cloud backup linked — go to Settings → Cloud Sync','error');nav('settings');return;}
+  try{
+    const res=await fetch(`https://api.github.com/gists/${gistId}`,{headers:{Authorization:`Bearer ${token}`}});
+    if(!res.ok)throw new Error(`HTTP ${res.status}`);
+    const gist=await res.json();
+    const content=gist.files['edgeflow-data.json']?.content;
+    if(!content)throw new Error('No data found in Gist');
+    const data=JSON.parse(content);
+    if(!Array.isArray(data.trades))throw new Error('Invalid data format');
+    const date=data.exportedAt?new Date(data.exportedAt).toLocaleDateString():'unknown date';
+    if(!confirm(`Replace all local data with cloud backup?\n\n${data.trades.length} trades · saved ${date}\n\nThis will overwrite your current data.`))return;
+    trades=data.trades;
+    if(data.accountNames)accountNames=data.accountNames;
+    if(data.settings){Object.assign(settings,data.settings);localStorage.setItem('ef_settings',JSON.stringify(settings));}
+    saveTrades();saveAccountNames();
+    cloudCfg.lastSync=new Date().toISOString();
+    localStorage.setItem('ef_cloud',JSON.stringify(cloudCfg));
+    selectedAccounts.clear();
+    refreshAll();updateFileChips();renderAcctOpts();updateCloudUI();
+    toast(`Loaded ${trades.length} trades from cloud ✓`,'success');
+  }catch(e){toast('Cloud pull failed: '+e.message.slice(0,60),'error');}
+}
+
+// Auto-push whenever tab is hidden (switching tabs, minimizing, or closing)
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='hidden'&&cloudCfg.token&&cloudCfg.gistId){
+    pushToCloud();
+  }
+});
 
 /* ══════════════════════════════════════════════
    THEME
