@@ -2,7 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="EdgeFlow">
 <title>EDGEFLOW — Trading Journal</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
@@ -464,7 +467,7 @@ textarea{resize:vertical;min-height:72px;}
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn primary" onclick="exportBackup()">↓ Export Backup</button>
-          <label for="jsonIn" class="btn" style="cursor:pointer;">↑ Import Backup</label>
+          <button class="btn" onclick="startImportBackup()">↑ Import Backup</button>
           <button class="btn" onclick="triggerImport()">↑ Import CSV</button>
           <button class="btn danger" onclick="confirmClear()">🗑 Clear All Data</button>
         </div>
@@ -602,14 +605,40 @@ textarea{resize:vertical;min-height:72px;}
       </div>
 
       <!-- Local backup option -->
-      <label for="jsonIn" class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;display:flex;cursor:pointer;">
+      <button class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;" onclick="startImportBackup()">
         ↑ Import Backup File
-      </label>
+      </button>
 
       <!-- Skip -->
       <button class="btn" style="width:100%;justify-content:center;color:var(--text3);border-color:transparent;background:transparent;" onclick="closeM('startupModal')">
         Continue without importing
       </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PASTE IMPORT MODAL (PWA / iOS standalone) ══ -->
+<div class="overlay" id="pasteImportModal">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-hdr">
+      <div class="modal-title">Import Backup</div>
+      <button class="modal-close" onclick="closeM('pasteImportModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text2);margin-bottom:14px;font-family:var(--font-d);line-height:1.8;">
+        On this device, paste your backup JSON below. First export a backup on another device, open the file, select all the text, and copy it.
+      </p>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-bottom:12px;" onclick="pasteFromClipboard()">
+        📋 Paste from Clipboard
+      </button>
+      <div class="fg">
+        <label>Or paste JSON manually</label>
+        <textarea id="pasteImportText" rows="7" placeholder='{"version":1,"trades":[...]}'></textarea>
+      </div>
+      <div class="form-actions">
+        <button class="btn" onclick="closeM('pasteImportModal')">Cancel</button>
+        <button class="btn primary" onclick="importFromPastedText()">Import</button>
+      </div>
     </div>
   </div>
 </div>
@@ -1536,14 +1565,71 @@ function closeTradePanel(){
 /* ══════════════════════════════════════════════
    LOCAL BACKUP
 ══════════════════════════════════════════════ */
-function exportBackup(){
+function isPWA(){
+  return window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches;
+}
+
+async function exportBackup(){
   const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames};
-  const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+  const json=JSON.stringify(data,null,2);
+  const filename=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
+  // On iOS PWA, use Web Share API so user can save to Files, AirDrop, etc.
+  if(navigator.canShare&&navigator.share){
+    try{
+      const file=new File([json],filename,{type:'application/json'});
+      if(navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:'EdgeFlow Backup',text:'EdgeFlow trading data backup'});
+        return;
+      }
+    }catch(e){if(e.name==='AbortError')return;}
+  }
+  // Fallback: trigger download
+  const blob=new Blob([json],{type:'application/json'});
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
-  a.href=url;a.download=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
   toast('Backup downloaded ✓','success');
+}
+
+function startImportBackup(){
+  closeM('startupModal');
+  if(isPWA()){
+    // File inputs are broken in iOS standalone — use paste modal instead
+    document.getElementById('pasteImportText').value='';
+    document.getElementById('pasteImportModal').classList.add('open');
+  } else {
+    document.getElementById('jsonIn').click();
+  }
+}
+
+async function pasteFromClipboard(){
+  try{
+    const text=await navigator.clipboard.readText();
+    if(!text){toast('Clipboard is empty','error');return;}
+    document.getElementById('pasteImportText').value=text;
+    toast('Pasted from clipboard','success');
+  }catch(e){
+    toast('Could not read clipboard — paste manually below','error');
+  }
+}
+
+function importFromPastedText(){
+  const text=document.getElementById('pasteImportText').value.trim();
+  if(!text){toast('Nothing to import','error');return;}
+  try{
+    const data=JSON.parse(text);
+    if(!Array.isArray(data.trades))throw new Error('Invalid backup');
+    const date=data.exportedAt?new Date(data.exportedAt).toLocaleDateString():'unknown date';
+    if(!confirm(`Merge ${data.trades.length} trades from backup (${date})?`))return;
+    const existingIds=new Set(trades.map(t=>t.id));
+    const fresh=data.trades.filter(t=>!existingIds.has(t.id));
+    trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
+    if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
+    saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
+    closeM('pasteImportModal');
+    toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} ✓`,'success');
+  }catch(e){toast('Invalid JSON — check your backup text','error');}
 }
 
 function handleJsonImport(files){
