@@ -261,9 +261,39 @@ textarea{resize:vertical;min-height:72px;}
 
 /* ── MONTH SUMMARY ── */
 .month-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+
+/* ── HAMBURGER ── */
+.hamburger{display:none;flex-direction:column;justify-content:center;gap:5px;width:36px;height:36px;padding:6px;border-radius:var(--r-sm);border:1px solid var(--border2);background:var(--surface2);cursor:pointer;flex-shrink:0;}
+.hamburger span{display:block;height:2px;background:var(--text2);border-radius:2px;transition:all .22s;}
+.hamburger:hover span{background:var(--accent);}
+
+/* ── SIDEBAR BACKDROP ── */
+.sidebar-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:699;backdrop-filter:blur(2px);}
+
+/* ── MOBILE ── */
+@media(max-width:768px){
+  .hamburger{display:flex;}
+  .sidebar{
+    position:fixed;top:0;left:0;bottom:0;z-index:700;
+    transform:translateX(-100%);
+    transition:transform .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:6px 0 32px rgba(0,0,0,.35);
+  }
+  .sidebar.open{transform:translateX(0);}
+  .sidebar-backdrop.open{display:block;}
+  .stats-grid{grid-template-columns:repeat(2,1fr);}
+  .chart-row{grid-template-columns:1fr;}
+  .month-summary{grid-template-columns:repeat(2,1fr);}
+  .acct-compare-bar.two,.acct-compare-bar.three{grid-template-columns:1fr;}
+  .topbar{padding:0 12px;}
+  .content{padding:14px;}
+  .acct-trigger-label{max-width:100px;}
+  .day-panel,.trade-panel{width:100%;}
+}
 </style>
 </head>
 <body>
+<div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeSidebar()"></div>
 <div class="app">
 
 <!-- ══ SIDEBAR ══ -->
@@ -292,6 +322,9 @@ textarea{resize:vertical;min-height:72px;}
 
   <!-- TOPBAR -->
   <div class="topbar">
+    <button class="hamburger" onclick="toggleSidebar()" aria-label="Toggle menu">
+      <span></span><span></span><span></span>
+    </button>
     <div class="topbar-title" id="topTitle">Dashboard</div>
     <!-- Account selector -->
     <div class="acct-selector" id="acctSelector">
@@ -739,6 +772,7 @@ function confirmAcctEdit(){
    NAV
 ══════════════════════════════════════════════ */
 function nav(id){
+  closeSidebar();
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
@@ -1625,6 +1659,20 @@ document.addEventListener('visibilitychange',()=>{
     pushToCloud();
   }
 });
+
+/* ══════════════════════════════════════════════
+   SIDEBAR TOGGLE (mobile)
+══════════════════════════════════════════════ */
+function toggleSidebar(){
+  const sidebar=document.querySelector('.sidebar');
+  const backdrop=document.getElementById('sidebarBackdrop');
+  const isOpen=sidebar.classList.contains('open');
+  isOpen?closeSidebar():(sidebar.classList.add('open'),backdrop.classList.add('open'));
+}
+function closeSidebar(){
+  document.querySelector('.sidebar').classList.remove('open');
+  document.getElementById('sidebarBackdrop').classList.remove('open');
+}
 
 /* ══════════════════════════════════════════════
    THEME
