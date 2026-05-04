@@ -488,18 +488,21 @@ textarea{resize:vertical;min-height:68px;}
       <!-- TRADOVATE / APEX -->
       <div id="form-tradovate">
         <div class="api-notice" style="margin-bottom:14px;">
-          ⚡ <strong>Tradovate / Apex Trader Funding:</strong> EDGEFLOW polls your Tradovate account every 5 seconds via REST API. New fills are automatically logged. Get your CID + API key at <strong>trader.tradovate.com → Settings → API Access</strong>.
+          ⚡ <strong>Tradovate / Apex Trader Funding</strong><br><br>
+          To get your <strong>App ID</strong>, <strong>CID</strong>, and <strong>Secret</strong>:<br>
+          1. Log in at <strong>trader.tradovate.com</strong><br>
+          2. Go to <strong>Account → API Access</strong> and create an app<br>
+          3. Copy the App Name (App ID), CID, and Secret below
         </div>
         <div class="form-grid">
           <div class="fg"><label>Username (Email)</label><input type="text" id="tv-user" placeholder="your@email.com"></div>
-          <div class="fg"><label>Password / API Key</label><input type="password" id="tv-key" placeholder="••••••••••••••••"></div>
-          <div class="fg"><label>CID (Customer ID)</label><input type="text" id="tv-cid" placeholder="123456"></div>
+          <div class="fg"><label>Account Password</label><input type="password" id="tv-key" placeholder="••••••••••••••••"></div>
+          <div class="fg"><label>App ID (App Name)</label><input type="text" id="tv-appid" placeholder="My App"></div>
+          <div class="fg"><label>CID (numeric)</label><input type="text" id="tv-cid" placeholder="123456"></div>
+          <div class="fg"><label>Secret Key</label><input type="password" id="tv-sec" placeholder="••••••••••••••••"></div>
           <div class="fg"><label>Environment</label>
             <select id="tv-env"><option value="demo">Demo / Simulation</option><option value="live">Live Account</option></select>
           </div>
-        </div>
-        <div style="margin-top:14px;font-size:11px;color:var(--text3);">
-          Real endpoint: <code style="color:var(--accent);">POST https://[live|demo].tradovateapi.com/v1/auth/accesstokenrequest</code>
         </div>
       </div>
 
@@ -1274,7 +1277,12 @@ async function connectAPI(){
   if(broker==='tradovate'||broker==='topstep'){
     user=document.getElementById(broker==='tradovate'?'tv-user':'ts-user')?.value||'';
     pass=document.getElementById(broker==='tradovate'?'tv-key':'ts-key')?.value||'';
-    if(broker==='tradovate')extra={cid:document.getElementById('tv-cid').value,env:document.getElementById('tv-env').value};
+    if(broker==='tradovate')extra={
+      appId:document.getElementById('tv-appid').value.trim(),
+      cid:document.getElementById('tv-cid').value.trim(),
+      sec:document.getElementById('tv-sec').value.trim(),
+      env:document.getElementById('tv-env').value
+    };
   } else if(broker==='rithmic'){
     user=document.getElementById('r-user')?.value||'';
     pass=document.getElementById('r-pass')?.value||'';
@@ -1312,9 +1320,10 @@ async function connectTradovate(broker,user,pass,extra){
       body:JSON.stringify({
         name:user,
         password:pass,
-        appId:'EdgeFlow',
+        appId:extra.appId||'EdgeFlow',
         appVersion:'1.0',
         cid:extra.cid?parseInt(extra.cid):undefined,
+        sec:extra.sec||undefined,
         deviceId
       })
     });
