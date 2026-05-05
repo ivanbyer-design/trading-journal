@@ -265,6 +265,11 @@ textarea{resize:vertical;min-height:72px;}
 /* ── MONTH SUMMARY ── */
 .month-summary{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
 
+/* ── FILE INPUT OVERLAY (iOS PWA workaround) ── */
+/* Input sits on top of the button — user taps the input directly, iOS can't block it */
+.file-input-btn{position:relative;overflow:hidden;cursor:pointer;}
+.file-input-btn input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:100px;-webkit-appearance:none;}
+
 /* ── PULL TO REFRESH ── */
 .ptr-indicator{position:fixed;top:-56px;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:9px 18px;font-family:var(--font-d);font-size:12px;font-weight:700;color:var(--accent);z-index:9998;white-space:nowrap;box-shadow:var(--shadow);transition:top .18s ease,opacity .18s;}
 .ptr-indicator.ready{color:var(--green);}
@@ -467,7 +472,7 @@ textarea{resize:vertical;min-height:72px;}
         </p>
         <div style="display:flex;gap:10px;flex-wrap:wrap;">
           <button class="btn primary" onclick="exportBackup()">↓ Export Backup</button>
-          <label for="jsonIn" class="btn" style="cursor:pointer;">↑ Import Backup</label>
+          <div class="btn file-input-btn">↑ Import Backup<input type="file" accept=".json" onchange="handleJsonImport(this.files)"></div>
           <button class="btn" onclick="triggerImport()">↑ Import CSV</button>
           <button class="btn danger" onclick="confirmClear()">🗑 Clear All Data</button>
         </div>
@@ -604,10 +609,11 @@ textarea{resize:vertical;min-height:72px;}
         <div id="startupLastSync" style="text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-d);margin-top:5px;"></div>
       </div>
 
-      <!-- Local backup option -->
-      <label for="jsonIn" class="btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;display:flex;cursor:pointer;">
+      <!-- Local backup option — file input overlaid directly on button so iOS PWA can't block it -->
+      <div class="btn file-input-btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;display:flex;">
         ↑ Import Backup File
-      </label>
+        <input type="file" accept=".json" onchange="handleJsonImport(this.files)">
+      </div>
 
       <!-- Skip -->
       <button class="btn" style="width:100%;justify-content:center;color:var(--text3);border-color:transparent;background:transparent;" onclick="closeM('startupModal')">
@@ -639,7 +645,6 @@ textarea{resize:vertical;min-height:72px;}
 </div>
 
 <input type="file" id="csvIn" accept=".csv,.txt" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;pointer-events:none;" onchange="handleFiles(this.files)">
-<input type="file" id="jsonIn" accept=".json" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;" onchange="handleJsonImport(this.files)">
 <div class="toast-container" id="toasts"></div>
 
 <script>
