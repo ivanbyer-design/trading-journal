@@ -316,7 +316,10 @@ textarea{resize:vertical;min-height:72px;}
     <div class="logo-sub">Trading Journal</div>
     <div class="logo-actions">
       <button class="logo-action" onclick="exportBackup()" title="Download a backup of all trades">↓ Export</button>
-      <button class="logo-action accent" onclick="openStartupModal()" title="Import a backup or sync from cloud">↑ Import</button>
+      <div class="logo-action accent file-input-btn" title="Import a backup file">
+        ↑ Import
+        <input type="file" accept=".json" onchange="handleJsonImport(this.files)">
+      </div>
     </div>
   </div>
   <nav class="nav">
@@ -598,7 +601,7 @@ textarea{resize:vertical;min-height:72px;}
     </div>
     <div class="modal-body">
       <p style="font-size:12px;color:var(--text2);margin-bottom:20px;font-family:var(--font-d);line-height:1.8;">
-        Would you like to load a backup before viewing your journal?
+        Would you like to sync your latest data from the cloud?
       </p>
 
       <!-- Cloud option — shown only when configured -->
@@ -609,15 +612,14 @@ textarea{resize:vertical;min-height:72px;}
         <div id="startupLastSync" style="text-align:center;font-size:10px;color:var(--text3);font-family:var(--font-d);margin-top:5px;"></div>
       </div>
 
-      <!-- Local backup option — file input overlaid directly on button so iOS PWA can't block it -->
-      <div class="btn file-input-btn" style="width:100%;justify-content:center;padding:12px;margin-bottom:10px;display:flex;">
-        ↑ Import Backup File
-        <input type="file" accept=".json" onchange="handleJsonImport(this.files)">
+      <!-- Hint about sidebar import button -->
+      <div style="font-size:11px;color:var(--text3);font-family:var(--font-d);text-align:center;margin-bottom:14px;line-height:1.7;">
+        To import a backup file, use the <strong style="color:var(--accent)">↑ Import</strong> button in the top of the sidebar.
       </div>
 
       <!-- Skip -->
-      <button class="btn" style="width:100%;justify-content:center;color:var(--text3);border-color:transparent;background:transparent;" onclick="closeM('startupModal')">
-        Continue without importing
+      <button class="btn" style="width:100%;justify-content:center;padding:12px;" onclick="closeM('startupModal')">
+        Continue
       </button>
     </div>
   </div>
