@@ -639,6 +639,23 @@ textarea{resize:vertical;min-height:72px;}
   </div>
 </div>
 
+<!-- ══ BACKUP CONFIRM MODAL ══ -->
+<div class="overlay" id="backupConfirmModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-hdr">
+      <div class="modal-title">Import Backup</div>
+      <button class="modal-close" onclick="closeM('backupConfirmModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p id="backupConfirmMsg" style="font-size:12px;color:var(--text2);margin-bottom:20px;font-family:var(--font-d);line-height:1.8;"></p>
+      <div class="form-actions">
+        <button class="btn" onclick="closeM('backupConfirmModal')">Cancel</button>
+        <button class="btn primary" onclick="confirmBackupImport()">Import</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ══ DROP OVERLAY ══ -->
 <div class="drop-overlay" id="dropOverlay">
   <div class="drop-overlay-icon">☕</div>
@@ -672,6 +689,7 @@ let cloudCfg=JSON.parse(localStorage.getItem('ef_cloud')||'{}');
 let acctModalMode='',acctModalTarget='';
 let pendingImportText='';
 let pendingImportFilename='';
+let pendingBackupData=null;
 
 /* ══════════════════════════════════════════════
    ACCOUNT HELPERS
@@ -1582,18 +1600,26 @@ function handleJsonImport(files){
     try{
       const data=JSON.parse(ev.target.result);
       if(!Array.isArray(data.trades))throw new Error('Invalid backup file');
+      pendingBackupData=data;
       const date=data.exportedAt?new Date(data.exportedAt).toLocaleDateString():'unknown date';
-      if(!confirm(`Merge ${data.trades.length} trades from backup (${date}) into your current data?`))return;
-      const existingIds=new Set(trades.map(t=>t.id));
-      const fresh=data.trades.filter(t=>!existingIds.has(t.id));
-      trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
-      if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
-      saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
-      toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} from backup`,'success');
-    }catch(e){toast('Invalid backup file','error');}
+      document.getElementById('backupConfirmMsg').textContent=`Merge ${data.trades.length} trade${data.trades.length!==1?'s':''} from backup (${date}) into your current data?`;
+      document.getElementById('backupConfirmModal').classList.add('open');
+    }catch(e){pendingBackupData=null;toast('Invalid backup file','error');}
   };
   reader.readAsText(files[0]);
-  document.getElementById('jsonIn').value='';
+}
+
+function confirmBackupImport(){
+  closeM('backupConfirmModal');
+  if(!pendingBackupData)return;
+  const data=pendingBackupData;
+  pendingBackupData=null;
+  const existingIds=new Set(trades.map(t=>t.id));
+  const fresh=data.trades.filter(t=>!existingIds.has(t.id));
+  trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
+  saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
+  toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} from backup`,'success');
 }
 
 /* ══════════════════════════════════════════════
