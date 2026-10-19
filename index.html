@@ -801,6 +801,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .wk-chip.on.imp-l{background:rgba(232,200,40,.2);border-color:#b89a06;color:#b89a06;}
 #newsSettings .wk-chip.on:not([class*=imp-]){background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
 @media(max-width:640px){.cal-news{margin-top:3px;gap:2px;}.cal-news .nf{font-size:0;padding:0;border-radius:50%;gap:0;}.cal-news .nf svg{display:none;}.cal-news .nf{width:9px;height:9px;}}
+.upd-bar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:3000;display:flex;align-items:center;gap:12px;padding:10px 12px 10px 18px;border-radius:12px;background:var(--hdr);color:#fff;font-family:var(--font-d);font-size:14px;font-weight:500;box-shadow:0 12px 40px rgba(10,5,30,.4);max-width:calc(100vw - 32px);}
+.upd-bar button{height:34px;padding:0 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-family:var(--font-d);font-size:13px;font-weight:700;cursor:pointer;}
+.upd-bar button.x{background:none;padding:0 6px;font-size:20px;opacity:.7;}
 </style>
 </head>
 <body>
@@ -3611,7 +3614,33 @@ function init(){
   setupPullToRefresh();
   setTimeout(openStartupModal, 400);
 }
+/* ══════════════════════════════════════════════
+   UPDATE CHECK (GitHub Pages lets browsers cache the page for 10 min)
+══════════════════════════════════════════════ */
+function appCode(doc){return[...doc.scripts].map(s=>s.textContent).find(t=>t.includes('function checkAppUpdate('))||'';}
+let appUpdChecked=0;
+async function checkAppUpdate(initial){
+  if(location.protocol==='file:'||Date.now()-appUpdChecked<60e3)return;
+  appUpdChecked=Date.now();
+  try{
+    // cache:'reload' also refreshes the browser's cached copy, so a reload picks up the new version
+    const r=await fetch(location.pathname+location.search,{cache:'reload'});if(!r.ok)return;
+    const fresh=appCode(new DOMParser().parseFromString(await r.text(),'text/html'));
+    let tried=false;try{tried=!!sessionStorage.getItem('ef_upd');}catch(e){}
+    if(!fresh||fresh===appCode(document)){try{sessionStorage.removeItem('ef_upd');}catch(e){}return;}
+    if(initial&&!tried){try{sessionStorage.setItem('ef_upd','1');}catch(e){}location.reload();return;}
+    showUpdateBar();
+  }catch(e){}
+}
+function showUpdateBar(){
+  if(document.getElementById('updBar'))return;
+  document.body.insertAdjacentHTML('beforeend',`<div class="upd-bar" id="updBar"><span>A new version of EdgeFlow is available.</span><button onclick="appReload()">Reload</button><button class="x" onclick="this.parentElement.remove()" aria-label="Dismiss">×</button></div>`);
+}
+function appReload(){try{flushDaySave();saveStrategies();}catch(e){}location.reload();}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')checkAppUpdate(false);});
+
 init();
+setTimeout(()=>checkAppUpdate(true),800);
 </script>
 <datalist id="stratNames"></datalist>
 </body>
