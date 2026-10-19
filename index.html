@@ -2638,7 +2638,9 @@ function newsLoad(wk,force){
     .then(r=>r.ok?r.json():r.status===404?null:Promise.reject(r.status))
     .then(d=>{
       let events=d?.events||null;const prev=newsCache[wk]?.events;
-      if(events&&prev){const k=e=>e.t+'|'+e.cur+'|'+e.date,seen=new Set(events.map(k));events=[...events,...prev.filter(e=>!seen.has(k(e)))].sort((a,b)=>a.date.localeCompare(b.date));}
+      // keep a cached event the feed dropped only if its day (ET) is already over; dropped earlier = cancelled
+      if(events&&prev){const k=e=>e.t+'|'+e.cur+'|'+e.date,seen=new Set(events.map(k)),todayET=new Date().toLocaleDateString('en-CA',{timeZone:'America/New_York'});
+        events=[...events,...prev.filter(e=>!seen.has(k(e))&&e.date.slice(0,10)<todayET)].sort((a,b)=>a.date.localeCompare(b.date));}
       if(!events&&prev)events=prev;
       newsCache[wk]={at:Date.now(),events,fetched:d?.fetched||newsCache[wk]?.fetched||null};try{localStorage.setItem('ef_news',JSON.stringify(newsCache));}catch(e){}newsQueueUI();})
     .catch(()=>{if(!newsCache[wk]?.events){newsCache[wk]={at:Date.now()-1500e3,events:null,err:true};newsQueueUI();}})

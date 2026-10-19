@@ -7,6 +7,7 @@ The feed only covers the current week, so running this on a schedule builds an a
 import json, os, sys, urllib.request
 from collections import Counter
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 FEED = "https://nfs.faireconomy.media/ff_calendar_thisweek.json"
 
@@ -39,10 +40,12 @@ def main(out):
     if os.path.exists(path):
         with open(path) as f:
             old = json.load(f).get("events") or []
-    # never drop history: keep stored events the feed no longer lists (released/rescheduled)
+    # Keep a stored event the feed no longer lists only if its day (ET) was already over:
+    # it happened. Removed before its day ended means cancelled/rescheduled, so drop it.
+    today_et = datetime.now(ZoneInfo("America/New_York")).date().isoformat()
     key = lambda e: (e["t"], e["cur"], e["date"])
     seen = {key(e) for e in events}
-    events = sorted(events + [e for e in old if key(e) not in seen], key=lambda e: e["date"])
+    events = sorted(events + [e for e in old if key(e) not in seen and e["date"][:10] < today_et], key=lambda e: e["date"])
     if old != events:
         with open(path, "w") as f:
             json.dump({"week": week, "fetched": datetime.now(timezone.utc).isoformat(timespec="seconds"),
