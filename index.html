@@ -526,6 +526,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 
 /* ══ DAY MODAL (Tradezella style) ══ */
 .trade-panel{z-index:850;}
+#tradeModal{z-index:900;}
+.tp-hdr-btns{display:flex;gap:6px;flex-shrink:0;}
+.tp-edit{height:28px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font-d);font-size:11px;font-weight:700;}
+.tp-edit:hover{color:var(--text);border-color:var(--accent);}
 .dm-overlay{position:fixed;inset:0;background:rgba(15,10,30,.55);z-index:790;display:none;align-items:center;justify-content:center;padding:28px;}
 .dm-overlay.open{display:flex;}
 .dm{background:var(--surface);border-radius:14px;width:100%;max-width:1200px;max-height:calc(100vh - 56px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(10,5,30,.35);overflow:hidden;font-family:var(--font-d);}
@@ -1167,7 +1171,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
     <div class="modal-hdr"><div class="modal-title" id="tradeMTitle">Log Trade</div><button class="modal-close" onclick="closeM('tradeModal')">×</button></div>
     <div class="modal-body">
       <div class="form-grid">
-        <div class="fg"><label>Symbol</label><select id="t-sym"><option>NQ</option><option>ES</option><option>MNQ</option><option>MES</option><option>CL</option><option>GC</option><option>RTY</option></select></div>
+        <div class="fg"><label>Symbol</label><select id="t-sym" onchange="mtRHint()"><option>NQ</option><option>ES</option><option>MNQ</option><option>MES</option><option>CL</option><option>GC</option><option>RTY</option></select></div>
         <div class="fg"><label>Direction</label><select id="t-dir" onchange="mtRHint()"><option value="LONG">Long</option><option value="SHORT">Short</option></select></div>
         <div class="fg"><label>Entry Price</label><input type="number" id="t-entry" step="0.25" oninput="mtRHint()"></div>
         <div class="fg"><label>Exit Price</label><input type="number" id="t-exit" step="0.25" oninput="mtRHint()"></div>
@@ -1175,7 +1179,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="fg"><label>Target</label><input type="number" id="t-target" step="0.25" placeholder="profit target (optional)" oninput="mtRHint()"></div>
         <div class="fg"><label>Planned R</label><input type="text" id="t-prr" readonly tabindex="-1" placeholder="auto: stop + target"></div>
         <div class="fg"><label>Realized R</label><input type="text" id="t-rhint" readonly tabindex="-1" placeholder="auto: stop + exit"></div>
-        <div class="fg"><label>Contracts</label><input type="number" id="t-qty" value="1" min="1"></div>
+        <div class="fg"><label>Contracts</label><input type="number" id="t-qty" value="1" min="1" oninput="mtRHint()"></div>
         <div class="fg"><label>Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
         <div class="fg"><label>P&amp;L ($)</label><input type="number" id="t-pnl" step="0.01" placeholder="auto-calculated"></div>
         <div class="fg"><label>Account</label><input type="text" id="t-acct" placeholder="Account name"></div>
@@ -1211,7 +1215,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
       <div class="tp-sym" id="tpSym">—</div>
       <div class="tp-meta" id="tpMeta"></div>
     </div>
-    <button class="tp-close" onclick="closeTradePanel()">×</button>
+    <div class="tp-hdr-btns">
+      <button class="tp-edit" onclick="openTradeModal(activeTradePanelId)">✎ Edit trade</button>
+      <button class="tp-close" onclick="closeTradePanel()">×</button>
+    </div>
   </div>
   <div class="tp-body" id="tpBody"></div>
 </div>
@@ -3215,6 +3222,8 @@ function openTradeModal(id=null){
     }
   }
   document.getElementById('tradeMTitle').textContent=id?'Edit Trade':'Log Trade';
+  if(!id)document.getElementById('t-pnl').value='';
+  document.getElementById('t-pnl').dataset.auto=mtAutoPnl();
   mkRender('mt');mtRHint();
   document.getElementById('tradeModal').classList.add('open');
 }
@@ -3239,16 +3248,27 @@ function saveTrade(){
     duration:'',notes:document.getElementById('t-notes').value,setup:'',emotions,source:'manual'};
   if(isFinite(stop))t.stop=stop;
   if(isFinite(target))t.target=target;
+  if(editId){delete t.setup;delete t.duration;delete t.source;}
   if(mtDraft.charts?.length)t.charts=mtDraft.charts;
   const keep=new Set(mtIds(t.charts));mtIds(mtOrig).forEach(x=>{if(!keep.has(x))imgDel(x);});
   mtOrig=t.charts||[];
   if(editId){const i=trades.findIndex(x=>x.id===editId);if(i!==-1)trades[i]={...trades[i],...t,charts:t.charts,stop:t.stop,target:t.target};}
   else trades.unshift(t);
   saveTrades();renderAcctOpts();updateFileChips();refreshAll();closeM('tradeModal');
+  if(editId&&activeTradePanelId===editId&&document.getElementById('tradePanel').classList.contains('open'))openTradeDetail(editId);
   toast(editId?'Trade updated ✓':'Trade logged ✓','success');
 }
 
+function mtAutoPnl(){
+  const v=k=>parseFloat(document.getElementById(k).value),e=v('t-entry'),x=v('t-exit');
+  if(!isFinite(e)||!isFinite(x))return'';
+  const dir=document.getElementById('t-dir').value,q=parseInt(document.getElementById('t-qty').value)||1,tv=TICK[document.getElementById('t-sym').value]||5;
+  return((dir==='LONG'?x-e:e-x)*q*(tv/.25)).toFixed(2);
+}
 function mtRHint(){
+  const pf=document.getElementById('t-pnl'),auto=mtAutoPnl();
+  if(pf.value!==''&&pf.dataset.auto!==undefined&&parseFloat(pf.value)===parseFloat(pf.dataset.auto))pf.value=auto;
+  pf.dataset.auto=auto;
   const v=k=>parseFloat(document.getElementById(k).value);
   const t={direction:document.getElementById('t-dir').value,entry:v('t-entry'),exit:v('t-exit'),stop:v('t-stop'),target:v('t-target'),contracts:parseInt(document.getElementById('t-qty').value)||1,symbol:document.getElementById('t-sym').value};
   const el=document.getElementById('t-rhint'),pl=document.getElementById('t-prr');el.value=pl.value='';
