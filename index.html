@@ -3299,6 +3299,22 @@ function closeM(id){
 ══════════════════════════════════════════════ */
 let activeTradePanelId=null;
 
+// Strategy chips from the Strategies tab; trades link to a strategy by name (t.setup)
+function tpStrategyHTML(t){
+  const lc=(t.setup||'').trim().toLowerCase(),named=strategies.filter(s=>(s.name||'').trim());
+  const chip=(name,color,title)=>`<span class="stag${name.trim().toLowerCase()===lc?' sel':''}" data-n="${esc(name)}"${title?` title="${title}"`:''} onclick="setTradeStrategy('${t.id}',this.dataset.n)">${color?`<i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-right:5px;vertical-align:1px"></i>`:''}${esc(name)}</span>`;
+  const chips=named.map(s=>chip(s.name,s.color));
+  if(lc&&!named.some(s=>s.name.trim().toLowerCase()===lc))chips.push(chip(t.setup,'','Not in your Strategies tab. Tap to untag'));
+  const go=`<a href="#" style="font-size:11px;color:var(--accent);font-family:var(--font-d);font-weight:700" onclick="event.preventDefault();closeTradePanel();nav('strategies')">`;
+  return chips.length?`<div class="tags-wrap">${chips.join('')}</div><div style="margin-top:8px">${go}Manage strategies →</a></div>`
+    :`<div style="font-size:12px;color:var(--text3)">No strategies yet. ${go}Create one in the Strategies tab →</a></div>`;
+}
+function setTradeStrategy(id,name){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  t.setup=(t.setup||'').trim().toLowerCase()===name.trim().toLowerCase()?'':name;
+  saveTrades();refreshAll();
+  const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
+}
 function setTradeAccount(id,sel){
   const t=trades.find(x=>x.id===id);if(!t)return;
   let a=sel.value;
@@ -3425,6 +3441,12 @@ function openTradeDetail(id){
       ${mkViewHTML('tr')}
     </div>`:''}
 
+    <!-- Strategy (picked from the Strategies tab) -->
+    <div class="tp-section">
+      <div class="tp-section-title">Strategy</div>
+      ${tpStrategyHTML(t)}
+    </div>
+
     <!-- Stats -->
     <div class="tp-section">
       <div class="tp-section-title">Trade Stats</div>
@@ -3456,11 +3478,6 @@ function openTradeDetail(id){
     <!-- Notes & Setup -->
     <div class="tp-section">
       <div class="tp-section-title">Notes</div>
-      <div class="tp-field">
-        <label>Setup / Strategy</label>
-        <input type="text" value="${(t.setup||'').replace(/"/g,'&quot;')}" placeholder="e.g. Break & Retest, VWAP Reclaim" list="stratNames" onfocus="stFillDatalist()"
-          onblur="patchTrade('${id}',{setup:this.value})">
-      </div>
       <div class="tp-field">
         <label>Trade Notes</label>
         <textarea rows="4" placeholder="What did you see? Why this trade? What would you do differently?"
