@@ -404,7 +404,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .awl-bar i{display:block;height:100%;}
 .awl-lbls{display:flex;justify-content:space-between;margin-top:8px;font-family:var(--font-d);font-size:12px;font-weight:600;}
 .dash-row3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:16px;margin-bottom:16px;}
-.dash-row2{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1250px);gap:16px;}
+.dash-row2{display:grid;grid-template-columns:minmax(280px,1fr) minmax(0,1320px);gap:16px;}
 @media(max-width:1700px){.dash-row2{grid-template-columns:1fr;}.dash-row2>.tz-card:last-child{order:-1;}}
 .tz-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:var(--card-shadow);min-width:0;display:flex;flex-direction:column;}
 .tz-card-h{display:flex;align-items:center;gap:8px;padding:16px 18px;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:15px;font-weight:600;color:var(--text);min-height:58px;flex-wrap:wrap;}
@@ -436,10 +436,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-mstats .day-pill{font-size:12px;}
 .day-pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:10px;font-family:var(--font-d);font-size:11px;font-weight:600;padding:2px 9px;}
 .day-pill.g{background:var(--green-dim);color:var(--green);} .day-pill.r{background:var(--red-dim);color:var(--red);}
-.cal-grid{grid-template-columns:minmax(104px,140px) repeat(7,minmax(0,1fr)) minmax(96px,128px);gap:8px;}
+.cal-grid{grid-template-columns:minmax(150px,190px) repeat(7,minmax(0,1fr)) minmax(96px,128px);gap:8px;}
 .cal-dow{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 0;font-size:13px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--text);}
 .cal-dow.cal-dow-wk{border:none;background:none;}
-.cal-cell{min-height:127px;padding:8px;border-radius:8px;background:var(--surface);align-items:flex-end;text-align:right;}
+.cal-cell{min-height:160px;padding:8px;border-radius:8px;background:var(--surface);align-items:flex-end;text-align:right;}
 .cal-cell.empty{background:var(--surface2);border-color:var(--border);}
 .cal-cell.win-day{background:var(--green-dim);border:1px solid var(--green);border-left:1px solid var(--green);}
 .cal-cell.loss-day{background:var(--red-dim);border:1px solid var(--red);border-left:1px solid var(--red);}
@@ -462,7 +462,23 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-ol-add{font-size:12px;font-weight:600;color:var(--accent);}
 .cal-ol-bias{font-size:13px;font-weight:700;}
 .cal-ol-k{font-weight:600;color:var(--text2);}
-.cal-ol-meta{font-size:10px;color:var(--text2);line-height:1.35;overflow:hidden;text-overflow:ellipsis;}
+.cal-ol-meta{font-size:10px;color:var(--text2);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}
+.cal-ol-inv{font-size:11px;font-weight:500;color:var(--red);background:var(--red-dim);border-left:3px solid var(--red);border-radius:4px;padding:3px 6px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.cal-ol-inv b{font-weight:700;}
+/* weekly prep: bias + invalidation */
+.wk-banner{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:12px;margin-bottom:16px;font-family:var(--font-d);}
+.wk-banner>div{border-radius:12px;padding:12px 16px;border:1px solid var(--border);background:var(--surface);}
+.wk-banner span{display:block;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.wk-banner b{font-size:18px;font-weight:700;}
+.wk-banner .inv{border:1px solid var(--red);border-left:5px solid var(--red);background:var(--red-dim);}
+.wk-banner .inv span{color:var(--red);}
+.wk-banner .inv b{color:var(--text);font-size:16px;white-space:pre-wrap;}
+.wk-banner .inv.empty b{color:var(--text3);font-weight:500;font-size:14px;}
+.wk-inv-field{margin-top:12px;border:1px solid var(--red);border-left:5px solid var(--red);background:var(--red-dim);border-radius:10px;padding:10px 12px;}
+.wk-inv-field label{color:var(--red)!important;font-weight:700!important;font-size:13px!important;}
+.wk-inv-field input{font-size:14px!important;font-weight:600;background:var(--surface);margin-top:6px;}
+.wk-inv-field small{display:block;font-family:var(--font-d);font-size:11px;color:var(--text2);margin-top:6px;}
+@media(max-width:700px){.wk-banner{grid-template-columns:1fr;}}
 .cal-ol-flags{display:flex;flex-wrap:wrap;gap:3px;}
 .cal-ol-flags span{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--red-dim);color:var(--red);white-space:nowrap;}
 .cal-ol .pm-prog{height:4px;margin:2px 0 0;}
@@ -2259,7 +2275,8 @@ function weekCellHTML(key){
   return`<div class="cal-ol has${cur?' cur':''}" onclick="openWeekPanel('${key}')">
     <div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div>
     <div class="cal-ol-bias"><span class="cal-ol-k">Bias:</span> <span style="color:${b?b[1]:'var(--text2)'}">${b?b[0]:'not set'}</span></div>
-    ${w.draw?`<div class="cal-ol-meta" title="${esc(w.draw)}">→ ${esc(w.draw.split('\n')[0].slice(0,40))}</div>`:''}
+    ${w.invalid?`<div class="cal-ol-inv" title="Bias invalidated if: ${esc(w.invalid)}"><b>✕ Invalid if:</b> ${esc(w.invalid)}</div>`:''}
+    ${w.draw?`<div class="cal-ol-meta" title="${esc(w.draw)}">→ ${esc(w.draw.split('\n')[0])}</div>`:''}
     ${flagHTML}
     <div class="pm-prog"><i style="width:${done/WK_CHECKLIST.length*100}%"></i></div>
   </div>`;
@@ -2271,11 +2288,18 @@ function openWeekPanel(key){
   renderDayModal();
 }
 function wkGet(){const k=selectedWeek;if(!weekly[k])weekly[k]={};return weekly[k];}
-function wkSet(field,val){queueDaySave(()=>{const w=wkGet();w[field]=val;w.updated=new Date().toISOString();});}
+function wkSet(field,val){queueDaySave(()=>{const w=wkGet();w[field]=val;w.updated=new Date().toISOString();});if(field==='invalid')wkRenderBanner();}
+function wkBannerHTML(w){
+  const b={bull:['Bullish','var(--green)'],bear:['Bearish','var(--red)'],neutral:['Neutral','var(--accent)']}[w.bias];
+  return`<div><span>Weekly bias</span><b style="color:${b?b[1]:'var(--text3)'}">${b?b[0]:'Not set'}</b></div>
+    <div class="inv${w.invalid?'':' empty'}"><span>⚠ Invalidation: my bias is wrong if…</span><b>${w.invalid?esc(w.invalid):'Not set. Add it in section 7 so you know when to stop trading this bias.'}</b></div>`;
+}
+function wkRenderBanner(){const el=document.getElementById('wkBanner');if(el)el.innerHTML=wkBannerHTML(weekly[selectedWeek]||{});}
 function wkPick(field,val,btn){
   const w=wkGet();w[field]=w[field]===val?'':val;w.updated=new Date().toISOString();saveDayData();
   btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(w[field])));
   if(field==='psyStep')wkRenderPsy();
+  if(field==='bias')wkRenderBanner();
   setDayStatus();
 }
 function wkToggleEvent(ev,btn){
@@ -2344,6 +2368,7 @@ function weekViewHTML(key){
     <div class="pm-sub">Build the big picture before Sunday's open, then plan each day inside it. Saves automatically.
       <button class="btn" style="font-size:12px" onclick="wkCopyLast()">⧉ Carry over last week</button></div>
     ${mkBlockHTML('wk')}
+    <div class="wk-banner" id="wkBanner">${wkBannerHTML(w)}</div>
     ${auto.length?`<div class="wk-auto">${auto.map(a=>`<div class="${a.info?'info':''}">${esc(a.text)}</div>`).join('')}</div>`:''}
     <div class="pm-grid">
       <div class="pm-card full">
@@ -2412,7 +2437,7 @@ function weekViewHTML(key){
         <div style="margin-top:10px">${ta('biasWhy','Why? Tie it to the structure, levels and news above',2)}</div>
         <div class="fg" style="margin-top:10px"><label>Draw / target for the week</label>${ta('draw','e.g. Buy-side above PWH 25,120, then 25,000 round number holds as support',2)}</div>
         <div class="fg" style="margin-top:10px"><label>If / then scenarios</label>${ta('scenarios','If Monday holds above the weekly open → look for longs into PWH.\nIf we lose PWL → bias flips, stay flat until the daily reclaims it.',3)}</div>
-        <div class="fg" style="margin-top:10px"><label>Invalidation</label>${inp('invalid','e.g. Daily close below 24,640')}</div>
+        <div class="fg wk-inv-field"><label>⚠ Invalidation: my bias is wrong if…</label>${inp('invalid','e.g. Daily close above 7,790 (prev week VAH)')}<small>Shown on the calendar and at the top of this page. When it happens, stop trading this bias.</small></div>
       </div>
 
       <div class="pm-card">
