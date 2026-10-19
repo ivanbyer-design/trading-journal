@@ -352,8 +352,6 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .nav-sep{height:1px;background:var(--border);margin:12px 4px;}
 .sidebar-footer{border-top:1px solid var(--border);padding:14px 0 0;}
 .sb-foot-lbl{font-family:var(--font-d);font-size:11px;font-weight:600;color:var(--text3);margin:0 2px 8px;}
-.sb-backup{display:flex;gap:6px;margin-bottom:10px;}
-.sb-backup .logo-action{font-size:12px;font-weight:600;padding:8px 6px;color:var(--text2);border-color:var(--border2);}
 .import-btn{border-radius:9px;font-size:12px;font-weight:600;letter-spacing:0;color:var(--text2);}
 
 /* dropdown menus */
@@ -812,13 +810,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   </nav>
   <div class="sidebar-footer">
     <div class="sb-foot-lbl">Backup</div>
-    <div class="sb-backup">
-      <button class="logo-action" onclick="exportBackup()" title="Download a backup of all trades">↓ Export</button>
-      <div class="logo-action file-input-btn" title="Import a backup file">
-        ↑ Import
-        <input type="file" accept=".json" onchange="handleJsonImport(this.files)">
-      </div>
-    </div>
+    <div class="import-btn" style="border-style:solid;margin-bottom:8px" onclick="exportBackup()" title="Download a backup of all your data">↓ Export</div>
     <div class="import-btn" onclick="triggerImport()">↑ Import CSV</div>
     <div class="file-chips" id="fileChips"></div>
   </div>
