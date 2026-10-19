@@ -425,7 +425,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-mstats .day-pill{font-size:12px;}
 .day-pill{display:inline-block;background:var(--accent-soft);color:var(--accent);border-radius:10px;font-family:var(--font-d);font-size:11px;font-weight:600;padding:2px 9px;}
 .day-pill.g{background:var(--green-dim);color:var(--green);} .day-pill.r{background:var(--red-dim);color:var(--red);}
-.cal-grid{grid-template-columns:repeat(7,minmax(0,1fr)) minmax(96px,128px);gap:8px;}
+.cal-grid{grid-template-columns:minmax(104px,140px) repeat(7,minmax(0,1fr)) minmax(96px,128px);gap:8px;}
 .cal-dow{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:9px 0;font-size:13px;letter-spacing:0;text-transform:none;font-weight:600;color:var(--text);}
 .cal-dow.cal-dow-wk{border:none;background:none;}
 .cal-cell{min-height:100px;padding:8px;border-radius:8px;background:var(--surface);align-items:flex-end;text-align:right;}
@@ -442,6 +442,18 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-week-lbl{font-size:12px;color:var(--text2);}
 .cal-week-pnl{font-size:17px;font-weight:700;}
 .cal-week .day-pill{align-self:flex-start;}
+.cal-dow.cal-dow-ol{color:var(--accent);font-size:12px;}
+.cal-ol{border:1px dashed var(--border2);border-radius:10px;background:var(--surface);padding:10px 11px;display:flex;flex-direction:column;gap:5px;font-family:var(--font-d);cursor:pointer;text-align:left;min-width:0;transition:border-color .15s;}
+.cal-ol:hover{border-color:var(--accent);}
+.cal-ol.has{border-style:solid;border-color:var(--accent);background:var(--accent-soft);}
+.cal-ol.cur{box-shadow:0 0 0 2px var(--accent) inset;}
+.cal-ol-lbl{font-size:11px;font-weight:600;color:var(--text2);}
+.cal-ol-add{font-size:12px;font-weight:600;color:var(--accent);}
+.cal-ol-bias{font-size:13px;font-weight:700;}
+.cal-ol-meta{font-size:10px;color:var(--text2);line-height:1.35;overflow:hidden;text-overflow:ellipsis;}
+.cal-ol-flags{display:flex;flex-wrap:wrap;gap:3px;}
+.cal-ol-flags span{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--red-dim);color:var(--red);white-space:nowrap;}
+.cal-ol .pm-prog{height:4px;margin:2px 0 0;}
 
 @media(max-width:768px){
   .tz-header{padding-left:6px;padding-right:10px;}
@@ -464,6 +476,8 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .cal-day-meta{display:none;}
   .cal-week{grid-column:1/-1;flex-direction:row;align-items:center;padding:7px 10px;gap:10px;margin-bottom:6px;}
   .cal-week-pnl{font-size:14px;margin-left:auto;}
+  .cal-ol{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:center;padding:7px 10px;gap:4px 10px;margin-top:6px;}
+  .cal-ol .pm-prog{flex:1 0 100%;}
   .cal-mstats{margin-left:0;width:100%;}
   .chart-box{height:240px;}
   .dd-menu{position:fixed;left:16px;right:16px;top:auto;min-width:0;}
@@ -506,6 +520,30 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dm-btn.primary:hover{background:var(--accent2);}
 
 /* note + premarket plan views */
+.dm-overlay.wk-mode #dmPlanBtn,.dm-overlay.wk-mode #dmNoteBtn,.dm-overlay.wk-mode #dmTradesBtn{display:none!important;}
+.wk-auto{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.wk-auto div{font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;background:var(--red-dim);color:var(--red);border:1px solid var(--red);}
+.wk-auto div.info{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
+.wk-recap{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:10px;}
+.wk-recap .dm-s-v{font-size:16px;}
+.wk-struct{display:grid;grid-template-columns:72px 1fr;gap:8px 10px;align-items:center;margin-bottom:10px;}
+.wk-struct span{font-size:13px;color:var(--text2);}
+.wk-struct .pm-seg button{min-width:0;height:32px;}
+.wk-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px;}
+.wk-chip{padding:5px 11px;border-radius:16px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font-d);font-size:12px;font-weight:600;cursor:pointer;}
+.wk-chip:hover{border-color:var(--accent);}
+.wk-chip.on{background:var(--red-dim);border-color:var(--red);color:var(--red);}
+.wk-days{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;}
+.wk-days textarea{min-height:92px;}
+.wk-psy{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.wk-psy span{font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);}
+.wk-psy span.near{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+.wk-psy span.major{font-weight:800;}
+.wk-links{display:flex;flex-wrap:wrap;gap:8px;}
+.wk-links a{font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;padding:6px 11px;border:1px solid var(--border2);border-radius:8px;}
+.wk-links a:hover{border-color:var(--accent);}
+.wk-lesson{font-size:13px;color:var(--text);background:var(--surface2);border-radius:8px;padding:9px 12px;border-left:3px solid var(--accent);white-space:pre-wrap;}
+@media(max-width:900px){.wk-days{grid-template-columns:1fr;}.wk-recap{grid-template-columns:repeat(2,minmax(0,1fr));}}
 .pm{max-width:920px;margin:0 auto;}
 .pm-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px;}
 .pm-sub{font-size:13px;color:var(--text2);margin-bottom:20px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
@@ -526,7 +564,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-rate span{font-size:13px;color:var(--text2);width:92px;}
 .pm-rate .pm-seg button{min-width:0;height:32px;}
 .pm-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-bottom:10px;}
-.pm-levels label,.pm-risk label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--text2);}
+.pm-levels label,.pm-risk label,.pm .fg>label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--text2);}
 .pm-risk{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
 .pm-check{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text);cursor:pointer;}
 .pm-check:last-child{border-bottom:none;}
@@ -1019,7 +1057,7 @@ let trades=JSON.parse(localStorage.getItem('ef_trades')||'[]');
 let settings=JSON.parse(localStorage.getItem('ef_settings')||'{"startingBalance":50000,"dailyLossLimit":1000}');
 let editId=null,emotions=[];
 let calYear,calMonth;
-let selectedDay=null;
+let selectedDay=null,selectedWeek=null;
 let radarChart=null,cumChart=null,dailyChart=null;
 
 /* Account selector state */
@@ -1687,10 +1725,11 @@ function renderCalendar(ft){
   for(let d=1;d<=daysInMonth;d++)cells.push(d);
   while(cells.length%7)cells.push(0);
 
-  let html=DAYS.map(d=>`<div class="cal-dow">${d}</div>`).join('')+'<div class="cal-dow cal-dow-wk"></div>';
+  let html='<div class="cal-dow cal-dow-wk cal-dow-ol">Weekly outlook</div>'+DAYS.map(d=>`<div class="cal-dow">${d}</div>`).join('')+'<div class="cal-dow cal-dow-wk"></div>';
   let mPnl=0,mDays=0;
   for(let r=0,wk=1;r<cells.length;r+=7,wk++){
     let wPnl=0,wDays=0;
+    html+=weekCellHTML(ymd(new Date(calYear,calMonth,1-firstDay+r)));
     for(let c=0;c<7;c++){
       const d=cells[r+c];
       if(!d){html+='<div class="cal-cell empty"></div>';continue;}
@@ -1727,11 +1766,12 @@ function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMont
 /* ══════════════════════════════════════════════
    DAY PANEL
 ══════════════════════════════════════════════ */
-let dayNotes={},premarket={};
+let dayNotes={},premarket={},weekly={};
 try{dayNotes=JSON.parse(localStorage.getItem('ef_daynotes')||'{}');}catch(e){}
 try{premarket=JSON.parse(localStorage.getItem('ef_premarket')||'{}');}catch(e){}
+try{weekly=JSON.parse(localStorage.getItem('ef_weekly')||'{}');}catch(e){}
 function saveDayData(){
-  try{localStorage.setItem('ef_daynotes',JSON.stringify(dayNotes));localStorage.setItem('ef_premarket',JSON.stringify(premarket));}catch(e){}
+  try{localStorage.setItem('ef_daynotes',JSON.stringify(dayNotes));localStorage.setItem('ef_premarket',JSON.stringify(premarket));localStorage.setItem('ef_weekly',JSON.stringify(weekly));}catch(e){}
 }
 const PM_CHECKLIST=['Reviewed the higher-timeframe trend','Marked key levels on my chart','Checked the economic calendar','Set my max loss and max trades','I know exactly what my A+ setup looks like','Calm and focused, no revenge or FOMO mindset'];
 function pmHasContent(p){return!!p&&Object.entries(p).some(([k,v])=>k!=='updated'&&(Array.isArray(v)?v.length:v!==''&&v!=null));}
@@ -1740,6 +1780,7 @@ let dayView='trades',dayChart=null,daySaveTimer=null;
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function openDayPanel(key,view){
+  flushDaySave();selectedWeek=null;
   selectedDay=key;
   renderCalendar();
   const dayTrades=tradesByDay(filteredTrades())[key]||[];
@@ -1750,13 +1791,14 @@ function openDayPanel(key,view){
 }
 function closeDayPanel(){
   flushDaySave();
-  selectedDay=null;
+  selectedDay=null;selectedWeek=null;
   document.getElementById('dayPanel').classList.remove('open');
   if(dayChart){dayChart.destroy();dayChart=null;}
   if(document.getElementById('calCells'))renderCalendar();
 }
 function setDayView(v){flushDaySave();dayView=dayView===v&&v!=='trades'?'trades':v;renderDayModal();}
 function dayPrimary(){
+  if(selectedWeek){flushDaySave();toast('Weekly outlook saved','success');closeDayPanel();return;}
   if(dayView==='trades'){
     const k=selectedDay;
     gFilter.range='custom';gFilter.from=k;gFilter.to=k;saveGFilter();renderFilterUI();
@@ -1765,6 +1807,8 @@ function dayPrimary(){
 }
 
 function renderDayModal(){
+  document.getElementById('dayPanel').classList.toggle('wk-mode',!!selectedWeek);
+  if(selectedWeek){renderWeekModal();return;}
   const key=selectedDay;if(!key)return;
   const dayTrades=(tradesByDay(filteredTrades())[key]||[]).sort((a,b)=>new Date(a.date)-new Date(b.date));
   const st=calcStats(dayTrades);
@@ -1932,6 +1976,248 @@ function planViewHTML(key){
   </div>`;
 }
 
+/* ── Weekly outlook (keyed by the Sunday that starts the calendar row) ── */
+function ymd(d){return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+function addDays(key,n){const d=new Date(key+'T12:00:00');d.setDate(d.getDate()+n);return d;}
+const WK_EVENTS=['FOMC decision','FOMC minutes','Fed chair speaks','Fed speakers','CPI','PPI','PCE','NFP','JOLTS','Jobless claims','GDP','Retail sales','ISM PMI','Consumer sentiment','Bond auctions','Mega-cap earnings','Geopolitical risk','Tariff / trade headlines'];
+const WK_CHECKLIST=['Marked monthly, weekly & daily highs/lows','Read daily structure and picked the weekly draw on liquidity','Marked psych whole-number levels near price','Checked the economic calendar for red-folder news','Checked earnings and Fed speakers for the week','Checked VIX, DXY and 10Y yields','Reviewed last week\'s trades and lessons','Set weekly max loss and profit target','Decided which days to sit out or size down'];
+const WK_LINKS=[['Economic calendar','https://www.forexfactory.com/calendar?week=this'],['FedWatch','https://www.cmegroup.com/markets/interest-rates/cme-fedwatch-tool.html'],['Fear & Greed','https://edition.cnn.com/markets/fear-and-greed'],['Earnings','https://www.earningswhispers.com/calendar'],['VIX','https://www.tradingview.com/symbols/TVC-VIX/'],['DXY','https://www.tradingview.com/symbols/TVC-DXY/']];
+
+function nthDow(y,m,dow,n){
+  if(n<0){const d=new Date(y,m+1,0);while(d.getDay()!==dow)d.setDate(d.getDate()-1);return d;}
+  const d=new Date(y,m,1);while(d.getDay()!==dow)d.setDate(d.getDate()+1);d.setDate(d.getDate()+7*(n-1));return d;
+}
+function observed(d){const r=new Date(d);if(r.getDay()===6)r.setDate(r.getDate()-1);else if(r.getDay()===0)r.setDate(r.getDate()+1);return r;}
+function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=(h+l-7*m+114)%31+1;return new Date(y,mo-1,da);}
+function usHolidays(y){
+  const gf=easter(y);gf.setDate(gf.getDate()-2);
+  const tg=nthDow(y,10,4,4),bf=new Date(tg);bf.setDate(bf.getDate()+1);
+  const h={};
+  [[observed(new Date(y,0,1)),'New Year\'s Day'],[nthDow(y,0,1,3),'MLK Day'],[nthDow(y,1,1,3),'Presidents Day'],[gf,'Good Friday'],[nthDow(y,4,1,-1),'Memorial Day'],
+   [observed(new Date(y,5,19)),'Juneteenth'],[observed(new Date(y,6,4)),'Independence Day'],[nthDow(y,8,1,1),'Labor Day'],[tg,'Thanksgiving'],[observed(new Date(y,11,25)),'Christmas']]
+   .forEach(([d,n])=>h[ymd(d)]={name:n,closed:true});
+  h[ymd(bf)]={name:'Black Friday',closed:false};
+  const ce=new Date(y,11,24);if(ce.getDay()>0&&ce.getDay()<6&&!h[ymd(ce)])h[ymd(ce)]={name:'Christmas Eve',closed:false};
+  return h;
+}
+// Calendar-driven events we can work out without a data feed
+function weekAuto(key){
+  const out=[];const days=[1,2,3,4,5].map(i=>addDays(key,i));
+  const hol={...usHolidays(days[0].getFullYear()),...usHolidays(days[4].getFullYear())};
+  days.forEach(d=>{
+    const k=ymd(d),dn=DAYS[d.getDay()],h=hol[k];
+    if(h)out.push({short:h.closed?'Holiday':'Early close',text:`${dn}: ${h.name}, ${h.closed?'US markets closed':'early close'}`});
+    if(d.getDay()===5){
+      const opex=ymd(nthDow(d.getFullYear(),d.getMonth(),5,3))===k,q=d.getMonth()%3===2;
+      if(opex)out.push({short:q?'Quad witch':'OPEX',text:`Fri: ${q?'Quarterly expiration (quad witching), expect heavy volume and pinning':'Monthly options expiration (OPEX)'}`});
+      if(d.getDate()<=7)out.push({short:'NFP?',text:'Fri: First Friday, jobs report (NFP) is usually released 8:30 ET',info:true});
+    }
+    if(d.getDay()===4&&d.getMonth()%3===2){
+      const roll=nthDow(d.getFullYear(),d.getMonth(),5,3);roll.setDate(roll.getDate()-8);
+      if(ymd(roll)===k)out.push({short:'Roll',text:'Thu: Index futures roll day, switch to the next contract month'});
+    }
+  });
+  const last=days.filter(d=>d.getMonth()===days[0].getMonth()).pop(),nx=new Date(last);nx.setDate(nx.getDate()+1);
+  if(last&&nx.getMonth()!==last.getMonth()&&nx.getDay()!==6)out.push({short:'Month-end',text:`${DAYS[last.getDay()]}: Month-end, watch for rebalancing flows and a new monthly candle`,info:true});
+  else if(days[4].getMonth()!==days[0].getMonth())out.push({short:'Month-end',text:'Month turns this week: rebalancing flows and a new monthly candle',info:true});
+  return out;
+}
+
+function weekCellHTML(key){
+  const w=weekly[key],has=pmHasContent(w),auto=weekAuto(key);
+  const t=ymd(new Date()),cur=t>=key&&t<ymd(addDays(key,7));
+  const flags=[...auto.filter(a=>!a.info).map(a=>a.short),...(w?.events||[])];
+  const flagHTML=flags.length?`<div class="cal-ol-flags">${flags.slice(0,4).map(f=>`<span>${esc(f)}</span>`).join('')}${flags.length>4?`<span>+${flags.length-4}</span>`:''}</div>`:'';
+  if(!has)return`<div class="cal-ol${cur?' cur':''}" onclick="openWeekPanel('${key}')"><div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div><div class="cal-ol-add">+ Plan week</div>${flagHTML}</div>`;
+  const b={bull:['Bullish','var(--green)'],bear:['Bearish','var(--red)'],neutral:['Neutral','var(--accent)']}[w.bias];
+  const done=(w.checklist||[]).length;
+  return`<div class="cal-ol has${cur?' cur':''}" onclick="openWeekPanel('${key}')">
+    <div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div>
+    <div class="cal-ol-bias" style="color:${b?b[1]:'var(--text2)'}">${b?b[0]:'No bias set'}</div>
+    ${w.draw?`<div class="cal-ol-meta" title="${esc(w.draw)}">→ ${esc(w.draw.split('\n')[0].slice(0,40))}</div>`:''}
+    ${flagHTML}
+    <div class="pm-prog"><i style="width:${done/WK_CHECKLIST.length*100}%"></i></div>
+  </div>`;
+}
+
+function openWeekPanel(key){
+  flushDaySave();selectedDay=null;selectedWeek=key;dayView='week';
+  document.getElementById('dayPanel').classList.add('open');
+  renderDayModal();
+}
+function wkGet(){const k=selectedWeek;if(!weekly[k])weekly[k]={};return weekly[k];}
+function wkSet(field,val){queueDaySave(()=>{const w=wkGet();w[field]=val;w.updated=new Date().toISOString();});}
+function wkPick(field,val,btn){
+  const w=wkGet();w[field]=w[field]===val?'':val;w.updated=new Date().toISOString();saveDayData();
+  btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.v===String(w[field])));
+  if(field==='psyStep')wkRenderPsy();
+  setDayStatus();
+}
+function wkToggleEvent(ev,btn){
+  const w=wkGet();const set=new Set(w.events||[]);set.has(ev)?set.delete(ev):set.add(ev);w.events=WK_EVENTS.filter(e=>set.has(e));w.updated=new Date().toISOString();saveDayData();
+  btn.classList.toggle('on',set.has(ev));setDayStatus();
+}
+function wkCheck(i,on){
+  const w=wkGet();const set=new Set(w.checklist||[]);on?set.add(i):set.delete(i);w.checklist=[...set];w.updated=new Date().toISOString();saveDayData();
+  document.getElementById('wkProg').style.width=w.checklist.length/WK_CHECKLIST.length*100+'%';
+  document.getElementById('wkProgTxt').textContent=`${w.checklist.length} of ${WK_CHECKLIST.length} done`;
+  setDayStatus();
+}
+function psyLevels(price,step){
+  const p=parseFloat(String(price).replace(/,/g,''));if(!isFinite(p)||p<=0)return[];
+  step=+step||(p>=10000?250:p>=1000?50:p>=100?10:1);
+  const major=10**Math.ceil(Math.log10(step*2)),base=Math.round(p/step)*step;
+  let near=null;const lv=[];
+  for(let i=4;i>=-4;i--){const v=+(base+i*step).toFixed(4);lv.push(v);if(near===null||Math.abs(v-p)<Math.abs(near-p))near=v;}
+  return lv.map(v=>({v,near:v===near,major:Math.abs(v%major)<1e-9}));
+}
+function wkRenderPsy(){
+  const el=document.getElementById('wkPsy');if(!el)return;
+  const w=weekly[selectedWeek]||{};const lv=psyLevels(w.psyPrice,w.psyStep);
+  el.innerHTML=lv.length?lv.map(l=>`<span class="${l.near?'near ':''}${l.major?'major':''}">${l.v.toLocaleString('en-US')}</span>`).join(''):'<span style="background:none;border:none;color:var(--text3);font-weight:500">Enter the current price to list nearby whole numbers</span>';
+}
+function wkCopyLast(){
+  const prev=Object.keys(weekly).filter(k=>k<selectedWeek&&pmHasContent(weekly[k])).sort().pop();
+  if(!prev){toast('No earlier outlook to copy','error');return;}
+  const src=JSON.parse(JSON.stringify(weekly[prev]));
+  ['news1','news2','news3','news4','news5','events','checklist','review','reviewWhy','lesson'].forEach(f=>delete src[f]);
+  weekly[selectedWeek]={...src,updated:new Date().toISOString()};
+  saveDayData();renderDayModal();toast(`Carried over levels and context from week of ${fdate(prev+'T12:00:00')}`,'success');
+}
+
+function renderWeekModal(){
+  const key=selectedWeek,mon=addDays(key,1),fri=addDays(key,5);
+  const f=d=>d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+  document.getElementById('dmDate').textContent=`Week of ${f(mon)} – ${f(fri)}, ${fri.getFullYear()}`;
+  const net=document.getElementById('dmNet');net.textContent='Weekly outlook';net.style.color='var(--accent)';
+  document.getElementById('dmPrimary').textContent='Save';
+  document.getElementById('dmStatus').textContent='';
+  if(dayChart){dayChart.destroy();dayChart=null;}
+  const body=document.getElementById('dmBody');
+  body.innerHTML=weekViewHTML(key);body.scrollTop=0;
+  wkRenderPsy();
+}
+
+function weekViewHTML(key){
+  const w=weekly[key]||{};
+  const seg=(field,opts)=>`<div class="pm-seg">${opts.map(([v,l,c])=>`<button type="button" data-v="${v}" class="${c||''}${String(w[field])===String(v)?' on':''}" onclick="wkPick('${field}','${v}',this)">${l}</button>`).join('')}</div>`;
+  const inp=(field,ph,extra='')=>`<input type="text" value="${esc(w[field]??'')}" placeholder="${ph}" oninput="wkSet('${field}',this.value)${extra}">`;
+  const ta=(field,ph,rows=3)=>`<textarea rows="${rows}" placeholder="${ph}" oninput="wkSet('${field}',this.value)">${esc(w[field]||'')}</textarea>`;
+  const trend=[['bull','Bullish','bull'],['range','Range','neu'],['bear','Bearish','bear']];
+  const auto=weekAuto(key);
+  // last week's numbers + lesson, for context
+  const dm=tradesByDay(filteredTrades());let lp=0,ld=0,lw=0,lt=0;
+  for(let i=-6;i<=0;i++){const dt=dm[ymd(addDays(key,i))]||[];if(dt.length){ld++;lt+=dt.length;lw+=dt.filter(t=>t.pnl>0).length;lp+=dt.reduce((s,t)=>s+t.pnl,0);}}
+  const prevKey=ymd(addDays(key,-7)),prev=weekly[prevKey]||{};
+  const pc=lp>0?'var(--green)':lp<0?'var(--red)':'var(--text)';
+  const bLbl={bull:'Bullish',bear:'Bearish',neutral:'Neutral'};
+  const stat=(l,v,c)=>`<div><div class="dm-s-l">${l}</div><div class="dm-s-v"${c?` style="color:${c}"`:''}>${v}</div></div>`;
+  const done=(w.checklist||[]).length;
+  const dayLbl=i=>{const d=addDays(key,i);return`${DAYS[d.getDay()]} ${d.getMonth()+1}/${d.getDate()}`;};
+  return`<div class="pm">
+    <div class="pm-title">Weekly outlook</div>
+    <div class="pm-sub">Build the big picture before Sunday's open, then plan each day inside it. Saves automatically.
+      <button class="btn" style="font-size:12px" onclick="wkCopyLast()">⧉ Carry over last week</button></div>
+    ${auto.length?`<div class="wk-auto">${auto.map(a=>`<div class="${a.info?'info':''}">${esc(a.text)}</div>`).join('')}</div>`:''}
+    <div class="pm-grid">
+      <div class="pm-card full">
+        <div class="pm-h"><span class="n">1</span>Last week recap</div>
+        <div class="wk-recap">${stat('Net P&amp;L',fmoney(lp),pc)}${stat('Days traded',ld)}${stat('Trades',lt)}${stat('Win rate',lt?fpct(lw/lt*100):'--')}</div>
+        ${prev.bias||prev.reviewWhy||prev.lesson?`<div class="wk-lesson">${prev.bias?`Last week's bias: <b>${bLbl[prev.bias]||'—'}</b>${prev.review?` · played out: <b>${esc(prev.review)}</b>`:''}\n`:''}${esc(prev.lesson||prev.reviewWhy||'')}</div>`:'<div class="pm-hint" style="margin:0">No review from last week. Fill in section 10 at the end of this week so next week starts with a lesson.</div>'}
+      </div>
+
+      <div class="pm-card full">
+        <div class="pm-h"><span class="n">2</span>HTF structure</div>
+        <div class="pm-hint">Top-down: what is each timeframe doing, and where is price inside the range?</div>
+        <div class="wk-struct">
+          <span>Monthly</span>${seg('mStruct',trend)}
+          <span>Weekly</span>${seg('wStruct',trend)}
+          <span>Daily</span>${seg('dStruct',trend)}
+          <span>Location</span>${seg('location',[['premium','Premium','bear'],['eq','Equilibrium','neu'],['discount','Discount','bull']])}
+        </div>
+        ${ta('structNotes','e.g. Daily made a higher high Friday and closed above last week\'s high. Last daily BOS at 24,850. Unfilled daily FVG 24,610–24,680. Weekly candle closed bullish engulfing.',3)}
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-h"><span class="n">3</span>Key HTF levels</div>
+        <div class="pm-levels">
+          <div class="fg"><label>Prev. week high</label>${inp('pwh','e.g. 25,120.50')}</div>
+          <div class="fg"><label>Prev. week low</label>${inp('pwl','e.g. 24,640.00')}</div>
+          <div class="fg"><label>Prev. month high</label>${inp('pmh','e.g. 25,300.00')}</div>
+          <div class="fg"><label>Prev. month low</label>${inp('pml','e.g. 23,980.25')}</div>
+          <div class="fg"><label>Weekly open</label>${inp('wopen','Sunday 6pm ET open')}</div>
+          <div class="fg"><label>ATH / major swing</label>${inp('ath','e.g. ATH 25,410')}</div>
+        </div>
+        ${ta('zones','Daily supply/demand, order blocks, FVGs, gaps, old highs/lows (liquidity)…',3)}
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-h"><span class="n">4</span>Psych whole-number levels</div>
+        <div class="pm-hint">Round numbers attract orders, stops and reactions</div>
+        <div class="fg"><label>Current price</label>${inp('psyPrice','e.g. 24,912',';wkRenderPsy()')}</div>
+        <div class="fg" style="margin-top:10px"><label>Step</label>${seg('psyStep',[['10','10'],['25','25'],['50','50'],['100','100'],['250','250'],['500','500'],['1000','1K']])}</div>
+        <div class="wk-psy" id="wkPsy"></div>
+        <div style="margin-top:10px">${ta('psyNotes','Which round numbers matter this week? e.g. 25,000 is untested, first touch likely reacts',2)}</div>
+      </div>
+
+      <div class="pm-card full">
+        <div class="pm-h"><span class="n">5</span>News &amp; economic calendar</div>
+        <div class="pm-hint">Tap what's on the calendar this week, then add times per day (ET). Red-folder days = flat or reduced size around the release.</div>
+        <div class="wk-chips">${WK_EVENTS.map(e=>`<button type="button" class="wk-chip${(w.events||[]).includes(e)?' on':''}" onclick="wkToggleEvent('${e}',this)">${e}</button>`).join('')}</div>
+        <div class="wk-days">${[1,2,3,4,5].map(i=>`<div class="fg"><label>${dayLbl(i)}</label>${ta('news'+i,i===3?'e.g. 8:30 CPI\n2:00 FOMC':'e.g. 8:30 claims',3)}</div>`).join('')}</div>
+        <div style="margin-top:10px">${ta('earnings','Earnings & Fed speakers: e.g. NVDA Wed after close, Powell Thu 1:00',2)}</div>
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-h"><span class="n">6</span>Sentiment &amp; intermarket</div>
+        <div class="fg"><label>Risk tone</label>${seg('risk',[['on','Risk-on','bull'],['mixed','Mixed','neu'],['off','Risk-off','bear']])}</div>
+        <div class="pm-levels" style="margin-top:10px">
+          <div class="fg"><label>VIX</label>${inp('vix','e.g. 16.2, falling')}</div>
+          <div class="fg"><label>DXY</label>${inp('dxy','e.g. 99.8, weak')}</div>
+          <div class="fg"><label>US 10Y yield</label>${inp('tnx','e.g. 4.12%, rising')}</div>
+          <div class="fg"><label>Fear &amp; Greed</label>${inp('fng','e.g. 68 Greed')}</div>
+        </div>
+        ${ta('sentNotes','ES vs NQ vs YM vs RTY (divergence / SMT), sector leaders, oil/gold/BTC, COT positioning, headlines, Fed expectations…',3)}
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-h"><span class="n">7</span>Weekly bias &amp; draw on liquidity</div>
+        ${seg('bias',[['bull','Bullish','bull'],['neutral','Neutral','neu'],['bear','Bearish','bear']])}
+        <div style="margin-top:10px">${ta('biasWhy','Why? Tie it to the structure, levels and news above',2)}</div>
+        <div class="fg" style="margin-top:10px"><label>Draw / target for the week</label>${ta('draw','e.g. Buy-side above PWH 25,120, then 25,000 round number holds as support',2)}</div>
+        <div class="fg" style="margin-top:10px"><label>If / then scenarios</label>${ta('scenarios','If Monday holds above the weekly open → look for longs into PWH.\nIf we lose PWL → bias flips, stay flat until the daily reclaims it.',3)}</div>
+        <div class="fg" style="margin-top:10px"><label>Invalidation</label>${inp('invalid','e.g. Daily close below 24,640')}</div>
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-h"><span class="n">8</span>Risk plan for the week</div>
+        <div class="pm-risk">
+          <div class="fg"><label>Max weekly loss ($)</label>${inp('wMaxLoss',String((settings.dailyLossLimit||1000)*2))}</div>
+          <div class="fg"><label>Weekly target ($)</label>${inp('wTarget','e.g. 1500')}</div>
+          <div class="fg"><label>Max trading days</label>${inp('wDays','e.g. 4')}</div>
+        </div>
+        <div class="fg" style="margin-top:10px"><label>Days to sit out or size down</label>${inp('sitOut','e.g. Wed (FOMC) flat until 2:30, Fri half size (OPEX)')}</div>
+        <div style="margin-top:10px">${ta('accountNotes','Account rules: eval drawdown left, payout targets, consistency rule…',2)}</div>
+      </div>
+
+      <div class="pm-card">
+        <div class="pm-h"><span class="n">9</span>Weekly prep checklist</div>
+        <div class="pm-prog"><i id="wkProg" style="width:${done/WK_CHECKLIST.length*100}%"></i></div>
+        <div class="pm-hint" id="wkProgTxt" style="margin:0 0 4px">${done} of ${WK_CHECKLIST.length} done</div>
+        ${WK_CHECKLIST.map((c,i)=>`<label class="pm-check"><input type="checkbox"${(w.checklist||[]).includes(i)?' checked':''} onchange="wkCheck(${i},this.checked)">${c}</label>`).join('')}
+        <div class="wk-links" style="margin-top:12px">${WK_LINKS.map(([l,u])=>`<a href="${u}" target="_blank" rel="noopener">${l} ↗</a>`).join('')}</div>
+      </div>
+
+      <div class="pm-card full">
+        <div class="pm-h"><span class="n">10</span>End of week review</div>
+        <div class="fg"><label>Did my bias play out?</label>${seg('review',[['yes','Yes','bull'],['partly','Partly','neu'],['no','No','bear']])}</div>
+        <div style="margin-top:10px">${ta('reviewWhy','What did the market actually do vs. my plan? Which levels mattered?',2)}</div>
+        <div class="fg" style="margin-top:10px"><label>Lesson to carry into next week</label>${ta('lesson','One sentence. It shows up at the top of next week\'s outlook.',2)}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
 /* ── autosave ── */
 let dayPendingFn=null;
 function queueDaySave(fn){
@@ -1943,7 +2229,8 @@ function flushDaySave(){
   clearTimeout(daySaveTimer);
   if(!dayPendingFn)return;
   dayPendingFn=null;
-  const k=selectedDay;
+  const k=selectedDay,w=selectedWeek;
+  if(w&&weekly[w]&&!pmHasContent(weekly[w]))delete weekly[w];
   if(k&&premarket[k]&&!pmHasContent(premarket[k]))delete premarket[k];
   if(k&&dayNotes[k]!==undefined&&!dayNotes[k].trim())delete dayNotes[k];
   saveDayData();setDayStatus();
@@ -2217,7 +2504,7 @@ function isPWA(){
 }
 
 async function exportBackup(){
-  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket};
+  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly};
   const json=JSON.stringify(data,null,2);
   const filename=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
   // On iOS PWA, use Web Share API so user can save to Files, AirDrop, etc.
@@ -2268,6 +2555,7 @@ function confirmBackupImport(){
   if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
   if(data.dayNotes)dayNotes={...data.dayNotes,...dayNotes};
   if(data.premarket)premarket={...data.premarket,...premarket};
+  if(data.weekly)weekly={...data.weekly,...weekly};
   saveDayData();
   saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
   toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} from backup`,'success');
@@ -2322,7 +2610,7 @@ function updateCloudUI(){
 async function pushToCloud(){
   const token=cloudCfg.token||(document.getElementById('cfgGhToken')?.value||'').trim();
   if(!token){toast('Enter your GitHub token in Settings → Cloud Sync','error');nav('settings');return;}
-  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket},null,2);
+  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly},null,2);
   const body=JSON.stringify({description:'EdgeFlow Trading Journal — Cloud Backup',public:false,files:{'edgeflow-data.json':{content:payload}}});
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
   try{
@@ -2356,6 +2644,7 @@ async function pullFromCloud(){
     if(data.accountNames)accountNames=data.accountNames;
     if(data.dayNotes)dayNotes=data.dayNotes;
     if(data.premarket)premarket=data.premarket;
+    if(data.weekly)weekly=data.weekly;
     saveDayData();
     if(data.settings){Object.assign(settings,data.settings);localStorage.setItem('ef_settings',JSON.stringify(settings));}
     saveTrades();saveAccountNames();
