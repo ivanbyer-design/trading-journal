@@ -767,7 +767,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .nw-empty a{color:var(--accent);}
 .nw-copy{background:none;border:none;color:var(--accent);font-family:var(--font-d);font-size:12px;font-weight:600;cursor:pointer;padding:6px 0 0;}
 .wk-days .nw-row{font-size:12px;padding:4px 0;gap:6px;} .wk-days .nw-t{width:auto;font-size:11px;}
-.wk-chip.auto:not(.on){border-style:dashed;border-color:#f0575a;color:#f0575a;}
+.wk-chip.auto:not(.on){border-style:dashed;}
+.wk-chip.auto-h:not(.on){border-color:#e5484d;color:#e5484d;} .wk-chip.auto-m:not(.on){border-color:#e8830c;color:#e8830c;} .wk-chip.auto-l:not(.on){border-color:#c9a400;color:#b89a06;}
+.wk-when{font-size:10px;font-weight:700;margin-left:5px;opacity:.85;}
 .nws-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .nws-lbl{width:90px;flex-shrink:0;}
 .nws-meta{font-family:var(--font-d);font-size:12px;color:var(--text2);margin-right:8px;}
@@ -2381,7 +2383,7 @@ function weekViewHTML(key){
 
       <div class="pm-card full">
         <div class="pm-h"><span class="n">5</span>News &amp; economic calendar</div>
-        <div class="pm-hint">Red/orange folder events load automatically (ET) and dashed chips are on this week's calendar. Tap chips to mark what matters, add your own notes per day. Red-folder days = flat or reduced size around the release.</div>
+        <div class="pm-hint">Events load automatically from ForexFactory (ET). Dashed chips are on this week's calendar, colored by impact (red, orange or yellow folder) with the day shown. Tap chips to mark what matters, add your own notes per day. Red-folder days = flat or reduced size around the release.</div>
         <div class="wk-chips">${WK_EVENTS.map(e=>`<button type="button" class="wk-chip${(w.events||[]).includes(e)?' on':''}" data-ev="${e}" onclick="wkToggleEvent('${e}',this)">${e}</button>`).join('')}</div>
         <div class="wk-days">${[1,2,3,4,5].map(i=>`<div class="fg nw-wrap"><label>${dayLbl(i)}</label><div class="nw-list" data-day="${ymd(addDays(key,i))}"></div>${ta('news'+i,i===3?'e.g. 8:30 CPI\n2:00 FOMC':'e.g. 8:30 claims',3)}</div>`).join('')}</div>
         <div style="margin-top:10px">${ta('earnings','Earnings & Fed speakers: e.g. NVDA Wed after close, Powell Thu 1:00',2)}</div>
@@ -2665,9 +2667,22 @@ function newsFill(){
   document.querySelectorAll('.nw-list[data-day]').forEach(el=>{newsLoad(newsWeekOf(el.dataset.day));el.innerHTML=newsListHTML(el.dataset.day);});
   // weekly outlook: flag event chips that are on this week's calendar
   if(selectedWeek&&document.querySelector('.wk-chip[data-ev]')){
-    const cfg=newsCfg(),wk=newsCache[selectedWeek],found=new Set();
-    if(cfg.on&&wk?.events)wk.events.filter(e=>newsMatchCur(e,cfg)).forEach(e=>{const m=NEWS_MAP.find(([,re])=>re.test(e.t));if(m)found.add(m[0]);});
-    document.querySelectorAll('.wk-chip[data-ev]').forEach(b=>{b.classList.toggle('auto',found.has(b.dataset.ev));b.title=found.has(b.dataset.ev)?'On the economic calendar this week':'';});
+    // chip → highest impact + the days/times it's scheduled
+    const cfg=newsCfg(),wk=newsCache[selectedWeek],found={},rank={High:3,Medium:2,Low:1};
+    if(cfg.on&&wk?.events)wk.events.filter(e=>newsMatchCur(e,cfg)&&rank[e.imp]).forEach(e=>{
+      const m=NEWS_MAP.find(([,re])=>re.test(e.t));if(!m)return;
+      const f=found[m[0]]=found[m[0]]||{imp:'Low',days:new Set(),lines:[]};
+      if(rank[e.imp]>rank[f.imp])f.imp=e.imp;
+      const dn=DAYS[new Date(e.date.slice(0,10)+'T12:00:00').getDay()];f.days.add(dn);f.lines.push(`${dn} ${newsTime(e)} ${e.t} (${NEWS_IMP[e.imp][0]} folder)`);
+    });
+    document.querySelectorAll('.wk-chip[data-ev]').forEach(b=>{
+      const f=found[b.dataset.ev];b.querySelector('.wk-when')?.remove();
+      b.classList.remove('auto','auto-h','auto-m','auto-l');
+      if(!f){b.title='';return;}
+      b.classList.add('auto','auto-'+NEWS_IMP[f.imp][1]);
+      b.insertAdjacentHTML('beforeend',`<small class="wk-when">${[...f.days].join(', ')}</small>`);
+      b.title=f.lines.join('\n');
+    });
   }
 }
 function newsCopy(btn,day){
