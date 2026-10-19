@@ -751,7 +751,11 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 /* economic news folders */
 .nf{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-d);font-size:10px;font-weight:700;padding:1px 6px 1px 5px;border-radius:6px;line-height:16px;}
 .nf.h{background:rgba(240,87,90,.15);color:#f0575a;} .nf.m{background:rgba(245,140,30,.16);color:#ec8a1e;} .nf.l{background:rgba(232,200,40,.2);color:#b89a06;} .nf.hol{background:var(--surface2);color:var(--text2);}
-.cal-news{display:flex;gap:3px;flex-wrap:wrap;align-self:flex-start;margin-top:6px;}
+.cal-news{display:flex;gap:4px;flex-wrap:wrap;align-self:flex-start;margin-top:6px;}
+.cal-news .nf{font-size:12px;padding:2px 8px 2px 6px;gap:4px;line-height:17px;color:#fff;}
+.cal-news .nf svg{width:13px;height:13px;}
+.cal-news .nf.h{background:#e5484d;} .cal-news .nf.m{background:#e8830c;} .cal-news .nf.l{background:#d4b106;} .cal-news .nf.hol{background:#6b6584;}
+.cal-cell.nw-h{border-top:3px solid #e5484d;} .cal-cell.nw-m{border-top:3px solid #e8830c;} .cal-cell.nw-l{border-top:3px solid #d4b106;}
 .cal-cell .cal-news:last-child{margin-top:auto;}
 .nw-wrap .nw-list{margin-bottom:10px;}
 .nw-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:13px;color:var(--text);}
@@ -771,7 +775,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .wk-chip.on.imp-m{background:rgba(245,140,30,.16);border-color:#ec8a1e;color:#ec8a1e;}
 .wk-chip.on.imp-l{background:rgba(232,200,40,.2);border-color:#b89a06;color:#b89a06;}
 #newsSettings .wk-chip.on:not([class*=imp-]){background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
-@media(max-width:640px){.cal-news{margin-top:3px;gap:2px;}.cal-news .nf{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;gap:0;}.cal-news .nf svg{display:none;}.cal-news .nf.h{background:#f0575a;}.cal-news .nf.m{background:#ec8a1e;}.cal-news .nf.l{background:#e8c828;}.cal-news .nf.hol{background:var(--text3);}}
+@media(max-width:640px){.cal-news{margin-top:3px;gap:2px;}.cal-news .nf{font-size:0;padding:0;border-radius:50%;gap:0;}.cal-news .nf svg{display:none;}.cal-news .nf{width:9px;height:9px;}}
 </style>
 </head>
 <body>
@@ -1947,6 +1951,7 @@ function renderCalendar(ft){
       const wins=dt.filter(t=>t.pnl>0).length;
       let cls='cal-cell'+(key===todayKey?' today':'')+(key===selectedDay?' selected':'');
       if(dt.length){cls+=pnl>0?' win-day':pnl<0?' loss-day':' be-day';wPnl+=pnl;wDays++;}
+      const nwTop=['High','Medium','Low'].find(i=>newsFor(key).some(e=>e.imp===i));if(nwTop)cls+=' nw-'+NEWS_IMP[nwTop][1];
       const col=pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--accent)';
       const hasPlan=pmHasContent(premarket[key]),hasNote=!!(dayNotes[key]||'').trim()||!!noteCharts[key]?.charts?.length;
       const icons=hasPlan||hasNote?`<div class="cal-icons">${hasPlan?'<span title="Premarket plan"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg></span>':''}${hasNote?'<span title="Note"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 8h12M6 13h12M6 18h7"/></svg></span>':''}</div>`:'';
