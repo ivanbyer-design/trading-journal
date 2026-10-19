@@ -770,6 +770,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .wk-chip.auto:not(.on){border-style:dashed;}
 .wk-chip.auto-h:not(.on){border-color:#e5484d;color:#e5484d;} .wk-chip.auto-m:not(.on){border-color:#e8830c;color:#e8830c;} .wk-chip.auto-l:not(.on){border-color:#c9a400;color:#b89a06;}
 .wk-when{font-size:10px;font-weight:700;margin-left:5px;opacity:.85;}
+.dm-news{display:flex;align-items:center;flex-wrap:wrap;gap:8px 14px;padding:10px 14px;margin-bottom:18px;border:1px solid var(--border);border-radius:10px;background:var(--surface2);font-family:var(--font-d);font-size:13px;color:var(--text);}
+.dm-news-l{font-size:12px;font-weight:700;color:var(--text2);text-transform:uppercase;letter-spacing:.6px;}
+.dm-news-i{display:inline-flex;align-items:center;gap:6px;}
+.dm-news .nf{padding:2px 5px;}
 .nws-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
 .nws-lbl{width:90px;flex-shrink:0;}
 .nws-meta{font-family:var(--font-d);font-size:12px;color:var(--text2);margin-right:8px;}
@@ -2046,7 +2050,7 @@ function renderDayModal(){
   const body=document.getElementById('dmBody');
   if(dayView==='note'){body.innerHTML=noteViewHTML(key);mkHydrate();}
   else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();newsFill();}
-  else{body.innerHTML=tradesViewHTML(dayTrades,st);if(dayTrades.length)drawDayChart(dayTrades);}
+  else{newsLoad(newsWeekOf(key));body.innerHTML=newsDayStripHTML(key)+tradesViewHTML(dayTrades,st);if(dayTrades.length)drawDayChart(dayTrades);}
   body.scrollTop=0;
 }
 
@@ -2625,16 +2629,22 @@ function newsWeekOf(day){const d=new Date(day+'T12:00:00');d.setDate(d.getDate()
 function newsLoad(wk,force){
   const c=newsCache[wk],cur=newsWeekOf(ymd(new Date()));
   // finished weeks never change; this week refreshes hourly; weeks without data are retried every few hours
-  const ttl=!c?0:c.events?(wk<cur?Infinity:3600e3):(wk===cur?1800e3:6*3600e3);
+  // a finished week is kept forever once we hold a copy fetched after it ended
+  const ended=new Date(wk+'T12:00:00').getTime()+7*864e5;
+  const ttl=!c?0:c.events?(wk<cur?(c.at>ended?Infinity:0):3600e3):(wk===cur?1800e3:6*3600e3);
   if((!force&&c&&Date.now()-c.at<ttl)||newsPending[wk])return;
   newsPending[wk]=1;
   fetch(NEWS_BASE+wk+'.json',{cache:'no-cache'})
     .then(r=>r.ok?r.json():r.status===404?null:Promise.reject(r.status))
-    .then(d=>{newsCache[wk]={at:Date.now(),events:d?.events||null,fetched:d?.fetched||null};try{localStorage.setItem('ef_news',JSON.stringify(newsCache));}catch(e){}newsQueueUI();})
+    .then(d=>{
+      let events=d?.events||null;const prev=newsCache[wk]?.events;
+      if(events&&prev){const k=e=>e.t+'|'+e.cur+'|'+e.date,seen=new Set(events.map(k));events=[...events,...prev.filter(e=>!seen.has(k(e)))].sort((a,b)=>a.date.localeCompare(b.date));}
+      if(!events&&prev)events=prev;
+      newsCache[wk]={at:Date.now(),events,fetched:d?.fetched||newsCache[wk]?.fetched||null};try{localStorage.setItem('ef_news',JSON.stringify(newsCache));}catch(e){}newsQueueUI();})
     .catch(()=>{if(!newsCache[wk]?.events){newsCache[wk]={at:Date.now()-1500e3,events:null,err:true};newsQueueUI();}})
     .finally(()=>{delete newsPending[wk];});
 }
-function newsQueueUI(){clearTimeout(newsUiTimer);newsUiTimer=setTimeout(()=>{if(document.getElementById('calCells')&&document.getElementById('panel-dashboard')?.classList.contains('active'))renderCalendar();newsFill();if(document.getElementById('newsSettings'))renderNewsSettings();},60);}
+function newsQueueUI(){clearTimeout(newsUiTimer);newsUiTimer=setTimeout(()=>{if(selectedDay&&!selectedWeek&&dayView==='trades'&&document.getElementById('dayPanel')?.classList.contains('open'))renderDayModal();if(document.getElementById('calCells')&&document.getElementById('panel-dashboard')?.classList.contains('active'))renderCalendar();newsFill();if(document.getElementById('newsSettings'))renderNewsSettings();},60);}
 function newsMatchCur(e,cfg){return cfg.cur.includes('All')||cfg.cur.includes(e.cur);}
 // filtered events for one ET day; holidays for the chosen currencies always show
 function newsFor(day,anyImpact){
@@ -2690,6 +2700,11 @@ function newsCopy(btn,day){
   const lines=newsFor(day).map(e=>`${newsTime(e)} ${e.imp==='High'?'🔴':e.imp==='Medium'?'🟠':e.imp==='Low'?'🟡':'⚪'} ${e.t}${e.fc?` (F ${e.fc}${e.prev?', P '+e.prev:''})`:''}`);
   const have=new Set(ta.value.split('\n'));const add=lines.filter(l=>!have.has(l));if(!add.length){toast('Already in your notes','info');return;}
   ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+add.join('\n');ta.dispatchEvent(new Event('input'));toast('News copied into notes','success');
+}
+// news strip at the top of the day pop-up (trades view)
+function newsDayStripHTML(day){
+  const ev=newsFor(day);if(!ev.length)return'';
+  return`<div class="dm-news"><span class="dm-news-l">News</span>${ev.map(e=>`<span class="dm-news-i" title="${esc((e.fc?'Forecast '+e.fc:'')+(e.prev?(e.fc?' · ':'')+'Previous '+e.prev:''))}"><span class="nf ${NEWS_IMP[e.imp]?.[1]||''}">${e.imp==='Holiday'?'Holiday':NEWS_ICON}</span>${newsTime(e)} ${esc(e.t)}</span>`).join('')}</div>`;
 }
 // red-folder names for the weekly outlook cell on the calendar
 function newsWeekFlags(wk){

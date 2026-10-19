@@ -35,10 +35,14 @@ def main(out):
     news = os.path.join(out, "news")
     os.makedirs(news, exist_ok=True)
     path = os.path.join(news, f"{week}.json")
-    old = None
+    old = []
     if os.path.exists(path):
         with open(path) as f:
-            old = json.load(f).get("events")
+            old = json.load(f).get("events") or []
+    # never drop history: keep stored events the feed no longer lists (released/rescheduled)
+    key = lambda e: (e["t"], e["cur"], e["date"])
+    seen = {key(e) for e in events}
+    events = sorted(events + [e for e in old if key(e) not in seen], key=lambda e: e["date"])
     if old != events:
         with open(path, "w") as f:
             json.dump({"week": week, "fetched": datetime.now(timezone.utc).isoformat(timespec="seconds"),
