@@ -726,6 +726,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 
 .st-an{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
 .st-an .tz-card{min-width:0;}
+.lvl-row{display:flex;gap:4px;align-items:stretch;}
+.lvl-row input{flex:1;min-width:0;text-align:center;}
+.lvl-btn{width:30px;flex:none;border:1px solid var(--border);background:var(--surface2);color:var(--text2);border-radius:6px;cursor:pointer;font-size:10px;}
+.lvl-btn:hover{color:var(--accent);border-color:var(--accent);}
 .st-sec-h{font-family:var(--font-d);font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--text2);margin:22px 0 10px;}
 .st-sec-h:first-child{margin-top:0;}
 .st-card-live{margin-top:10px;font-size:11px;color:var(--text2);}
@@ -993,7 +997,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
           </div>
           <div class="kpi">
             <div class="kpi-txt">
-              <div class="kpi-lbl">Avg R-multiple <i class="info" title="Average realized R (points won or lost ÷ distance to your initial stop), over trades that have a stop loss set. Badge: trades with a stop / all trades">i</i> <span class="ibadge" id="k-rn">0</span></div>
+              <div class="kpi-lbl">Avg R-multiple <i class="info" title="Average realized R (points won or lost ÷ distance to your initial stop), using your default stop from Settings unless you set a trade's own stop. Badge: trades with a stop / all trades">i</i> <span class="ibadge" id="k-rn">0</span></div>
               <div class="kpi-val" id="k-avgr">--</div>
               <div style="font-size:11px;color:var(--text3);margin-top:4px" id="k-prr"></div>
             </div>
@@ -1078,6 +1082,19 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="form-grid" style="max-width:440px;">
           <div class="fg"><label>Starting Balance</label><input type="number" id="cfgBal" value="50000" onchange="saveSettings()"></div>
           <div class="fg"><label>Daily Loss Limit ($)</label><input type="number" id="cfgDLL" value="1000" onchange="saveSettings()"></div>
+        </div>
+      </div>
+
+      <!-- Default stop / target -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header"><div class="card-title">Default Stop Loss &amp; Take Profit</div></div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px;font-family:var(--font-d);line-height:1.8">
+          Every trade gets this initial stop and target, measured in points from its entry, unless you adjust that trade's own levels with the ▲ ▼ buttons in the trade panel.
+          Planned R and realized R (and the dashboard's Avg R-multiple) are calculated from these.
+        </p>
+        <div class="form-grid" style="max-width:440px;">
+          <div class="fg"><label>Stop Loss (pts)</label><input type="number" id="cfgStop" value="5" min="0.25" step="0.25" onchange="saveSettings()"></div>
+          <div class="fg"><label>Take Profit (pts)</label><input type="number" id="cfgTarget" value="10" min="0.25" step="0.25" onchange="saveSettings()"></div>
         </div>
       </div>
 
@@ -1181,8 +1198,8 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="fg"><label>Direction</label><select id="t-dir" onchange="mtRHint()"><option value="LONG">Long</option><option value="SHORT">Short</option></select></div>
         <div class="fg"><label>Entry Price</label><input type="number" id="t-entry" step="0.25" oninput="mtRHint()"></div>
         <div class="fg"><label>Exit Price</label><input type="number" id="t-exit" step="0.25" oninput="mtRHint()"></div>
-        <div class="fg"><label>Stop Loss</label><input type="number" id="t-stop" step="0.25" placeholder="initial stop (optional)" oninput="mtRHint()"></div>
-        <div class="fg"><label>Target</label><input type="number" id="t-target" step="0.25" placeholder="profit target (optional)" oninput="mtRHint()"></div>
+        <div class="fg"><label>Stop Loss</label><input type="number" id="t-stop" step="0.25" placeholder="blank = default stop" oninput="mtRHint()"></div>
+        <div class="fg"><label>Target</label><input type="number" id="t-target" step="0.25" placeholder="blank = default target" oninput="mtRHint()"></div>
         <div class="fg"><label>Planned R</label><input type="text" id="t-prr" readonly tabindex="-1" placeholder="auto: stop + target"></div>
         <div class="fg"><label>Realized R</label><input type="text" id="t-rhint" readonly tabindex="-1" placeholder="auto: stop + exit"></div>
         <div class="fg"><label>Contracts</label><input type="number" id="t-qty" value="1" min="1" oninput="mtRHint()"></div>
@@ -1524,6 +1541,7 @@ function nav(id){
   if(id==='settings'){
     document.getElementById('cfgBal').value=settings.startingBalance;
     document.getElementById('cfgDLL').value=settings.dailyLossLimit;
+    document.getElementById('cfgStop').value=defStopPts();document.getElementById('cfgTarget').value=defTargetPts();
     updateCloudUI();
     renderNewsSettings();newsLoad(newsWeekOf(ymd(new Date())));
   }
@@ -1762,6 +1780,9 @@ function saveTrades(){localStorage.setItem('ef_trades',JSON.stringify(trades));}
 function saveSettings(){
   settings.startingBalance=parseFloat(document.getElementById('cfgBal').value)||50000;
   settings.dailyLossLimit=parseFloat(document.getElementById('cfgDLL').value)||1000;
+  const sp=parseFloat(document.getElementById('cfgStop').value),tp=parseFloat(document.getElementById('cfgTarget').value);
+  settings.defStopPts=sp>0?sp:5;settings.defTargetPts=tp>0?tp:10;
+  document.getElementById('cfgStop').value=settings.defStopPts;document.getElementById('cfgTarget').value=settings.defTargetPts;
   localStorage.setItem('ef_settings',JSON.stringify(settings));
 }
 function confirmClear(){
@@ -1796,19 +1817,25 @@ function calcStats(arr){
     grossWin,grossLoss};
 }
 
-// Risk = distance from entry to the initial stop; null when there is no stop or it sits on the profit side
+// Default initial stop / target distances (points from entry), set in Settings; used when a trade has no level of its own
+function defStopPts(){const v=+settings.defStopPts;return v>0?v:5;}
+function defTargetPts(){const v=+settings.defTargetPts;return v>0?v:10;}
+function tradeLevelSet(t,key){if(t[key]==null||t[key]==='')return false;const v=+t[key];return isFinite(v)&&!(key==='stop'?stopSideErr:targetSideErr)(t.direction,t.entry,v);}
+function tradeStopPx(t){if(!isFinite(t.entry))return null;return tradeLevelSet(t,'stop')?+t.stop:t.entry+(t.direction==='LONG'?-1:1)*defStopPts();}
+function tradeTargetPx(t){if(!isFinite(t.entry))return null;return tradeLevelSet(t,'target')?+t.target:t.entry+(t.direction==='LONG'?1:-1)*defTargetPts();}
+// Risk = distance from entry to the initial stop (the trade's own, else the default)
 function tradeRiskPts(t){
-  if(t.stop==null||t.stop==='')return null;const s=+t.stop;if(!isFinite(s))return null;
+  const s=tradeStopPx(t);if(s==null)return null;
   const r=t.direction==='LONG'?t.entry-s:s-t.entry;return r>0?r:null;
 }
 function tradeR(t){
-  const r=tradeRiskPts(t);if(r)return(t.direction==='LONG'?t.exit-t.entry:t.entry-t.exit)/r;
+  const r=tradeRiskPts(t);if(r&&isFinite(t.exit))return(t.direction==='LONG'?t.exit-t.entry:t.entry-t.exit)/r;
   return t.rMultiple!=null&&t.rMultiple!==''&&isFinite(+t.rMultiple)?+t.rMultiple:null;
 }
 function tradeRiskUsd(t){const r=tradeRiskPts(t);return r?r*(+t.contracts||1)*((TICK[t.symbol]||5)/.25):null;}
 // Planned R = distance to target ÷ distance to stop
 function tradeRewardPts(t){
-  if(t.target==null||t.target==='')return null;const g=+t.target;if(!isFinite(g))return null;
+  const g=tradeTargetPx(t);if(g==null)return null;
   const r=t.direction==='LONG'?g-t.entry:t.entry-g;return r>0?r:null;
 }
 function tradePlannedR(t){const r=tradeRiskPts(t),w=tradeRewardPts(t);return r&&w?w/r:null;}
@@ -3338,6 +3365,7 @@ function mtRHint(){
   const t={direction:document.getElementById('t-dir').value,entry:v('t-entry'),exit:v('t-exit'),stop:v('t-stop'),target:v('t-target'),contracts:parseInt(document.getElementById('t-qty').value)||1,symbol:document.getElementById('t-sym').value};
   const el=document.getElementById('t-rhint'),pl=document.getElementById('t-prr');el.value=pl.value='';
   if(!isFinite(t.entry))return;
+  if(!isFinite(t.stop))t.stop=tradeStopPx(t);if(!isFinite(t.target))t.target=tradeTargetPx(t);
   const serr=isFinite(t.stop)?stopSideErr(t.direction,t.entry,t.stop):'',terr=isFinite(t.target)?targetSideErr(t.direction,t.entry,t.target):'';
   if(serr){el.value=pl.value=serr;return;}
   if(terr)pl.value=terr;
@@ -3381,12 +3409,36 @@ function setTradeAccount(id,sel){
   const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
   toast(`Moved to "${a}"`,'success');
 }
+// Stop / target field with ▲ ▼ nudges (one tick each); shows the default level until the trade gets its own
+function tpLevelHTML(t,key){
+  const own=tradeLevelSet(t,key),px=key==='stop'?tradeStopPx(t):tradeTargetPx(t),pts=key==='stop'?tradeRiskPts(t):tradeRewardPts(t);
+  const lbl=key==='stop'?'Stop Loss (initial)':'Take Profit';
+  const btn=(d,ch)=>`<button type="button" class="lvl-btn" title="${d>0?'Up':'Down'} 1 tick" onclick="nudgeTradeLevel('${t.id}','${key}',${d})">${ch}</button>`;
+  return`<div class="tp-field"><label>${lbl} <span style="font-weight:500;color:var(--text3);text-transform:none;letter-spacing:0">${pts!=null?pts.toFixed(2)+' pts':''}${own?` · <a href="#" style="color:var(--accent)" onclick="event.preventDefault();resetTradeLevel('${t.id}','${key}')">reset</a>`:' · default'}</span></label>
+    <div class="lvl-row">${btn(-1,'▼')}<input type="number" step="0.25" value="${px!=null?px.toFixed(2):''}" onchange="setTradeLevel('${t.id}','${key}',this)">${btn(1,'▲')}</div></div>`;
+}
+function nudgeTradeLevel(id,key,d){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  const cur=key==='stop'?tradeStopPx(t):tradeTargetPx(t);if(cur==null)return;
+  const n=Math.round((cur+d*.25)*4)/4;
+  const err=(key==='stop'?stopSideErr:targetSideErr)(t.direction,t.entry,n);
+  if(err){toast(err,'error');return;}
+  t[key]=n;
+  const def=key==='stop'?t.entry+(t.direction==='LONG'?-1:1)*defStopPts():t.entry+(t.direction==='LONG'?1:-1)*defTargetPts();
+  if(Math.abs(n-def)<1e-9)delete t[key];
+  saveTrades();refreshAll();
+  const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
+}
+function resetTradeLevel(id,key){
+  const t=trades.find(x=>x.id===id);if(!t)return;delete t[key];saveTrades();refreshAll();
+  const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
+}
 function setTradeLevel(id,key,inp){
   const t=trades.find(x=>x.id===id);if(!t)return;
   const v=inp.value.trim(),n=parseFloat(v);
   if(v&&!isFinite(n))return;
   const err=v&&(key==='stop'?stopSideErr:targetSideErr)(t.direction,t.entry,n);
-  if(err){toast(err,'error');inp.value=t[key]??'';return;}
+  if(err){toast(err,'error');const px=key==='stop'?tradeStopPx(t):tradeTargetPx(t);inp.value=px!=null?px.toFixed(2):'';return;}
   if(v)t[key]=n;else delete t[key];
   saveTrades();refreshAll();
   const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
@@ -3400,7 +3452,7 @@ function patchTrade(id,changes){
 
 function drawTradeDiagram(t){
   const W=384,H=160;
-  const hasStop=!!tradeRiskPts(t),hasTg=!!tradeRewardPts(t),ps=[t.entry,t.exit,...(hasStop?[+t.stop]:[]),...(hasTg?[+t.target]:[])];
+  const hasStop=!!tradeRiskPts(t),hasTg=!!tradeRewardPts(t),ps=[t.entry,t.exit,...(hasStop?[tradeStopPx(t)]:[]),...(hasTg?[tradeTargetPx(t)]:[])];
   const lo=Math.min(...ps),hi=Math.max(...ps);
   const pad=(hi-lo)||Math.max(t.entry*.001,1);
   const rangeMin=lo-pad*1.8,rangeMax=hi+pad*1.8;
@@ -3448,15 +3500,15 @@ function drawTradeDiagram(t){
   const pts=Math.abs(t.exit-t.entry).toFixed(2);
   const moveLabel=`<text x="${arrowX}" y="${H-2}" text-anchor="middle" font-size="9" fill="${textColor}" font-family="Inter,sans-serif">${pts} pts · ${fpnl(t.pnl)}</text>`;
 
-  const stopY=hasStop?py(+t.stop):0;
+  const stopY=hasStop?py(tradeStopPx(t)):0;
   const stopLine=hasStop?`
     <line x1="52" y1="${stopY}" x2="${W}" y2="${stopY}" stroke="#f0575a" stroke-width="1.5" stroke-dasharray="2,3"/>
-    <text x="56" y="${stopY-4}" font-size="9" fill="#f0575a" font-family="Inter,sans-serif" font-weight="600">STOP ${(+t.stop).toFixed(2)}</text>`:'';
+    <text x="56" y="${stopY-4}" font-size="9" fill="#f0575a" font-family="Inter,sans-serif" font-weight="600">STOP ${tradeStopPx(t).toFixed(2)}</text>`:'';
 
-  const tgY=hasTg?py(+t.target):0;
+  const tgY=hasTg?py(tradeTargetPx(t)):0;
   const tgLine=hasTg?`
     <line x1="52" y1="${tgY}" x2="${W}" y2="${tgY}" stroke="#2db87d" stroke-width="1.5" stroke-dasharray="2,3"/>
-    <text x="56" y="${tgY-4}" font-size="9" fill="#2db87d" font-family="Inter,sans-serif" font-weight="600">TARGET ${(+t.target).toFixed(2)}</text>`:'';
+    <text x="56" y="${tgY-4}" font-size="9" fill="#2db87d" font-family="Inter,sans-serif" font-weight="600">TARGET ${tradeTargetPx(t).toFixed(2)}</text>`:'';
 
   return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible">${ticks}${zone}${stopLine}${tgLine}${entryLine}${exitLine}${arrow}${moveLabel}</svg>`;
 }
@@ -3507,10 +3559,7 @@ function openTradeDetail(id){
     <div class="tp-section">
       <div class="tp-section-title">Trade Stats</div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <div class="tp-field"><label>Stop Loss (initial)</label>
-          <input type="number" step="0.25" value="${t.stop??''}" placeholder="e.g. 7735.25" onchange="setTradeLevel('${id}','stop',this)"></div>
-        <div class="tp-field"><label>Target</label>
-          <input type="number" step="0.25" value="${t.target??''}" placeholder="e.g. 7760.00" onchange="setTradeLevel('${id}','target',this)"></div>
+        ${tpLevelHTML(t,'stop')}${tpLevelHTML(t,'target')}
       </div>
       <div class="tp-stats">
         <div class="tp-s"><div class="tp-s-lbl">Net P&L</div><div class="tp-s-val" style="color:${pnlColor}">${fpnl(t.pnl)}</div></div>
@@ -3519,8 +3568,8 @@ function openTradeDetail(id){
         <div class="tp-s"><div class="tp-s-lbl">Entry</div><div class="tp-s-val" style="font-size:13px">${t.entry.toFixed(2)}</div></div>
         <div class="tp-s"><div class="tp-s-lbl">Exit</div><div class="tp-s-val" style="font-size:13px">${t.exit.toFixed(2)}</div></div>
         <div class="tp-s"><div class="tp-s-lbl">Move</div><div class="tp-s-val" style="font-size:13px;color:${pnlColor}">${pts} pts</div></div>
-        <div class="tp-s"><div class="tp-s-lbl">Stop</div><div class="tp-s-val" style="font-size:13px">${tradeRiskPts(t)?(+t.stop).toFixed(2):'—'}</div></div>
-        <div class="tp-s"><div class="tp-s-lbl">Target</div><div class="tp-s-val" style="font-size:13px">${tradeRewardPts(t)?(+t.target).toFixed(2):'—'}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Stop</div><div class="tp-s-val" style="font-size:13px">${tradeRiskPts(t)?tradeStopPx(t).toFixed(2):'—'}</div></div>
+        <div class="tp-s"><div class="tp-s-lbl">Target</div><div class="tp-s-val" style="font-size:13px">${tradeRewardPts(t)?tradeTargetPx(t).toFixed(2):'—'}</div></div>
         <div class="tp-s"><div class="tp-s-lbl">Planned R</div><div class="tp-s-val" style="font-size:13px">${fRR(tradePlannedR(t))}</div></div>
         <div class="tp-s"><div class="tp-s-lbl">Risk</div><div class="tp-s-val" style="font-size:13px">${tradeRiskPts(t)?`${tradeRiskPts(t).toFixed(2)} pts`:'—'}</div>${tradeRiskUsd(t)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${fmoney(tradeRiskUsd(t))}</div>`:''}</div>
         <div class="tp-s"><div class="tp-s-lbl">Reward</div><div class="tp-s-val" style="font-size:13px">${tradeRewardPts(t)?`${tradeRewardPts(t).toFixed(2)} pts`:'—'}</div>${tradeRewardPts(t)?`<div style="font-size:10px;color:var(--text3);margin-top:2px">${fmoney(tradeRewardPts(t)*(+t.contracts||1)*((TICK[t.symbol]||5)/.25))}</div>`:''}</div>
