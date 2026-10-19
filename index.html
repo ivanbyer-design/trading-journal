@@ -216,7 +216,6 @@ tr:hover td{background:rgba(108,93,211,.04);}
 .tp-diagram-wrap{padding:16px 18px;border-bottom:1px solid var(--border);}
 .tp-field{display:flex;flex-direction:column;gap:5px;margin-bottom:10px;}
 .tp-field:last-child{margin-bottom:0;}
-.tp-img-preview{width:100%;border-radius:var(--r-sm);margin-top:8px;display:none;border:1px solid var(--border);}
 .tp-emo-wrap{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px;}
 
 /* ── DROP OVERLAY ── */
@@ -718,6 +717,24 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .mk-thumb.add{border-style:dashed;background:none;color:var(--accent);font-size:22px;display:flex;align-items:center;justify-content:center;}
 .mk-light{position:fixed;inset:0;z-index:2000;background:rgba(5,3,12,.94);display:none;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;}
 .mk-light.open{display:flex;}
+.mk.sm{margin-bottom:0;}
+.mk.sm .mk-drop{min-height:170px;padding:18px 14px;gap:8px;}
+.mk.sm .mk-drop b{font-size:14px;}
+.mk.sm .mk-drop span{font-size:12px;}
+.mk.sm .mk-drop-ic{width:42px;height:42px;}
+.mk.sm .mk-add input[type=text]{min-width:0;}
+.mk.sm .mk-img{max-height:50vh;min-height:140px;}
+.mk.sm .mk-tools{top:6px;right:6px;}
+.mk.sm .mk-tools button,.mk.sm .mk-tools .file-input-btn{height:28px;padding:0 8px;font-size:11px;}
+.mk.sm .mk-label{max-width:none;}
+.db-imgs{display:flex;align-items:center;gap:5px;padding:4px 8px;min-height:38px;}
+.db-img{position:relative;width:52px;height:30px;border-radius:5px;overflow:hidden;border:1px solid var(--border);background:#0b0916;flex-shrink:0;}
+.db-img img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in;}
+.db-img button{display:none;position:absolute;top:0;right:0;width:16px;height:16px;border:none;border-radius:0 0 0 5px;background:rgba(0,0,0,.7);color:#fff;font-size:11px;line-height:1;cursor:pointer;padding:0;}
+.db-img:hover button{display:block;}
+.db-img-add{width:26px;height:26px;border-radius:6px;border:1px dashed var(--border2);background:none;color:var(--text3);cursor:pointer;font-size:15px;flex-shrink:0;}
+.db-img-add:hover{border-color:var(--accent);color:var(--accent);}
+.db tr:not(:hover) .db-imgs .db-img-add:not(:only-child){opacity:0;}
 .mk-light img{max-width:100%;max-height:100%;object-fit:contain;}
 </style>
 </head>
@@ -1878,7 +1895,7 @@ function renderCalendar(ft){
       let cls='cal-cell'+(key===todayKey?' today':'')+(key===selectedDay?' selected':'');
       if(dt.length){cls+=pnl>0?' win-day':pnl<0?' loss-day':' be-day';wPnl+=pnl;wDays++;}
       const col=pnl>0?'var(--green)':pnl<0?'var(--red)':'var(--accent)';
-      const hasPlan=pmHasContent(premarket[key]),hasNote=!!(dayNotes[key]||'').trim();
+      const hasPlan=pmHasContent(premarket[key]),hasNote=!!(dayNotes[key]||'').trim()||!!noteCharts[key]?.charts?.length;
       const icons=hasPlan||hasNote?`<div class="cal-icons">${hasPlan?'<span title="Premarket plan"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M5 12l5 5 9-10"/></svg></span>':''}${hasNote?'<span title="Note"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 8h12M6 13h12M6 18h7"/></svg></span>':''}</div>`:'';
       html+=`<div class="${cls}" onclick="openDayPanel('${key}')">${icons}
         <div class="cal-day-num">${d}</div>
@@ -1904,12 +1921,13 @@ function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMont
 /* ══════════════════════════════════════════════
    DAY PANEL
 ══════════════════════════════════════════════ */
-let dayNotes={},premarket={},weekly={};
+let dayNotes={},premarket={},weekly={},noteCharts={};
 try{dayNotes=JSON.parse(localStorage.getItem('ef_daynotes')||'{}');}catch(e){}
 try{premarket=JSON.parse(localStorage.getItem('ef_premarket')||'{}');}catch(e){}
 try{weekly=JSON.parse(localStorage.getItem('ef_weekly')||'{}');}catch(e){}
+try{noteCharts=JSON.parse(localStorage.getItem('ef_notecharts')||'{}');}catch(e){}
 function saveDayData(){
-  try{localStorage.setItem('ef_daynotes',JSON.stringify(dayNotes));localStorage.setItem('ef_premarket',JSON.stringify(premarket));localStorage.setItem('ef_weekly',JSON.stringify(weekly));}catch(e){}
+  try{localStorage.setItem('ef_daynotes',JSON.stringify(dayNotes));localStorage.setItem('ef_premarket',JSON.stringify(premarket));localStorage.setItem('ef_weekly',JSON.stringify(weekly));localStorage.setItem('ef_notecharts',JSON.stringify(noteCharts));}catch(e){}
 }
 const PM_CHECKLIST=['Reviewed the higher-timeframe trend','Marked key levels on my chart','Checked the economic calendar','Set my max loss and max trades','I know exactly what my A+ setup looks like','Calm and focused, no revenge or FOMO mindset'];
 function pmHasContent(p){return!!p&&Object.entries(p).some(([k,v])=>k!=='updated'&&(Array.isArray(v)?v.length:v!==''&&v!=null));}
@@ -1918,7 +1936,7 @@ let dayView='trades',dayChart=null,daySaveTimer=null;
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function openDayPanel(key,view){
-  flushDaySave();mkSel.pm=0;selectedWeek=null;
+  flushDaySave();mkSel.pm=0;mkSel.note=0;selectedWeek=null;
   selectedDay=key;
   renderCalendar();
   const dayTrades=tradesByDay(filteredTrades())[key]||[];
@@ -1958,14 +1976,14 @@ function renderDayModal(){
   pb.classList.toggle('active',dayView==='plan');nb.classList.toggle('active',dayView==='note');
   pb.querySelector('.has')?.remove();nb.querySelector('.has')?.remove();
   if(pmHasContent(premarket[key]))pb.insertAdjacentHTML('beforeend','<span class="has" title="Plan saved"></span>');
-  if((dayNotes[key]||'').trim())nb.insertAdjacentHTML('beforeend','<span class="has" title="Note saved"></span>');
+  if((dayNotes[key]||'').trim()||noteCharts[key]?.charts?.length)nb.insertAdjacentHTML('beforeend','<span class="has" title="Note saved"></span>');
   nb.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.trim())n.textContent=dayView==='note'?'Close note':'View note';});
   document.getElementById('dmTradesBtn').style.display=dayView==='trades'?'none':'';
   document.getElementById('dmPrimary').textContent=dayView==='trades'?'View Details':'Save';
   document.getElementById('dmStatus').textContent='';
   if(dayChart){dayChart.destroy();dayChart=null;}
   const body=document.getElementById('dmBody');
-  if(dayView==='note')body.innerHTML=noteViewHTML(key);
+  if(dayView==='note'){body.innerHTML=noteViewHTML(key);mkHydrate();}
   else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();}
   else{body.innerHTML=tradesViewHTML(dayTrades,st);if(dayTrades.length)drawDayChart(dayTrades);}
   body.scrollTop=0;
@@ -2019,6 +2037,7 @@ function noteViewHTML(key){
   return`<div class="pm">
     <div class="pm-title">Daily journal</div>
     <div class="pm-sub">How did the session go? What did you do well, and what will you change tomorrow?</div>
+    ${mkBlockHTML('note')}
     <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea>
   </div>`;
 }
@@ -2358,9 +2377,9 @@ function weekViewHTML(key){
   </div>`;
 }
 
-/* ── Chart markup images (premarket + weekly) ── */
-// Uploaded images live in IndexedDB (localStorage is too small); plans only keep {id,kind,url,label}.
-let mkDbP=null;const mkCache={};const mkSel={pm:0,wk:0};
+/* ── Chart / screenshot images (plans, notes, strategies, trades, backtest rows) ── */
+// Uploaded images live in IndexedDB (localStorage is too small); owners only keep {id,kind,url,label}.
+let mkDbP=null;const mkCache={};const mkSel={pm:0,wk:0,note:0,st:0,tr:0};
 function mkDb(){
   if(!mkDbP)mkDbP=new Promise((res,rej)=>{const r=indexedDB.open('edgeflow',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
   return mkDbP;
@@ -2368,10 +2387,16 @@ function mkDb(){
 async function imgPut(id,data){mkCache[id]=data;const db=await mkDb();return new Promise((res,rej)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').put(data,id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}
 async function imgGet(id){if(mkCache[id])return mkCache[id];try{const db=await mkDb();return await new Promise(res=>{const q=db.transaction('images').objectStore('images').get(id);q.onsuccess=()=>{if(q.result)mkCache[id]=q.result;res(q.result||null);};q.onerror=()=>res(null);});}catch(e){return null;}}
 async function imgDel(id){delete mkCache[id];try{const db=await mkDb();db.transaction('images','readwrite').objectStore('images').delete(id);}catch(e){}}
-function allChartRefs(){const ids=new Set();[premarket,weekly].forEach(o=>Object.values(o).forEach(p=>(p?.charts||[]).forEach(c=>{if(c.kind==='img')ids.add(c.id);})));return ids;}
+function allChartRefs(){
+  const ids=new Set(),add=a=>(Array.isArray(a)?a:[]).forEach(c=>{if(c?.kind==='img')ids.add(c.id);});
+  [premarket,weekly,noteCharts].forEach(o=>Object.values(o).forEach(p=>add(p?.charts)));
+  trades.forEach(t=>add(t.charts));
+  strategies.forEach(s=>{add(s.charts);(s.rows||[]).forEach(r=>Object.values(r).forEach(add));});
+  return ids;
+}
 function mkSrc(c){return c.kind==='url'?c.url:(mkCache[c.id]||'');}
 function tvToImg(u){
-  u=u.trim();const m=u.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+  u=(u||'').trim();const m=u.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
   if(m)return`https://s3.tradingview.com/snapshots/${m[1][0].toLowerCase()}/${m[1]}.png`;
   return/^https?:\/\//i.test(u)?u:'';
 }
@@ -2389,23 +2414,49 @@ function compressImage(file){
     im.src=url;
   });
 }
-function mkObj(scope,create){
-  const store=scope==='wk'?weekly:premarket,k=scope==='wk'?selectedWeek:selectedDay;
-  if(!k)return null;if(!store[k]&&create)store[k]={};return store[k];
-}
-function mkTouch(scope){const o=mkObj(scope,true);o.updated=new Date().toISOString();saveDayData();setDayStatus();mkRender(scope);}
-async function mkAddFiles(scope,files){
-  const imgs=[...(files||[])].filter(f=>f.type.startsWith('image/'));if(!imgs.length)return;
-  const o=mkObj(scope,true);o.charts=o.charts||[];
-  for(const f of imgs){
-    try{const id='img_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);await imgPut(id,await compressImage(f));o.charts.push({id,kind:'img'});}
+// files → stored chart entries
+async function mkEntries(files){
+  const out=[];
+  for(const f of [...(files||[])].filter(f=>f.type.startsWith('image/'))){
+    try{const id='img_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);await imgPut(id,await compressImage(f));out.push({id,kind:'img'});}
     catch(e){toast('Could not add image: '+e.message,'error');}
   }
-  mkSel[scope]=o.charts.length-1;mkTouch(scope);toast('Chart markup added','success');
+  return out;
+}
+function mkUrlEntry(raw){const url=tvToImg(raw);if(!url){toast('Paste a TradingView snapshot link or an image URL','error');return null;}return{id:'url_'+Date.now().toString(36),kind:'url',url};}
+
+const MK_TEXT={
+  pm:['Add your premarket chart markup','Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.'],
+  wk:['Add your weekly chart markup','Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.'],
+  note:['Add screenshots from the session','Your executions, what price did vs. your plan. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
+  st:['Add your A+ model chart','An annotated example of the perfect version of this setup. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
+  tr:['Add a chart screenshot','Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.']
+};
+function mkObj(scope,create){
+  if(scope==='st')return stCur();
+  if(scope==='tr'){
+    const t=trades.find(x=>x.id===activeTradePanelId);
+    if(t&&t.screenshot&&!t.charts){const u=tvToImg(t.screenshot);if(u)t.charts=[{id:'url_'+t.id,kind:'url',url:u}];delete t.screenshot;saveTrades();}
+    return t;
+  }
+  const store=scope==='wk'?weekly:scope==='note'?noteCharts:premarket,k=scope==='wk'?selectedWeek:selectedDay;
+  if(!k)return null;if(!store[k]&&create)store[k]={};return store[k];
+}
+function mkSave(scope){
+  if(scope==='st'){saveStrategies();return;}
+  if(scope==='tr'){saveTrades();return;}
+  if(scope==='note'&&selectedDay&&!noteCharts[selectedDay]?.charts)delete noteCharts[selectedDay];
+  saveDayData();setDayStatus();
+}
+function mkTouch(scope){const o=mkObj(scope,true);if(scope==='pm'||scope==='wk')o.updated=new Date().toISOString();mkSave(scope);mkRender(scope);}
+async function mkAddFiles(scope,files){
+  const add=await mkEntries(files);if(!add.length)return;
+  const o=mkObj(scope,true);if(!o)return;o.charts=[...(o.charts||[]),...add];
+  mkSel[scope]=o.charts.length-1;mkTouch(scope);toast(add.length>1?`${add.length} images added`:'Image added','success');
 }
 function mkAddUrl(scope,raw){
-  const url=tvToImg(raw||'');if(!url){toast('Paste a TradingView snapshot link or an image URL','error');return;}
-  const o=mkObj(scope,true);o.charts=o.charts||[];o.charts.push({id:'url_'+Date.now().toString(36),kind:'url',url});
+  const c=mkUrlEntry(raw);if(!c)return;
+  const o=mkObj(scope,true);if(!o)return;o.charts=[...(o.charts||[]),c];
   mkSel[scope]=o.charts.length-1;mkTouch(scope);
 }
 function mkRemove(scope,btn){
@@ -2416,26 +2467,30 @@ function mkRemove(scope,btn){
   mkSel[scope]=Math.max(0,mkSel[scope]-1);mkTouch(scope);
 }
 function mkPick(scope,i){mkSel[scope]=i;mkRender(scope);}
-function mkLabel(scope,v){const o=mkObj(scope);const c=o?.charts?.[mkSel[scope]];if(!c)return;c.label=v;queueDaySave(()=>{});const t=document.querySelector(`#mk-${scope} .mk-thumb.on i`);if(t)t.textContent=v;}
+function mkLabel(scope,v){
+  const o=mkObj(scope);const c=o?.charts?.[mkSel[scope]];if(!c)return;c.label=v;
+  if(scope==='st')stQueueSave();else if(scope==='tr')saveTrades();else queueDaySave(()=>{});
+  const t=document.querySelector(`#mk-${scope} .mk-thumb.on i`);if(t)t.textContent=v;
+}
 function mkOpen(src){if(!src)return;let l=document.getElementById('mkLight');if(!l){l=document.createElement('div');l.id='mkLight';l.className='mk-light';l.onclick=()=>l.classList.remove('open');l.innerHTML='<img alt="">';document.body.appendChild(l);}l.querySelector('img').src=src;l.classList.add('open');}
 function mkDragAttrs(scope){return`ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');mkAddFiles('${scope}',event.dataTransfer.files)"`;}
+function mkFileBtn(lbl,cls,onchange){return`<div class="${cls} file-input-btn">${lbl}<input type="file" accept="image/*" multiple onchange="${onchange};this.value=''"></div>`;}
 function mkBlockHTML(scope){
-  const o=mkObj(scope)||{},cs=o.charts||[];
-  const what=scope==='wk'?'weekly':'premarket';
-  const fileBtn=(lbl,cls)=>`<div class="${cls} file-input-btn">${lbl}<input type="file" accept="image/*" multiple onchange="mkAddFiles('${scope}',this.files);this.value=''"></div>`;
-  if(!cs.length)return`<div class="mk" id="mk-${scope}"><div class="mk-drop" ${mkDragAttrs(scope)}>
+  const o=mkObj(scope)||{},cs=o.charts||[],sm=scope==='tr'?' sm':'';
+  const fileBtn=(lbl,cls)=>mkFileBtn(lbl,cls,`mkAddFiles('${scope}',this.files)`);
+  if(!cs.length)return`<div class="mk${sm}" id="mk-${scope}"><div class="mk-drop" ${mkDragAttrs(scope)}>
       <div class="mk-drop-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.6"/></svg></div>
-      <b>Add your ${what} chart markup</b>
-      <span>Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.</span>
+      <b>${MK_TEXT[scope][0]}</b>
+      <span>${MK_TEXT[scope][1]}</span>
       <div class="mk-add">${fileBtn('Choose image','btn primary')}
         <input type="text" placeholder="https://www.tradingview.com/x/…" onkeydown="if(event.key==='Enter')mkAddUrl('${scope}',this.value)">
         <button class="btn" onclick="mkAddUrl('${scope}',this.previousElementSibling.value)">Embed link</button></div>
     </div></div>`;
   const i=Math.min(mkSel[scope],cs.length-1),c=cs[i],src=mkSrc(c);
-  return`<div class="mk" id="mk-${scope}">
+  return`<div class="mk${sm}" id="mk-${scope}">
     <div class="mk-view" ${mkDragAttrs(scope)}>
-      ${src||c.kind==='img'?`<img class="mk-img" data-mk="${c.kind==='img'?c.id:''}"${src?` src="${esc(src)}"`:''} alt="Chart markup" onclick="mkOpen(this.src)" onerror="this.outerHTML='<div class=&quot;mk-missing&quot;>Image could not load. If it was uploaded on another device, pull from cloud to sync it.</div>'">`:''}
-      <div class="mk-tools"><button onclick="mkOpen(document.querySelector('#mk-${scope} .mk-img')?.src)">⤢ Full screen</button>${fileBtn('+ Add','')}<button onclick="mkRemove('${scope}',this)">✕ Remove</button></div>
+      <img class="mk-img" data-mk="${c.kind==='img'?c.id:''}"${src?` src="${esc(src)}"`:''} alt="Chart" onclick="mkOpen(this.src)" onerror="this.outerHTML='<div class=&quot;mk-missing&quot;>Image could not load. If it was uploaded on another device, pull from cloud to sync it.</div>'">
+      <div class="mk-tools"><button onclick="mkOpen(document.querySelector('#mk-${scope} .mk-img')?.src)">⤢${sm?'':' Full screen'}</button>${fileBtn('+ Add','')}<button onclick="mkRemove('${scope}',this)">✕ Remove</button></div>
     </div>
     <div class="mk-bar">
       <input class="mk-label" value="${esc(c.label||'')}" placeholder="Label, e.g. NQ Daily / 4H" oninput="mkLabel('${scope}',this.value)">
@@ -2444,17 +2499,22 @@ function mkBlockHTML(scope){
   </div>`;
 }
 function mkRender(scope){const el=document.getElementById('mk-'+scope);if(!el)return;el.outerHTML=mkBlockHTML(scope);mkHydrate();}
-// Fill in uploaded images from IndexedDB after the block is in the DOM
+// Fill in uploaded images from IndexedDB after they are in the DOM
 function mkHydrate(){
   document.querySelectorAll('img[data-mk]').forEach(async im=>{
     const id=im.dataset.mk;if(!id||im.getAttribute('src'))return;
     const d=await imgGet(id);if(d)im.src=d;else im.dispatchEvent(new Event('error'));
   });
 }
-// Paste a screenshot or a TradingView link straight into the open plan
+// Which image block a paste should land in
+function mkPasteScope(){
+  if(document.getElementById('tradePanel')?.classList.contains('open'))return'tr';
+  if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':dayView==='note'?'note':null;
+  if(document.getElementById('panel-strategies')?.classList.contains('active')&&stUI.id&&stUI.tab==='breakdown')return'st';
+  return null;
+}
 document.addEventListener('paste',e=>{
-  if(!document.getElementById('dayPanel')?.classList.contains('open'))return;
-  const scope=selectedWeek?'wk':dayView==='plan'?'pm':null;if(!scope)return;
+  const scope=mkPasteScope();if(!scope)return;
   const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile());
   if(files.length){e.preventDefault();mkAddFiles(scope,files);return;}
   const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea')return;
@@ -2496,7 +2556,7 @@ function stQueueSave(){clearTimeout(stSaveTimer);stSaveTimer=setTimeout(saveStra
 function stUid(){return Math.random().toString(36).slice(2,10);}
 function stCur(){return strategies.find(s=>s.id===stUI.id);}
 const ST_COLORS=['#6c5dd3','#2db87d','#3898ec','#f5a524','#d65caa','#f0575a','#14b8a6'];
-const ST_TYPES={text:'Aa',number:'#',date:'▦',select:'▾',checkbox:'☑',url:'↗'};
+const ST_TYPES={text:'Aa',number:'#',date:'▦',select:'▾',checkbox:'☑',url:'↗',image:'▣'};
 const ST_SECTIONS=[
   ['thesis','💡','The idea','Why does this edge exist? Who is trapped or forced to act?','e.g. Price sweeps the Asia low into London open, then reverses as trapped shorts cover…'],
   ['conditions','🧭','Market conditions','HTF context, bias and the type of day this works on','e.g. Daily bullish, price in discount, no red-folder news in the first hour…'],
@@ -2518,7 +2578,7 @@ function stDefaultProps(){return[
   {key:'pnl',name:'P&L $',type:'number'},
   {key:'grade',name:'Grade',type:'select',options:['A+','A','B','C']},
   {key:'notes',name:'Notes',type:'text'},
-  {key:'link',name:'Chart',type:'url'}];}
+  {key:'shot',name:'Screenshot',type:'image'}];}
 
 function stOutcome(r){const o=r.outcome;if(o==='Win'||o==='Loss'||o==='BE')return o;const v=parseFloat(r.r);return isFinite(v)?(v>0?'Win':v<0?'Loss':'BE'):'';}
 function stSorted(rows){return[...rows].sort((a,b)=>(a.date||'').localeCompare(b.date||''));}
@@ -2548,6 +2608,7 @@ function renderStrategies(){
   el.innerHTML=stDetailHTML(s);
   if(stUI.tab==='breakdown')el.querySelectorAll('.st-sec textarea').forEach(stAutosize);
   if(stUI.tab==='analytics')stDrawCurve(s);
+  mkHydrate();
 }
 function stListHTML(){
   const cards=strategies.map((s,i)=>{
@@ -2573,18 +2634,20 @@ function stNew(){
   strategies.push(s);saveStrategies();stUI.id=s.id;stUI.tab='breakdown';stUI.sort=null;stUI.q='';stUI.fOutcome='';renderStrategies();
   setTimeout(()=>document.getElementById('stName')?.focus(),50);
 }
-function stOpen(id){stUI.id=id;stUI.tab='breakdown';stUI.sort=null;stUI.q='';stUI.fOutcome='';renderStrategies();document.getElementById('mainContent')?.scrollTo?.(0,0);}
+function stOpen(id){mkSel.st=0;stUI.id=id;stUI.tab='breakdown';stUI.sort=null;stUI.q='';stUI.fOutcome='';renderStrategies();document.getElementById('mainContent')?.scrollTo?.(0,0);}
 function stBack(){saveStrategies();stUI.id=null;renderStrategies();}
 function stTab(t){stUI.tab=t;renderStrategies();}
 function stSet(field,val){const s=stCur();if(!s)return;s[field]=val;s.updated=new Date().toISOString();stQueueSave();}
 function stAutosize(t){t.style.height='auto';t.style.height=Math.max(96,t.scrollHeight+2)+'px';}
 function stDup(){
   const s=stCur();const c=JSON.parse(JSON.stringify(s));c.id=stUid();c.name=(s.name||'Untitled')+' (copy)';c.rows=[];c.created=new Date().toISOString();
+  (c.charts||[]).forEach(ch=>{if(ch.kind!=='img')return;const old=ch.id;ch.id='img_'+stUid();imgGet(old).then(d=>{if(d)imgPut(ch.id,d);});});
   strategies.push(c);saveStrategies();stOpen(c.id);toast('Duplicated without backtest rows','success');
 }
 function stDel(btn){
   if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Tap again to delete';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent='Delete';}},3000);return;}
-  strategies=strategies.filter(x=>x.id!==stUI.id);saveStrategies();stUI.id=null;renderStrategies();toast('Strategy deleted','success');
+  const gone=stCur();strategies=strategies.filter(x=>x.id!==stUI.id);saveStrategies();
+  const keep=allChartRefs();[...(gone?.charts||[]),...(gone?.rows||[]).flatMap(r=>Object.values(r).filter(Array.isArray).flat())].forEach(c=>{if(c?.kind==='img'&&!keep.has(c.id))imgDel(c.id);});stUI.id=null;renderStrategies();toast('Strategy deleted','success');
 }
 
 function stDetailHTML(s){
@@ -2608,7 +2671,7 @@ function stDetailHTML(s){
     ${stUI.tab==='breakdown'?stBreakdownHTML(s):stUI.tab==='backtest'?`<div id="stKpis">${stKpisHTML(st)}</div>${stDbBarHTML()}<div id="stDbArea">${stDbHTML(s)}</div>`:stAnalyticsHTML(s,st)}`;
 }
 function stBreakdownHTML(s){
-  return`<div class="st-doc">${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='examples'?' full':''}">
+  return`${mkBlockHTML('st')}<div class="st-doc">${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='examples'?' full':''}">
     <h4><i>${ic}</i>${t}</h4><p>${hint}</p>
     <textarea placeholder="${esc(ph)}" oninput="stSet('${f}',this.value);stAutosize(this)${f==='examples'?';stRenderLinks(this.value)':''}">${esc(s[f]||'')}</textarea>
     ${f==='examples'?`<div class="st-links" id="stLinks">${stLinksHTML(s[f])}</div>`:''}
@@ -2630,6 +2693,7 @@ function stPillCls(p,v){if(!v)return'';if(p.key==='outcome')return{Win:'c1',Loss
 function stCellHTML(p,r){
   const v=r[p.key]??'',on=`'${r.id}','${p.key}'`;
   if(p.type==='select')return`<td><select data-k="${p.key}" class="pill-sel${v?' v '+stPillCls(p,v):''}" onchange="stCell(${on},this.value);this.className='pill-sel'+(this.value?' v '+stPillCls(stProp('${p.key}'),this.value):'')"><option value="">${p.key==='outcome'&&!v&&stOutcome(r)?stOutcome(r)+' (auto)':''}</option>${(p.options||[]).map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select></td>`;
+  if(p.type==='image')return stImgCellHTML(p,r);
   if(p.type==='checkbox')return`<td><input type="checkbox"${v?' checked':''} onchange="stCell(${on},this.checked)"></td>`;
   if(p.type==='number'){const n=parseFloat(v);return`<td class="num${p.key==='r'&&n>0?' r-pos':p.key==='r'&&n<0?' r-neg':''}"><input type="number" step="any" value="${esc(v)}" oninput="stCell(${on},this.value);${p.key==='r'?`this.parentElement.className='num'+(this.value>0?' r-pos':this.value<0?' r-neg':'')`:''}"></td>`;}
   if(p.type==='date')return`<td><input type="date" value="${esc(v)}" onchange="stCell(${on},this.value)"></td>`;
@@ -2657,7 +2721,7 @@ function stDbBarHTML(){
 }
 function stDbHTML(s){
   const rows=stVisibleRows(s);
-  const head=s.props.map(p=>`<th style="min-width:${p.type==='checkbox'?70:p.type==='number'?100:p.type==='date'?140:p.type==='select'?120:150}px"><button onclick="stPropMenu('${p.key}',this,event)"><span class="ty">${ST_TYPES[p.type]}</span>${esc(p.name)}${stUI.sort?.key===p.key?`<span class="so">${stUI.sort.dir>0?'▲':'▼'}</span>`:''}</button></th>`).join('');
+  const head=s.props.map(p=>`<th style="min-width:${p.type==='checkbox'?70:p.type==='number'?100:p.type==='date'?140:p.type==='select'?120:p.type==='image'?130:150}px"><button onclick="stPropMenu('${p.key}',this,event)"><span class="ty">${ST_TYPES[p.type]}</span>${esc(p.name)}${stUI.sort?.key===p.key?`<span class="so">${stUI.sort.dir>0?'▲':'▼'}</span>`:''}</button></th>`).join('');
   return`<div class="db-wrap" id="stDb"><table class="db"><thead><tr><th style="width:44px"></th>${head}<th class="db-add"><button title="Add property" onclick="stAddPropMenu(this,event)">+</button></th></tr></thead>
       <tbody>${rows.map((r,i)=>`<tr data-id="${r.id}"><td class="idx"><span>${i+1}</span><button title="Delete row" onclick="stDelRow('${r.id}')">×</button></td>${s.props.map(p=>stCellHTML(p,r)).join('')}<td></td></tr>`).join('')}</tbody>
     </table><button class="db-new" onclick="stAddRow()">+ New row</button></div>
@@ -2667,7 +2731,7 @@ function stRefreshDb(){
   const s=stCur();if(!s)return;
   const area=document.getElementById('stDbArea');if(!area)return;
   const sc=document.getElementById('stDb')?.scrollLeft||0;
-  area.innerHTML=stDbHTML(s);
+  area.innerHTML=stDbHTML(s);mkHydrate();
   document.getElementById('stDb').scrollLeft=sc;
   stRefreshKpis();
 }
@@ -2687,11 +2751,36 @@ function stAddRow(){
   const tr=wrap.querySelector('tbody tr:last-child');tr?.querySelector('td:nth-child(3) input, td:nth-child(3) select')?.focus();
   document.querySelector('.st-tab small').textContent=s.rows.length;
 }
-function stDelRow(id){const s=stCur();s.rows=s.rows.filter(r=>r.id!==id);saveStrategies();stRefreshDb();document.querySelector('.st-tab small').textContent=s.rows.length;}
+function stDelRow(id){const s=stCur();Object.values(s.rows.find(r=>r.id===id)||{}).forEach(v=>(Array.isArray(v)?v:[]).forEach(c=>{if(c.kind==='img')imgDel(c.id);}));s.rows=s.rows.filter(r=>r.id!==id);saveStrategies();stRefreshDb();document.querySelector('.st-tab small').textContent=s.rows.length;}
 function stExportCsv(){
   const s=stCur();const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
-  const csv=[s.props.map(p=>q(p.name)).join(','),...stSorted(s.rows).map(r=>s.props.map(p=>q(r[p.key])).join(','))].join('\n');
+  const csv=[s.props.map(p=>q(p.name)).join(','),...stSorted(s.rows).map(r=>s.props.map(p=>q(Array.isArray(r[p.key])?r[p.key].map(c=>c.url||'uploaded image').join(' '):r[p.key])).join(','))].join('\n');
   const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`${(s.name||'strategy').replace(/[^\w-]+/g,'_')}-backtest.csv`;a.click();
+}
+
+/* ── image cells ── */
+function stImgCellHTML(p,r){
+  const cs=Array.isArray(r[p.key])?r[p.key]:[];
+  return`<td><div class="db-imgs">${cs.map((c,j)=>`<span class="db-img"><img data-mk="${c.kind==='img'?c.id:''}"${mkSrc(c)?` src="${esc(mkSrc(c))}"`:''} alt="" onclick="mkOpen(this.src)"><button title="Remove" onclick="stImgRemove('${r.id}','${p.key}',${j})">×</button></span>`).join('')}<button class="db-img-add" title="Add image" onclick="stImgPop('${r.id}','${p.key}',this,event)">+</button></div></td>`;
+}
+function stImgPush(rid,key,add){
+  const r=stCur().rows.find(x=>x.id===rid);if(!r||!add.length)return;
+  r[key]=[...(Array.isArray(r[key])?r[key]:[]),...add];saveStrategies();stClosePop();stRefreshDb();
+}
+async function stImgAddFiles(rid,key,files){stImgPush(rid,key,await mkEntries(files));}
+function stImgAddUrl(rid,key,raw){const c=mkUrlEntry(raw);if(c)stImgPush(rid,key,[c]);}
+function stImgRemove(rid,key,j){
+  const r=stCur().rows.find(x=>x.id===rid);const c=r?.[key]?.[j];if(!c)return;
+  r[key].splice(j,1);if(c.kind==='img')imgDel(c.id);if(!r[key].length)delete r[key];saveStrategies();stRefreshDb();
+}
+function stImgPop(rid,key,btn,e){
+  e.stopPropagation();const pop=stPop();
+  pop.innerHTML=`<label>Add screenshot</label>${mkFileBtn('Choose image','btn primary',`stImgAddFiles('${rid}','${key}',this.files)`)}
+    <small>or paste a TradingView snapshot / image link</small>
+    <input id="dbpUrl" placeholder="https://www.tradingview.com/x/…" onkeydown="if(event.key==='Enter')stImgAddUrl('${rid}','${key}',this.value)">
+    <div class="row"><button class="btn" onclick="stImgAddUrl('${rid}','${key}',document.getElementById('dbpUrl').value)">Embed link</button></div>`;
+  pop.querySelector('.file-input-btn').style.justifyContent='center';
+  stPlacePop(pop,btn);
 }
 
 /* ── property popovers ── */
@@ -2720,7 +2809,7 @@ function stSaveProp(key){
 }
 function stDelProp(key,btn){
   if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Confirm';return;}
-  const s=stCur();s.props=s.props.filter(p=>p.key!==key);s.rows.forEach(r=>delete r[key]);if(stUI.sort?.key===key)stUI.sort=null;
+  const s=stCur();s.props=s.props.filter(p=>p.key!==key);s.rows.forEach(r=>{(Array.isArray(r[key])?r[key]:[]).forEach(c=>{if(c.kind==='img')imgDel(c.id);});delete r[key];});if(stUI.sort?.key===key)stUI.sort=null;
   saveStrategies();stClosePop();stRefreshDb();
 }
 function stAddPropMenu(btn,e){
@@ -2924,7 +3013,7 @@ function drawTradeDiagram(t){
 function openTradeDetail(id){
   const t=trades.find(x=>x.id===id);
   if(!t)return;
-  activeTradePanelId=id;
+  activeTradePanelId=id;mkSel.tr=0;
 
   const acct=t.account||'Default';
   const color=acctColor(acct);
@@ -2949,6 +3038,12 @@ function openTradeDetail(id){
     <div class="tp-diagram-wrap">
       <div class="tp-section-title">Trade Diagram</div>
       ${drawTradeDiagram(t)}
+    </div>
+
+    <!-- Screenshot -->
+    <div class="tp-section">
+      <div class="tp-section-title">Chart Screenshot</div>
+      ${mkBlockHTML('tr')}
     </div>
 
     <!-- Stats -->
@@ -2988,30 +3083,10 @@ function openTradeDetail(id){
       <div class="tp-emo-wrap" id="tpEmoWrap">
         ${emoList.map(e=>`<span class="stag${curEmos.includes(e)?' sel':''}" onclick="toggleTpEmo(this,'${id}','${e}')">${e}</span>`).join('')}
       </div>
-    </div>
-
-    <!-- Screenshot -->
-    <div class="tp-section">
-      <div class="tp-section-title">Chart Screenshot</div>
-      <div class="tp-field">
-        <label>Image URL (paste TradingView screenshot link)</label>
-        <input type="url" id="tpImgUrl" value="${t.screenshot||''}" placeholder="https://..."
-          oninput="previewTpImg(this.value)"
-          onblur="patchTrade('${id}',{screenshot:this.value})">
-      </div>
-      <img id="tpImgPreview" class="tp-img-preview" src="${t.screenshot||''}"
-        style="display:${t.screenshot?'block':'none'}"
-        onerror="this.style.display='none'">
     </div>`;
 
   document.getElementById('tradePanel').classList.add('open');
-}
-
-function previewTpImg(url){
-  const img=document.getElementById('tpImgPreview');
-  if(!url){img.style.display='none';return;}
-  img.src=url;img.style.display='block';
-  img.onerror=()=>img.style.display='none';
+  mkHydrate();
 }
 
 function toggleTpEmo(el,id,emo){
@@ -3046,7 +3121,7 @@ function isPWA(){
 }
 
 async function exportBackup(){
-  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies};
+  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies,noteCharts};
   data.images=await collectImages(allChartRefs());
   const json=JSON.stringify(data,null,2);
   const filename=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
@@ -3099,6 +3174,7 @@ function confirmBackupImport(){
   if(data.dayNotes)dayNotes={...data.dayNotes,...dayNotes};
   if(data.premarket)premarket={...data.premarket,...premarket};
   if(data.images)storeImages(data.images);
+  if(data.noteCharts)noteCharts={...data.noteCharts,...noteCharts};
   if(data.weekly)weekly={...data.weekly,...weekly};
   if(data.strategies){const have=new Set(strategies.map(x=>x.id));strategies=[...strategies,...data.strategies.filter(x=>!have.has(x.id))];saveStrategies();}
   saveDayData();
@@ -3155,7 +3231,7 @@ function updateCloudUI(){
 async function pushToCloud(){
   const token=cloudCfg.token||(document.getElementById('cfgGhToken')?.value||'').trim();
   if(!token){toast('Enter your GitHub token in Settings → Cloud Sync','error');nav('settings');return;}
-  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies},null,2);
+  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies,noteCharts},null,2);
   const files={'edgeflow-data.json':{content:payload}};
   const refs=allChartRefs(),synced=new Set(cloudCfg.gistId?(cloudCfg.syncedImgs||[]):[]);
   for(const id of refs)if(!synced.has(id)){const d=await imgGet(id);if(d)files[`img-${id}.txt`]={content:d};}
@@ -3194,6 +3270,7 @@ async function pullFromCloud(){
     if(data.dayNotes)dayNotes=data.dayNotes;
     if(data.premarket)premarket=data.premarket;
     if(data.weekly)weekly=data.weekly;
+    if(data.noteCharts)noteCharts=data.noteCharts;
     if(data.strategies){strategies=data.strategies;saveStrategies();}
     saveDayData();
     if(data.settings){Object.assign(settings,data.settings);localStorage.setItem('ef_settings',JSON.stringify(settings));}
