@@ -244,6 +244,20 @@ tr:hover td{background:rgba(108,93,211,.04);}
 .modal-close{width:28px;height:28px;border-radius:var(--r-sm);border:1px solid var(--border);background:transparent;color:var(--text3);cursor:pointer;font-size:18px;display:flex;align-items:center;justify-content:center;}
 .modal-close:hover{color:var(--text);}
 .modal-body{padding:20px 22px 24px;}
+.ap-sub{font-family:var(--font-d);font-size:12px;color:var(--text2);margin-top:4px;font-weight:500;}
+.ap-list{display:flex;flex-direction:column;gap:8px;}
+.ap-opt{display:flex;align-items:center;gap:12px;width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:var(--font-d);font-size:14px;font-weight:600;cursor:pointer;text-align:left;transition:border-color .15s,background .15s;}
+.ap-opt:hover{border-color:var(--accent);background:var(--accent-soft);}
+.ap-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;}
+.ap-opt small{margin-left:auto;font-size:12px;font-weight:500;color:var(--text3);}
+.ap-opt.new{border-style:dashed;color:var(--accent);}
+.ap-new{display:none;flex-direction:column;gap:10px;margin-top:4px;padding:14px;border:1px solid var(--accent);border-radius:10px;background:var(--accent-soft);}
+.ap-new.open{display:flex;}
+.ap-new input[type=text]{font-family:var(--font-d);font-size:14px;height:40px;}
+.ap-new .btn{height:40px;justify-content:center;font-size:13px;}
+.ap-new .btn.off{opacity:.45;}
+.ap-new .btn.off input{pointer-events:none;}
+.ap-empty{font-family:var(--font-d);font-size:13px;color:var(--text2);margin-bottom:10px;}
 .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
 .fg{display:flex;flex-direction:column;gap:5px;}
 .fg.full{grid-column:1/-1;}
@@ -1060,17 +1074,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 </div>
 
 <!-- ══ ACCOUNT NAME MODAL ══ -->
-<div class="overlay" id="acctNameModal">
+<div class="overlay" id="acctPickModal" onclick="if(event.target===this)closeM('acctPickModal')">
   <div class="modal">
-    <div class="modal-hdr"><div class="modal-title">Name this account</div><button class="modal-close" onclick="closeM('acctNameModal')">×</button></div>
-    <div class="modal-body">
-      <p style="font-size:12px;color:var(--text2);margin-bottom:16px;font-family:var(--font-d);line-height:1.7;">Give this CSV a name so you can filter and compare accounts later. You can import multiple files with different names.</p>
-      <div class="fg"><label>Account Name</label><input type="text" id="acctNameInput" placeholder="e.g. Apex-123, Eval Account, Live Account"></div>
-      <div class="form-actions">
-        <button class="btn" onclick="closeM('acctNameModal')">Cancel</button>
-        <button class="btn primary" onclick="confirmImport()">Import Trades</button>
-      </div>
-    </div>
+    <div class="modal-hdr"><div><div class="modal-title">Which account is this CSV from?</div><div class="ap-sub" id="apSub"></div></div><button class="modal-close" onclick="closeM('acctPickModal')">×</button></div>
+    <div class="modal-body" id="apBody"></div>
   </div>
 </div>
 
@@ -1195,7 +1202,6 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   <div class="drop-overlay-sub">Release to load your CSV file</div>
 </div>
 
-<input type="file" id="csvIn" accept=".csv,.txt" style="position:fixed;width:1px;height:1px;opacity:0;top:0;left:0;pointer-events:none;" onchange="handleFiles(this.files)">
 <div class="toast-container" id="toasts"></div>
 
 <script>
@@ -1219,8 +1225,6 @@ let selectedAccounts=new Set(); // empty = all
 let accountNames=JSON.parse(localStorage.getItem('ef_accounts')||'[]');
 let cloudCfg=JSON.parse(localStorage.getItem('ef_cloud')||'{}');
 let acctModalMode='',acctModalTarget='';
-let pendingImportText='';
-let pendingImportFilename='';
 let pendingBackupData=null;
 
 /* ══════════════════════════════════════════════
@@ -1425,27 +1429,48 @@ function nav(id){
 /* ══════════════════════════════════════════════
    CSV IMPORT
 ══════════════════════════════════════════════ */
-function triggerImport(){document.getElementById('csvIn').click();}
-
+// Ask which account first; each option is itself the file picker (iOS PWAs block programmatic clicks)
+let apPendingFile=null;
+function triggerImport(){openAcctPick(null);}
 function handleFiles(files){
-  if(!files||!files.length)return;
-  const file=files[0];
-  pendingImportFilename=file.name;
-  const reader=new FileReader();
-  reader.onload=ev=>{
-    pendingImportText=ev.target.result;
-    const defaultName=file.name.replace(/\.[^.]+$/,'').replace(/[_-]/g,' ');
-    document.getElementById('acctNameInput').value=defaultName;
-    document.getElementById('csvIn').value='';
-    document.getElementById('acctNameModal').classList.add('open');
-  };
-  reader.readAsText(file);
+  const f=[...(files||[])].find(x=>/\.(csv|txt)$/i.test(x.name)||x.type==='text/csv');
+  if(!f){if(files&&files.length)toast('Drop a .csv file to import trades','error');return;}
+  openAcctPick(f);
 }
-
-function confirmImport(){
-  const acctName=document.getElementById('acctNameInput').value.trim()||'Default';
-  closeM('acctNameModal');
-  importCSV(pendingImportText,pendingImportFilename,acctName);
+function apPickAttrs(js){
+  // with a dropped file we import straight away; otherwise the option opens the file window
+  return apPendingFile?{cls:'',inner:'',click:` onclick="${esc(js)}"`}:{cls:' file-input-btn',inner:`<input type="file" accept=".csv,.txt" onchange="${esc(js.replace('apPendingFile','this.files[0]'))};this.value=''">`,click:''};
+}
+function openAcctPick(file){
+  apPendingFile=file;closeDDs();closeSidebar();
+  document.getElementById('apSub').textContent=file?`File: ${file.name}`:'Pick the account, then choose your CSV file';
+  const accts=allAccounts();
+  const opts=accts.map(a=>{
+    const n=trades.filter(t=>(t.account||'Default')===a).length,js=`apImport(apPendingFile,'${a.replace(/\\/g,'\\\\').replace(/'/g,"\\'")}')`,at=apPickAttrs(js);
+    return`<div class="ap-opt${at.cls}"${at.click}><span class="ap-dot" style="background:${acctColor(a)}"></span>${esc(a)}<small>${n} trade${n!==1?'s':''}</small>${at.inner}</div>`;
+  }).join('');
+  const nt=apPickAttrs(`apImport(apPendingFile,document.getElementById('apNewName').value.trim())`);
+  document.getElementById('apBody').innerHTML=`
+    ${accts.length?'':'<div class="ap-empty">No accounts yet. Add your first one below.</div>'}
+    <div class="ap-list">${opts}
+      <button class="ap-opt new" onclick="apShowNew()">+ Add account</button>
+      <div class="ap-new${accts.length?'':' open'}" id="apNew">
+        <input type="text" id="apNewName" placeholder="e.g. Apex-123, Eval Account, Live Account" oninput="document.getElementById('apNewGo').classList.toggle('off',!this.value.trim())" onkeydown="if(event.key==='Enter'&&apPendingFile&&this.value.trim())apImport(apPendingFile,this.value.trim())">
+        <div class="btn primary off${nt.cls}" id="apNewGo"${nt.click}>${apPendingFile?'Import to new account':'Choose CSV file'}${nt.inner}</div>
+      </div>
+    </div>`;
+  document.getElementById('acctPickModal').classList.add('open');
+  if(!accts.length)setTimeout(()=>document.getElementById('apNewName')?.focus(),50);
+}
+function apShowNew(){document.getElementById('apNew').classList.add('open');document.getElementById('apNewName').focus();}
+function apImport(file,acct){
+  if(!acct){toast('Type a name for the new account first','error');apShowNew();return;}
+  if(!file)return;
+  closeM('acctPickModal');apPendingFile=null;
+  if(!allAccounts().includes(acct)){accountNames.push(acct);saveAccountNames();}
+  const reader=new FileReader();
+  reader.onload=ev=>{importCSV(ev.target.result,file.name,acct);renderAcctOpts();};
+  reader.readAsText(file);
 }
 
 /* ── CSV Row Parser ── */
@@ -2473,7 +2498,7 @@ function mkLabel(scope,v){
   const t=document.querySelector(`#mk-${scope} .mk-thumb.on i`);if(t)t.textContent=v;
 }
 function mkOpen(src){if(!src)return;let l=document.getElementById('mkLight');if(!l){l=document.createElement('div');l.id='mkLight';l.className='mk-light';l.onclick=()=>l.classList.remove('open');l.innerHTML='<img alt="">';document.body.appendChild(l);}l.querySelector('img').src=src;l.classList.add('open');}
-function mkDragAttrs(scope){return`ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');mkAddFiles('${scope}',event.dataTransfer.files)"`;}
+function mkDragAttrs(scope){return`ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag');mkAddFiles('${scope}',event.dataTransfer.files)"`;}
 function mkFileBtn(lbl,cls,onchange){return`<div class="${cls} file-input-btn">${lbl}<input type="file" accept="image/*" multiple onchange="${onchange};this.value=''"></div>`;}
 function mkBlockHTML(scope){
   const o=mkObj(scope)||{},cs=o.charts||[],sm=scope==='tr'?' sm':'';
@@ -3107,7 +3132,7 @@ function closeTradePanel(){
 ══════════════════════════════════════════════ */
 (function setupDrop(){
   let n=0;
-  document.addEventListener('dragenter',e=>{if(e.dataTransfer.types.includes('Files')){n++;document.getElementById('dropOverlay').classList.add('active');}});
+  document.addEventListener('dragenter',e=>{if(e.dataTransfer.types.includes('Files')&&!mkPasteScope()){n++;document.getElementById('dropOverlay').classList.add('active');}});
   document.addEventListener('dragleave',()=>{if(--n<=0){n=0;document.getElementById('dropOverlay').classList.remove('active');}});
   document.addEventListener('dragover',e=>e.preventDefault());
   document.addEventListener('drop',e=>{e.preventDefault();n=0;document.getElementById('dropOverlay').classList.remove('active');if(e.dataTransfer.files.length)handleFiles(e.dataTransfer.files);});
