@@ -463,10 +463,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-ol-bias{font-size:13px;font-weight:700;}
 .cal-ol-k{font-weight:600;color:var(--text2);}
 .cal-ol-meta{font-size:10px;color:var(--text2);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;}
-.cal-ol-inv{font-size:11px;font-weight:500;line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
-.cal-ol-inv mark{background:var(--red-dim);color:var(--red);font-weight:700;padding:1px 4px;border-radius:3px;-webkit-box-decoration-break:clone;box-decoration-break:clone;}
-.cal-ol-inv b{font-weight:700;color:var(--red);}
-.cal-ol-inv.missing b{background:var(--red-dim);padding:1px 4px;border-radius:3px;}
+.cal-ol-inv{font-size:11px;font-weight:500;color:var(--text);line-height:1.5;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;}
+.cal-ol-inv mark{background:var(--red);color:#fff;font-weight:700;padding:1px 5px;border-radius:4px;white-space:nowrap;}
+.cal-ol-inv b{font-weight:700;background:var(--red);color:#fff;}
+.cal-ol-inv.missing b{padding:1px 5px;border-radius:4px;}
 /* weekly prep: bias + invalidation */
 .wk-banner{display:grid;grid-template-columns:minmax(150px,220px) 1fr;gap:12px;margin-bottom:16px;font-family:var(--font-d);}
 .wk-banner>div{border-radius:12px;padding:12px 16px;border:1px solid var(--border);background:var(--surface);}
@@ -2277,7 +2277,7 @@ function weekCellHTML(key){
   return`<div class="cal-ol has${cur?' cur':''}" onclick="openWeekPanel('${key}')">
     <div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div>
     <div class="cal-ol-bias"><span class="cal-ol-k">Bias:</span> <span style="color:${b?b[1]:'var(--text2)'}">${b?b[0]:'not set'}</span></div>
-    ${w.invalid?`<div class="cal-ol-inv" title="Bias invalidated if: ${esc(w.invalid)}"><span class="cal-ol-k">Invalid if:</span> <mark>${esc(w.invalid)}</mark></div>`:w.bias?`<div class="cal-ol-inv missing" title="Open the weekly outlook and fill in section 7"><b>⚠ No invalidation set</b></div>`:''}
+    ${w.invalid?`<div class="cal-ol-inv" title="Bias invalidated if: ${esc(w.invalid)}"><mark>✕ Invalid if:</mark> ${esc(w.invalid)}</div>`:w.bias?`<div class="cal-ol-inv missing" title="Open the weekly outlook and fill in section 7"><b>⚠ No invalidation set</b></div>`:''}
     ${w.draw?`<div class="cal-ol-meta" title="${esc(w.draw)}">→ ${esc(w.draw.split('\n')[0])}</div>`:''}
     ${flagHTML}
     <div class="pm-prog"><i style="width:${done/WK_CHECKLIST.length*100}%"></i></div>
