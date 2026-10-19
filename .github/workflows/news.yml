@@ -1,0 +1,42 @@
+name: Update economic calendar
+
+on:
+  schedule:
+    - cron: "15 */4 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: news
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check out news-data branch
+        run: |
+          if git ls-remote --exit-code --heads origin news-data >/dev/null; then
+            git fetch --depth=1 origin news-data
+            git worktree add data origin/news-data
+            git -C data switch -c news-data
+          else
+            git worktree add --orphan -b news-data data
+          fi
+
+      - name: Fetch ForexFactory calendar
+        run: python3 scripts/fetch_news.py data
+
+      - name: Commit if changed
+        working-directory: data
+        run: |
+          git add news
+          if git diff --cached --quiet; then echo "No changes"; exit 0; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898283+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update economic calendar"
+          git push origin news-data

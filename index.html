@@ -750,6 +750,30 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .db-img-add:hover{border-color:var(--accent);color:var(--accent);}
 .db tr:not(:hover) .db-imgs .db-img-add:not(:only-child){opacity:0;}
 .mk-light img{max-width:100%;max-height:100%;object-fit:contain;}
+/* economic news folders */
+.nf{display:inline-flex;align-items:center;gap:3px;font-family:var(--font-d);font-size:10px;font-weight:700;padding:1px 6px 1px 5px;border-radius:6px;line-height:16px;}
+.nf.h{background:rgba(240,87,90,.15);color:#f0575a;} .nf.m{background:rgba(245,140,30,.16);color:#ec8a1e;} .nf.l{background:rgba(232,200,40,.2);color:#b89a06;} .nf.hol{background:var(--surface2);color:var(--text2);}
+.cal-news{display:flex;gap:3px;flex-wrap:wrap;align-self:flex-start;margin-top:6px;}
+.cal-cell .cal-news:last-child{margin-top:auto;}
+.nw-wrap .nw-list{margin-bottom:10px;}
+.nw-row{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);font-family:var(--font-d);font-size:13px;color:var(--text);}
+.nw-row:last-of-type{border-bottom:none;}
+.nw-t{width:54px;flex-shrink:0;color:var(--text2);font-size:12px;padding-top:1px;}
+.nw-n{flex:1;min-width:0;}
+.nw-n small{display:block;font-size:11px;color:var(--text3);margin-top:1px;}
+.nw-empty{font-family:var(--font-d);font-size:12px;color:var(--text3);padding:4px 0 2px;line-height:1.5;}
+.nw-empty a{color:var(--accent);}
+.nw-copy{background:none;border:none;color:var(--accent);font-family:var(--font-d);font-size:12px;font-weight:600;cursor:pointer;padding:6px 0 0;}
+.wk-days .nw-row{font-size:12px;padding:4px 0;gap:6px;} .wk-days .nw-t{width:auto;font-size:11px;}
+.wk-chip.auto:not(.on){border-style:dashed;border-color:#f0575a;color:#f0575a;}
+.nws-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+.nws-lbl{width:90px;flex-shrink:0;}
+.nws-meta{font-family:var(--font-d);font-size:12px;color:var(--text2);margin-right:8px;}
+.wk-chip.on.imp-h{background:rgba(240,87,90,.15);border-color:#f0575a;color:#f0575a;}
+.wk-chip.on.imp-m{background:rgba(245,140,30,.16);border-color:#ec8a1e;color:#ec8a1e;}
+.wk-chip.on.imp-l{background:rgba(232,200,40,.2);border-color:#b89a06;color:#b89a06;}
+#newsSettings .wk-chip.on:not([class*=imp-]){background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
+@media(max-width:640px){.cal-news{margin-top:3px;gap:2px;}.cal-news .nf{font-size:0;padding:0;width:7px;height:7px;border-radius:50%;gap:0;}.cal-news .nf svg{display:none;}.cal-news .nf.h{background:#f0575a;}.cal-news .nf.m{background:#ec8a1e;}.cal-news .nf.l{background:#e8c828;}.cal-news .nf.hol{background:var(--text3);}}
 </style>
 </head>
 <body>
@@ -999,6 +1023,16 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
           <div class="fg"><label>Starting Balance</label><input type="number" id="cfgBal" value="50000" onchange="saveSettings()"></div>
           <div class="fg"><label>Daily Loss Limit ($)</label><input type="number" id="cfgDLL" value="1000" onchange="saveSettings()"></div>
         </div>
+      </div>
+
+      <!-- News calendar -->
+      <div class="card" style="margin-bottom:12px;">
+        <div class="card-header"><div class="card-title">News Calendar</div></div>
+        <p style="font-size:12px;color:var(--text2);margin-bottom:14px;font-family:var(--font-d);line-height:1.8">
+          Economic events from ForexFactory, shown on the calendar and in your premarket and weekly plans. Times are US Eastern.
+          The feed is synced every 4 hours and covers the current week. New weeks appear on Sunday.
+        </p>
+        <div id="newsSettings"></div>
       </div>
 
       <!-- Local Backup -->
@@ -1423,6 +1457,7 @@ function nav(id){
     document.getElementById('cfgBal').value=settings.startingBalance;
     document.getElementById('cfgDLL').value=settings.dailyLossLimit;
     updateCloudUI();
+    renderNewsSettings();newsLoad(newsWeekOf(ymd(new Date())));
   }
 }
 
@@ -1909,7 +1944,8 @@ function renderCalendar(ft){
   let mPnl=0,mDays=0;
   for(let r=0,wk=1;r<cells.length;r+=7,wk++){
     let wPnl=0,wDays=0;
-    html+=weekCellHTML(ymd(new Date(calYear,calMonth,1-firstDay+r)));
+    const wkKey=ymd(new Date(calYear,calMonth,1-firstDay+r));newsLoad(wkKey);
+    html+=weekCellHTML(wkKey);
     for(let c=0;c<7;c++){
       const d=cells[r+c];
       if(!d){html+='<div class="cal-cell empty"></div>';continue;}
@@ -1927,6 +1963,7 @@ function renderCalendar(ft){
         ${dt.length?`<div class="cal-day-pnl" style="color:${col}">${fcompact(pnl)}</div>
           <div class="cal-day-meta">${dt.length} trade${dt.length!==1?'s':''}</div>
           <div class="cal-day-meta">${(wins/dt.length*100).toFixed(1)}%</div>`:''}
+        ${newsCellHTML(key)}
       </div>`;
     }
     mPnl+=wPnl;mDays+=wDays;
@@ -2009,7 +2046,7 @@ function renderDayModal(){
   if(dayChart){dayChart.destroy();dayChart=null;}
   const body=document.getElementById('dmBody');
   if(dayView==='note'){body.innerHTML=noteViewHTML(key);mkHydrate();}
-  else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();}
+  else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();newsFill();}
   else{body.innerHTML=tradesViewHTML(dayTrades,st);if(dayTrades.length)drawDayChart(dayTrades);}
   body.scrollTop=0;
 }
@@ -2123,9 +2160,10 @@ function planViewHTML(key){
         </div>
         ${ta('levels','Other levels: VWAP, value area, round numbers, gaps…',2)}
       </div>
-      <div class="pm-card">
+      <div class="pm-card nw-wrap">
         <div class="pm-h"><span class="n">4</span>News &amp; events</div>
         <div class="pm-hint">Times to stay flat or size down</div>
+        <div class="nw-list" data-day="${key}"></div>
         ${ta('news','e.g. 8:30 CPI, 10:00 ISM, 2:00 FOMC minutes',4)}
       </div>
       <div class="pm-card full">
@@ -2209,7 +2247,7 @@ function weekAuto(key){
 function weekCellHTML(key){
   const w=weekly[key],has=pmHasContent(w),auto=weekAuto(key);
   const t=ymd(new Date()),cur=t>=key&&t<ymd(addDays(key,7));
-  const flags=[...auto.filter(a=>!a.info).map(a=>a.short),...(w?.events||[])];
+  const flags=[...new Set([...auto.filter(a=>!a.info).map(a=>a.short),...newsWeekFlags(key),...(w?.events||[])])];
   const flagHTML=flags.length?`<div class="cal-ol-flags">${flags.slice(0,4).map(f=>`<span>${esc(f)}</span>`).join('')}${flags.length>4?`<span>+${flags.length-4}</span>`:''}</div>`:'';
   if(!has)return`<div class="cal-ol${cur?' cur':''}" onclick="openWeekPanel('${key}')"><div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div><div class="cal-ol-add">+ Plan week</div>${flagHTML}</div>`;
   const b={bull:['Bullish','var(--green)'],bear:['Bearish','var(--red)'],neutral:['Neutral','var(--accent)']}[w.bias];
@@ -2278,7 +2316,7 @@ function renderWeekModal(){
   if(dayChart){dayChart.destroy();dayChart=null;}
   const body=document.getElementById('dmBody');
   body.innerHTML=weekViewHTML(key);body.scrollTop=0;
-  wkRenderPsy();mkHydrate();
+  wkRenderPsy();mkHydrate();newsFill();
 }
 
 function weekViewHTML(key){
@@ -2346,9 +2384,9 @@ function weekViewHTML(key){
 
       <div class="pm-card full">
         <div class="pm-h"><span class="n">5</span>News &amp; economic calendar</div>
-        <div class="pm-hint">Tap what's on the calendar this week, then add times per day (ET). Red-folder days = flat or reduced size around the release.</div>
-        <div class="wk-chips">${WK_EVENTS.map(e=>`<button type="button" class="wk-chip${(w.events||[]).includes(e)?' on':''}" onclick="wkToggleEvent('${e}',this)">${e}</button>`).join('')}</div>
-        <div class="wk-days">${[1,2,3,4,5].map(i=>`<div class="fg"><label>${dayLbl(i)}</label>${ta('news'+i,i===3?'e.g. 8:30 CPI\n2:00 FOMC':'e.g. 8:30 claims',3)}</div>`).join('')}</div>
+        <div class="pm-hint">Red/orange folder events load automatically (ET) and dashed chips are on this week's calendar. Tap chips to mark what matters, add your own notes per day. Red-folder days = flat or reduced size around the release.</div>
+        <div class="wk-chips">${WK_EVENTS.map(e=>`<button type="button" class="wk-chip${(w.events||[]).includes(e)?' on':''}" data-ev="${e}" onclick="wkToggleEvent('${e}',this)">${e}</button>`).join('')}</div>
+        <div class="wk-days">${[1,2,3,4,5].map(i=>`<div class="fg nw-wrap"><label>${dayLbl(i)}</label><div class="nw-list" data-day="${ymd(addDays(key,i))}"></div>${ta('news'+i,i===3?'e.g. 8:30 CPI\n2:00 FOMC':'e.g. 8:30 claims',3)}</div>`).join('')}</div>
         <div style="margin-top:10px">${ta('earnings','Earnings & Fed speakers: e.g. NVDA Wed after close, Powell Thu 1:00',2)}</div>
       </div>
 
@@ -2568,6 +2606,102 @@ function flushDaySave(){
 }
 function setDayStatus(){const s=document.getElementById('dmStatus');if(s)s.textContent='Saved ✓';}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('dayPanel').classList.contains('open')&&!document.getElementById('tradePanel').classList.contains('open'))closeDayPanel();});
+
+/* ══════════════════════════════════════════════
+   ECONOMIC NEWS (ForexFactory feed, synced to the news-data branch by a GitHub Action)
+══════════════════════════════════════════════ */
+const NEWS_BASE='https://raw.githubusercontent.com/ivanbyer-design/trading-journal/news-data/news/';
+const NEWS_IMP={High:['Red','h'],Medium:['Orange','m'],Low:['Yellow','l'],Holiday:['Holiday','hol']};
+const NEWS_CURS=['USD','EUR','GBP','JPY','CAD','AUD','NZD','CHF','CNY'];
+// feed title → weekly-outlook event chip
+const NEWS_MAP=[['FOMC decision',/federal funds rate|fomc statement|fomc press/i],['FOMC minutes',/fomc meeting minutes/i],['Fed chair speaks',/fed chair/i],
+  ['Fed speakers',/fomc member|\bspeaks\b/i],['CPI',/\bcpi\b/i],['PPI',/\bppi\b/i],['PCE',/\bpce\b/i],['NFP',/non-farm employment change/i],['JOLTS',/jolts/i],
+  ['Jobless claims',/unemployment claims/i],['GDP',/\bgdp\b/i],['Retail sales',/retail sales/i],['ISM PMI',/\bism\b.*pmi/i],['Consumer sentiment',/consumer sentiment|uom/i],
+  ['Bond auctions',/bond auction|note auction/i]];
+let newsCache={};const newsPending={};let newsUiTimer=null;
+try{newsCache=JSON.parse(localStorage.getItem('ef_news')||'{}');}catch(e){}
+function newsCfg(){settings.news=Object.assign({on:true,cur:['USD'],imp:['High','Medium']},settings.news||{});return settings.news;}
+function newsSaveCfg(){localStorage.setItem('ef_settings',JSON.stringify(settings));}
+function newsWeekOf(day){const d=new Date(day+'T12:00:00');d.setDate(d.getDate()-d.getDay());return ymd(d);}
+function newsLoad(wk,force){
+  const c=newsCache[wk],cur=newsWeekOf(ymd(new Date()));
+  // finished weeks never change; this week refreshes hourly; weeks without data are retried every few hours
+  const ttl=!c?0:c.events?(wk<cur?Infinity:3600e3):(wk===cur?1800e3:6*3600e3);
+  if((!force&&c&&Date.now()-c.at<ttl)||newsPending[wk])return;
+  newsPending[wk]=1;
+  fetch(NEWS_BASE+wk+'.json',{cache:'no-cache'})
+    .then(r=>r.ok?r.json():r.status===404?null:Promise.reject(r.status))
+    .then(d=>{newsCache[wk]={at:Date.now(),events:d?.events||null,fetched:d?.fetched||null};try{localStorage.setItem('ef_news',JSON.stringify(newsCache));}catch(e){}newsQueueUI();})
+    .catch(()=>{if(!newsCache[wk]?.events){newsCache[wk]={at:Date.now()-1500e3,events:null,err:true};newsQueueUI();}})
+    .finally(()=>{delete newsPending[wk];});
+}
+function newsQueueUI(){clearTimeout(newsUiTimer);newsUiTimer=setTimeout(()=>{if(document.getElementById('calCells')&&document.getElementById('panel-dashboard')?.classList.contains('active'))renderCalendar();newsFill();if(document.getElementById('newsSettings'))renderNewsSettings();},60);}
+function newsMatchCur(e,cfg){return cfg.cur.includes('All')||cfg.cur.includes(e.cur);}
+// filtered events for one ET day; holidays for the chosen currencies always show
+function newsFor(day,anyImpact){
+  const cfg=newsCfg(),wk=newsCache[newsWeekOf(day)];if(!cfg.on||!wk?.events)return[];
+  return wk.events.filter(e=>e.date.slice(0,10)===day&&newsMatchCur(e,cfg)&&(anyImpact||e.imp==='Holiday'||cfg.imp.includes(e.imp))).sort((a,b)=>a.date.localeCompare(b.date));
+}
+function newsTime(e){const t=e.date.slice(11,16);if(t==='00:00')return'All day';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')}${h<12?'am':'pm'}`;}
+function newsShort(t){const m=NEWS_MAP.find(([,re])=>re.test(t));return m?m[0]:t.replace(/\s+(m\/m|y\/y|q\/q)$/i,'').slice(0,14);}
+const NEWS_ICON='<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
+function newsCellHTML(day){
+  const ev=newsFor(day);if(!ev.length)return'';
+  const tip=ev.map(e=>`${newsTime(e)} ${e.cur} ${e.t} (${NEWS_IMP[e.imp]?.[0]||e.imp})`).join('\n');
+  const n=k=>ev.filter(e=>e.imp===k).length;
+  return`<div class="cal-news" title="${esc(tip)}">${['High','Medium','Low','Holiday'].filter(n).map(k=>`<span class="nf ${NEWS_IMP[k][1]}">${k==='Holiday'?'Holiday':NEWS_ICON+n(k)}</span>`).join('')}</div>`;
+}
+// lists inside the premarket plan / weekly outlook: <div class="nw-list" data-day="YYYY-MM-DD">
+function newsListHTML(day){
+  const cfg=newsCfg();
+  if(!cfg.on)return'';
+  const wk=newsCache[newsWeekOf(day)];
+  if(!wk)return'<div class="nw-empty">Loading calendar…</div>';
+  if(wk.err)return`<div class="nw-empty">Couldn't reach the news feed (offline?). It will retry automatically. <a href="https://www.forexfactory.com/calendar" target="_blank" rel="noopener">Open ForexFactory ↗</a></div>`;
+  if(!wk.events)return`<div class="nw-empty">No calendar data for this week yet. ForexFactory publishes each week on Sunday. <a href="https://www.forexfactory.com/calendar" target="_blank" rel="noopener">Open ForexFactory ↗</a></div>`;
+  const ev=newsFor(day);
+  if(!ev.length)return'<div class="nw-empty">No '+cfg.imp.map(i=>NEWS_IMP[i][0].toLowerCase()).join('/')+' folder news'+(cfg.cur.includes('All')?'':' for '+cfg.cur.join(', '))+'.</div>';
+  return ev.map(e=>`<div class="nw-row"><span class="nw-t">${newsTime(e)}</span><span class="nf ${NEWS_IMP[e.imp]?.[1]||''}">${e.imp==='Holiday'?'Holiday':NEWS_ICON}</span><span class="nw-n">${cfg.cur.length>1||cfg.cur.includes('All')?`<b>${esc(e.cur)}</b> `:''}${esc(e.t)}${e.fc||e.prev?`<small>${e.fc?'F '+esc(e.fc):''}${e.fc&&e.prev?' · ':''}${e.prev?'P '+esc(e.prev):''}</small>`:''}</span></div>`).join('')
+    +`<button type="button" class="nw-copy" onclick="newsCopy(this,'${day}')">Copy into notes</button>`;
+}
+function newsFill(){
+  document.querySelectorAll('.nw-list[data-day]').forEach(el=>{newsLoad(newsWeekOf(el.dataset.day));el.innerHTML=newsListHTML(el.dataset.day);});
+  // weekly outlook: flag event chips that are on this week's calendar
+  if(selectedWeek&&document.querySelector('.wk-chip[data-ev]')){
+    const cfg=newsCfg(),wk=newsCache[selectedWeek],found=new Set();
+    if(cfg.on&&wk?.events)wk.events.filter(e=>newsMatchCur(e,cfg)).forEach(e=>{const m=NEWS_MAP.find(([,re])=>re.test(e.t));if(m)found.add(m[0]);});
+    document.querySelectorAll('.wk-chip[data-ev]').forEach(b=>{b.classList.toggle('auto',found.has(b.dataset.ev));b.title=found.has(b.dataset.ev)?'On the economic calendar this week':'';});
+  }
+}
+function newsCopy(btn,day){
+  const ta=btn.closest('.nw-wrap')?.querySelector('textarea');if(!ta)return;
+  const lines=newsFor(day).map(e=>`${newsTime(e)} ${e.imp==='High'?'🔴':e.imp==='Medium'?'🟠':e.imp==='Low'?'🟡':'⚪'} ${e.t}${e.fc?` (F ${e.fc}${e.prev?', P '+e.prev:''})`:''}`);
+  const have=new Set(ta.value.split('\n'));const add=lines.filter(l=>!have.has(l));if(!add.length){toast('Already in your notes','info');return;}
+  ta.value=(ta.value.trim()?ta.value.trim()+'\n':'')+add.join('\n');ta.dispatchEvent(new Event('input'));toast('News copied into notes','success');
+}
+// red-folder names for the weekly outlook cell on the calendar
+function newsWeekFlags(wk){
+  const cfg=newsCfg(),c=newsCache[wk];if(!cfg.on||!c?.events)return[];
+  return[...new Set(c.events.filter(e=>e.imp==='High'&&newsMatchCur(e,cfg)).map(e=>newsShort(e.t)))];
+}
+/* settings card */
+function renderNewsSettings(){
+  const el=document.getElementById('newsSettings');if(!el)return;
+  const cfg=newsCfg(),cur=newsCache[newsWeekOf(ymd(new Date()))];
+  const chip=(on,label,js,cls='')=>`<button type="button" class="wk-chip ${cls}${on?' on':''}" onclick="${js}">${label}</button>`;
+  el.innerHTML=`
+    <div class="nws-row"><label class="nws-lbl">Show news</label>${chip(cfg.on,cfg.on?'On':'Off',"newsSet('on')")}</div>
+    <div class="nws-row"><label class="nws-lbl">Impact</label>${['High','Medium','Low'].map(i=>chip(cfg.imp.includes(i),NEWS_IMP[i][0],`newsSet('imp','${i}')`,'imp-'+NEWS_IMP[i][1])).join('')}</div>
+    <div class="nws-row"><label class="nws-lbl">Currencies</label>${[...NEWS_CURS,'All'].map(c=>chip(cfg.cur.includes(c),c,`newsSet('cur','${c}')`)).join('')}</div>
+    <div class="nws-row" style="margin-top:6px"><span class="nws-meta">${cur?.events?`This week: ${cur.events.length} events · feed updated ${cur.fetched?new Date(cur.fetched).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit'}):'—'}`:cur?'No data for this week yet (ForexFactory publishes on Sunday)':'Not loaded yet'}</span>
+      <button class="btn" onclick="newsLoad(newsWeekOf(ymd(new Date())),true);toast('Refreshing calendar…','info')">↻ Refresh now</button></div>`;
+}
+function newsSet(k,v){
+  const cfg=newsCfg();
+  if(k==='on')cfg.on=!cfg.on;
+  else{const s=new Set(cfg[k]);if(k==='cur'&&v==='All'){cfg.cur=s.has('All')?['USD']:['All'];}else{s.delete('All');s.has(v)?s.delete(v):s.add(v);cfg[k]=[...s];if(!cfg[k].length)cfg[k]=k==='cur'?['USD']:['High'];}}
+  newsSaveCfg();renderNewsSettings();
+}
 
 /* ══════════════════════════════════════════════
    STRATEGIES (playbook + backtest database)
