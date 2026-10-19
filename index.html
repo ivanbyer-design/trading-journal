@@ -726,6 +726,11 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 
 .st-an{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
 .st-an .tz-card{min-width:0;}
+.st-sec-h{font-family:var(--font-d);font-size:12px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;color:var(--text2);margin:22px 0 10px;}
+.st-sec-h:first-child{margin-top:0;}
+.st-card-live{margin-top:10px;font-size:11px;color:var(--text2);}
+.strat-lbl{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;color:var(--text);white-space:nowrap;}
+.strat-lbl i{width:7px;height:7px;border-radius:50%;flex:none;}
 .st-grp{width:100%;font-family:var(--font-d);font-size:13px;}
 .st-grp th{font-size:12px;text-transform:none;letter-spacing:0;color:var(--text2);font-weight:600;padding:8px 6px;}
 .st-grp td{padding:9px 6px;color:var(--text);font-size:13px;}
@@ -1055,6 +1060,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div style="display:flex;gap:8px;">
           <select id="fSym" onchange="renderTrades()" style="width:120px;font-family:var(--font-d);font-size:11px;"><option value="">All Symbols</option></select>
           <select id="fDir" onchange="renderTrades()" style="width:120px;font-family:var(--font-d);font-size:11px;"><option value="">All Sides</option><option value="LONG">Long</option><option value="SHORT">Short</option></select>
+          <select id="fStrat" onchange="renderTrades()" style="width:140px;font-family:var(--font-d);font-size:11px;"><option value="">All Strategies</option></select>
         </div>
       </div>
       <div class="card"><div id="allTradesTable"></div></div>
@@ -1183,6 +1189,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="fg"><label>Date &amp; Time</label><input type="datetime-local" id="t-date"></div>
         <div class="fg"><label>P&amp;L ($)</label><input type="number" id="t-pnl" step="0.01" placeholder="auto-calculated"></div>
         <div class="fg"><label>Account</label><input type="text" id="t-acct" placeholder="Account name"></div>
+        <div class="fg"><label>Strategy</label><select id="t-setup"></select></div>
         <div class="fg full"><label>Notes</label><textarea id="t-notes" rows="3" placeholder="What did you see? Why this trade?"></textarea></div>
       </div>
       <div style="margin-top:12px;">
@@ -2014,6 +2021,7 @@ function tradeRowHTML(t){
     <td style="color:var(--text3);font-family:var(--font-d);font-size:11px">${t.duration||'—'}</td>
     <td style="font-family:var(--font-d);font-weight:800;color:${c}">${fpnl(t.pnl)}</td>
     <td style="font-family:var(--font-d);color:var(--text2)">${fRm(tradeR(t))}</td>
+    <td>${stratLabelHTML(t.setup)}</td>
   </tr>`;
 }
 
@@ -2854,7 +2862,7 @@ function newsSet(k,v){
 ══════════════════════════════════════════════ */
 let strategies=[];
 try{strategies=JSON.parse(localStorage.getItem('ef_strategies')||'[]');}catch(e){}
-let stSaveTimer=null,stChart=null;
+let stSaveTimer=null,stChart=null,stLiveChart=null;
 const stUI={id:null,tab:'breakdown',sort:null,q:'',fOutcome:''};
 function saveStrategies(){try{localStorage.setItem('ef_strategies',JSON.stringify(strategies));}catch(e){}}
 function stQueueSave(){clearTimeout(stSaveTimer);stSaveTimer=setTimeout(saveStrategies,400);}
@@ -2902,17 +2910,24 @@ const fR=(v,d=2)=>(v>0?'+':'')+(+v).toFixed(d)+'R';
 const fPF=v=>isFinite(v)?v.toFixed(2):'∞';
 function stLive(s){
   const nm=(s.name||'').trim().toLowerCase();if(!nm)return[];
-  return trades.filter(t=>(t.setup||'').trim().toLowerCase()===nm);
+  return trades.filter(t=>(t.setup||'').trim().toLowerCase()===nm).sort((a,b)=>new Date(a.date)-new Date(b.date));
+}
+function stByName(name){const lc=(name||'').trim().toLowerCase();return lc?strategies.find(s=>(s.name||'').trim().toLowerCase()===lc):null;}
+function stratLabelHTML(name){
+  if(!(name||'').trim())return'<span style="color:var(--text3)">--</span>';
+  const s=stByName(name);
+  return`<span class="strat-lbl"><i style="background:${s?.color||'var(--text3)'}"></i>${esc(name)}</span>`;
 }
 
 function renderStrategies(){
   const el=document.getElementById('stratRoot');if(!el)return;
   if(stChart){stChart.destroy();stChart=null;}
+  if(stLiveChart){stLiveChart.destroy();stLiveChart=null;}
   const s=stCur();
   if(!s){stUI.id=null;el.innerHTML=stListHTML();return;}
   el.innerHTML=stDetailHTML(s);
   if(stUI.tab==='breakdown')el.querySelectorAll('.st-sec textarea').forEach(stAutosize);
-  if(stUI.tab==='analytics')stDrawCurve(s);
+  if(stUI.tab==='analytics'){stDrawCurve(s);stDrawLiveCurve(s);}
   mkHydrate();
 }
 function stListHTML(){
@@ -2928,6 +2943,7 @@ function stListHTML(){
         <div>Total R<b style="color:${st.tot>0?'var(--green)':st.tot<0?'var(--red)':'var(--text)'}">${st.n?fR(st.tot,1):'--'}</b></div>
         <div>PF<b>${st.n?fPF(st.pf):'--'}</b></div>
       </div>
+      ${(()=>{const lv=stLive(s);if(!lv.length)return'';const ls=calcStats(lv);return`<div class="st-card-live">Live: ${ls.total} trade${ls.total!==1?'s':''} · ${fpct(ls.wr)} win · <b style="color:${ls.netPnl>0?'var(--green)':ls.netPnl<0?'var(--red)':'var(--text)'}">${fmoney(ls.netPnl)}</b></div>`;})()}
     </div>`;}).join('');
   return`<div class="st-top"><div class="st-top-sub">Your playbook. Break down each setup, then log backtests to prove the edge.</div>
       <button class="btn primary" style="height:36px;font-size:13px" onclick="stNew()">+ New strategy</button></div>
@@ -2942,7 +2958,10 @@ function stNew(){
 function stOpen(id){mkSel.st=0;stUI.id=id;stUI.tab='breakdown';stUI.sort=null;stUI.q='';stUI.fOutcome='';renderStrategies();document.getElementById('mainContent')?.scrollTo?.(0,0);}
 function stBack(){saveStrategies();stUI.id=null;renderStrategies();}
 function stTab(t){stUI.tab=t;renderStrategies();}
-function stSet(field,val){const s=stCur();if(!s)return;s[field]=val;s.updated=new Date().toISOString();stQueueSave();}
+function stSet(field,val){const s=stCur();if(!s)return;
+  if(field==='name'){const old=(s.name||'').trim().toLowerCase(),nv=val.trim();
+    if(old&&nv&&!strategies.some(x=>x!==s&&(x.name||'').trim().toLowerCase()===old)){let n=0;trades.forEach(t=>{if((t.setup||'').trim().toLowerCase()===old){t.setup=nv;n++;}});if(n)saveTrades();}}
+  s[field]=val;s.updated=new Date().toISOString();stQueueSave();}
 function stAutosize(t){t.style.height='auto';t.style.height=Math.max(96,t.scrollHeight+2)+'px';}
 function stDup(){
   const s=stCur();const c=JSON.parse(JSON.stringify(s));c.id=stUid();c.name=(s.name||'Untitled')+' (copy)';c.rows=[];c.created=new Date().toISOString();
@@ -3143,28 +3162,52 @@ function stGroupHTML(title,rows,keyFn,order){
     <thead><tr><th></th><th class="n">Trades</th><th class="n">Win %</th><th class="n">Total R</th><th class="n">Exp.</th></tr></thead>
     <tbody>${ks.map(k=>{const st=stStats(g[k]);return`<tr><td style="font-weight:600">${esc(k)}</td><td class="n">${st.n}</td><td class="n">${fpct(st.wr)}</td><td class="n" style="color:${st.tot>0?'var(--green)':st.tot<0?'var(--red)':'inherit'};font-weight:600">${fR(st.tot,1)}</td><td class="n">${fR(st.exp)}</td></tr>`;}).join('')}</tbody></table></div></div>`;
 }
+function stLiveHTML(s){
+  const live=stLive(s);
+  if(!live.length)return`<div class="st-empty"><b>No live trades tagged yet</b>Open a trade from the Trades page and tag it with <b style="display:inline">${esc(s.name||'this strategy')}</b> (or pick it when you log a trade) to track how profitable it is.</div>`;
+  const ls=calcStats(live),pc=v=>v>0?'var(--green)':v<0?'var(--red)':'';
+  const Rs=live.map(tradeR).filter(r=>r!=null),avgR=Rs.length?Rs.reduce((a,b)=>a+b,0)/Rs.length:null;
+  const k=(l,v,c)=>`<div class="st-kpi"><div>${l}</div><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
+  return`<div class="st-kpis">${k('Trades',ls.total)}${k('Net P&amp;L',fmoney(ls.netPnl),pc(ls.netPnl))}${k('Win rate',fpct(ls.wr))}${k('Profit factor',fPF(ls.pf))}
+      ${k('Avg per trade',fmoney(ls.avgPnl),pc(ls.avgPnl))}${k('Avg win / loss',`${fmoney(ls.wins?ls.grossWin/ls.wins:0)} / ${fmoney(ls.losses?-ls.grossLoss/ls.losses:0)}`)}${k('Avg R',avgR==null?'--':fR(avgR),avgR==null?'':pc(avgR))}${k('Best / worst',`${fmoney(ls.bestTrade)} / ${fmoney(ls.worstTrade)}`)}</div>
+    <div class="st-an">
+      <div class="tz-card"><div class="tz-card-h">Live equity curve ($)</div><div class="tz-card-b"><div class="chart-box"><canvas id="stLiveCurve"></canvas></div></div></div>
+      <div class="tz-card"><div class="tz-card-h">Tagged trades</div><div class="tz-card-b" style="max-height:300px;overflow:auto"><table class="st-grp">
+        <thead><tr><th>Date</th><th>Side</th><th class="n">P&amp;L</th><th class="n">R</th></tr></thead>
+        <tbody>${live.slice().reverse().map(t=>`<tr style="cursor:pointer" onclick="openTradeDetail('${t.id}')"><td>${fdate(t.date)} <span style="color:var(--text3)">${esc(t.symbol)}</span></td><td>${t.direction}</td><td class="n" style="color:${pc(t.pnl)};font-weight:600">${fmoney(t.pnl)}</td><td class="n">${fRm(tradeR(t))}</td></tr>`).join('')}</tbody></table></div></div>
+    </div>`;
+}
 function stAnalyticsHTML(s,st){
   const rows=s.rows||[];
-  if(!st.n)return stKpisHTML(st)+'<div class="st-empty"><b>No backtest data yet</b>Log trades in the Backtest tab to see the equity curve and breakdowns.</div>';
+  const liveSec=`<div class="st-sec-h">Live trades</div>${stLiveHTML(s)}`;
+  if(!st.n)return liveSec+'<div class="st-sec-h">Backtest</div><div class="st-empty"><b>No backtest data yet</b>Log trades in the Backtest tab to see the equity curve and breakdowns.</div>';
   const live=stLive(s),ls=calcStats(live);
   const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const groups=[stGroupHTML('By weekday',rows,r=>r.date?dows[new Date(r.date+'T12:00:00').getDay()]:'',['Mon','Tue','Wed','Thu','Fri','Sat','Sun']),
     ...s.props.filter(p=>p.type==='select'&&p.key!=='outcome').map(p=>stGroupHTML('By '+p.name.toLowerCase(),rows,r=>r[p.key],p.options)),
     ...s.props.filter(p=>p.type==='checkbox').map(p=>stGroupHTML(p.name,rows,r=>r[p.key]?'Yes':'No',['Yes','No']))].join('');
-  return`${stKpisHTML(st)}
+  return`${liveSec}<div class="st-sec-h">Backtest</div>${stKpisHTML(st)}
     <div class="st-an">
       <div class="tz-card"><div class="tz-card-h">Backtest equity curve (R)</div><div class="tz-card-b"><div class="chart-box"><canvas id="stCurve"></canvas></div></div></div>
-      <div class="tz-card"><div class="tz-card-h">Backtest vs live <i class="info" title="Live = journal trades whose Setup field matches this strategy's name exactly">i</i></div><div class="tz-card-b">
+      <div class="tz-card"><div class="tz-card-h">Backtest vs live <i class="info" title="Live = journal trades tagged with this strategy">i</i></div><div class="tz-card-b">
         ${live.length?`<div class="st-cmp"><span></span><span class="h">Backtest</span><span class="h">Live</span>
           <span>Trades</span><b>${st.n}</b><b>${ls.total}</b>
           <span>Win rate</span><b>${fpct(st.wr)}</b><b style="color:${ls.wr<st.wr-10?'var(--red)':'inherit'}">${fpct(ls.wr)}</b>
           <span>Profit factor</span><b>${fPF(st.pf)}</b><b>${isFinite(ls.pf)?ls.pf.toFixed(2):'∞'}</b>
           <span>Net</span><b>${fR(st.tot,1)}</b><b style="color:${ls.netPnl>=0?'var(--green)':'var(--red)'}">${fmoney(ls.netPnl)}</b></div>
           <div class="pm-hint" style="margin:14px 0 0">If live win rate is well below backtest, check whether you're following the entry criteria.</div>`
-        :`<div class="pm-hint" style="margin:0;line-height:1.7">No live trades tagged yet. Open a trade from the Trades page and set its <b>Setup</b> to <b>${esc(s.name||'this strategy\'s name')}</b> to compare live results against the backtest.</div>`}
+        :`<div class="pm-hint" style="margin:0;line-height:1.7">No live trades tagged yet. Tag trades with <b>${esc(s.name||'this strategy')}</b> to compare live results against the backtest.</div>`}
       </div></div>
     </div>
     <div class="st-grp-wrap">${groups}</div>`;
+}
+function stDrawLiveCurve(s){
+  const c=document.getElementById('stLiveCurve');if(!c)return;
+  const live=stLive(s);let cum=0;const data=[0,...live.map(t=>+(cum+=t.pnl).toFixed(2))];
+  const sc=chartScales();sc.y.ticks.callback=v=>fmoney(v,0);
+  stLiveChart=new Chart(c,{type:'line',data:{labels:['Start',...live.map(t=>shortDate(dayKey(t.date)))],datasets:[{data,borderColor:s.color||'#7c6fe0',borderWidth:2,tension:.2,pointRadius:0,pointHoverRadius:4,
+    fill:{target:'origin',above:'rgba(45,184,125,.28)',below:'rgba(240,87,90,.28)'}}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Cumulative: ${fmoney(c.raw)}`}}},scales:sc}});
 }
 function stDrawCurve(s){
   const st=stStats(s.rows||[]);const c=document.getElementById('stCurve');if(!c)return;
@@ -3180,20 +3223,25 @@ function stDrawCurve(s){
 function renderTrades(){
   const symF=document.getElementById('fSym').value;
   const dirF=document.getElementById('fDir').value;
+  const stF=document.getElementById('fStrat').value;
   const ft=filteredTrades();
+  const sNames=[...new Set([...strategies.map(s=>(s.name||'').trim()),...ft.map(t=>(t.setup||'').trim())].filter(Boolean))].sort((a,b)=>a.localeCompare(b));
+  document.getElementById('fStrat').innerHTML='<option value="">All Strategies</option><option value="__none">No strategy</option>'+sNames.map(n=>`<option value="${esc(n)}"${n===stF?' selected':''}>${esc(n)}</option>`).join('');
+  document.getElementById('fStrat').value=stF;
   const syms=[...new Set(ft.map(t=>t.symbol))].sort();
   const curSym=document.getElementById('fSym').value;
   document.getElementById('fSym').innerHTML='<option value="">All Symbols</option>'+syms.map(s=>`<option${s===curSym?' selected':''}>${s}</option>`).join('');
-  let filtered=ft.filter(t=>(!symF||t.symbol===symF)&&(!dirF||t.direction===dirF));
+  const stLc=stF.toLowerCase();
+  let filtered=ft.filter(t=>(!symF||t.symbol===symF)&&(!dirF||t.direction===dirF)&&(!stF||(stF==='__none'?!(t.setup||'').trim():(t.setup||'').trim().toLowerCase()===stLc)));
   const wrap=document.getElementById('allTradesTable');
   if(!filtered.length){wrap.innerHTML='<div style="text-align:center;padding:40px;color:var(--text3);font-family:var(--font-d)">No trades match filters</div>';return;}
   const byDay={};for(const t of filtered){const k=dayKey(t.date);if(!byDay[k])byDay[k]=[];byDay[k].push(t);}
-  let html='<div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Account</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>Duration</th><th>P&L</th><th>R</th></tr></thead><tbody>';
+  let html='<div class="table-wrap"><table><thead><tr><th>Date</th><th>Time</th><th>Account</th><th>Symbol</th><th>Side</th><th>Qty</th><th>Entry</th><th>Exit</th><th>Duration</th><th>P&L</th><th>R</th><th>Strategy</th></tr></thead><tbody>';
   for(const[day,dt]of Object.entries(byDay).sort((a,b)=>b[0].localeCompare(a[0]))){
     const dayPnl=dt.reduce((s,t)=>s+t.pnl,0);
     const wins=dt.filter(t=>t.pnl>0).length;
     const pc=dayPnl>=0?'var(--green)':'var(--red)';
-    html+=`<tr><td colspan="11" style="background:var(--surface2);padding:9px 10px;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--text2);">
+    html+=`<tr><td colspan="12" style="background:var(--surface2);padding:9px 10px;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:.3px;color:var(--text2);">
       ${fdate(day+'T12:00:00')} &nbsp;·&nbsp; ${dt.length} trade${dt.length!==1?'s':''} &nbsp;·&nbsp; ${wins}W / ${dt.length-wins}L &nbsp;·&nbsp; <span style="color:${pc}">${fpnl(parseFloat(dayPnl.toFixed(2)))}</span>
     </td></tr>`;
     html+=dt.map(t=>tradeRowHTML(t)).join('');
@@ -3217,6 +3265,7 @@ function openTradeModal(id=null){
   document.getElementById('t-date').value=new Date(now-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
   document.getElementById('t-acct').value=allAccounts()[0]||'';
   document.getElementById('t-stop').value='';document.getElementById('t-target').value='';
+  mtFillStrategies(ot?.setup||'');
   if(id){
     const t=trades.find(x=>x.id===id);
     if(t){
@@ -3237,6 +3286,13 @@ function openTradeModal(id=null){
   document.getElementById('tradeModal').classList.add('open');
 }
 
+function mtFillStrategies(cur){
+  const names=strategies.map(s=>(s.name||'').trim()).filter(Boolean);
+  if(cur&&!names.some(n=>n.toLowerCase()===cur.trim().toLowerCase()))names.push(cur);
+  const el=document.getElementById('t-setup');
+  el.innerHTML='<option value="">No strategy</option>'+names.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  el.value=names.find(n=>n.toLowerCase()===cur.trim().toLowerCase())||'';
+}
 function saveTrade(){
   const sym=document.getElementById('t-sym').value;
   const dir=document.getElementById('t-dir').value;
@@ -3254,10 +3310,10 @@ function saveTrade(){
   const t={id:editId||Date.now().toString(),account:document.getElementById('t-acct').value||'Default',
     symbol:sym,direction:dir,entry,exit,contracts:qty,pnl,
     date:new Date(document.getElementById('t-date').value).toISOString(),
-    duration:'',notes:document.getElementById('t-notes').value,setup:'',emotions,source:'manual'};
+    duration:'',notes:document.getElementById('t-notes').value,setup:document.getElementById('t-setup').value,emotions,source:'manual'};
   if(isFinite(stop))t.stop=stop;
   if(isFinite(target))t.target=target;
-  if(editId){delete t.setup;delete t.duration;delete t.source;}
+  if(editId){delete t.duration;delete t.source;}
   if(mtDraft.charts?.length)t.charts=mtDraft.charts;
   const keep=new Set(mtIds(t.charts));mtIds(mtOrig).forEach(x=>{if(!keep.has(x))imgDel(x);});
   mtOrig=t.charts||[];
