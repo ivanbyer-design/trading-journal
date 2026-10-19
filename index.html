@@ -458,6 +458,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-ol:hover{border-color:var(--accent);}
 .cal-ol.has{border-style:solid;border-color:var(--accent);background:var(--accent-soft);}
 .cal-ol.cur{box-shadow:0 0 0 2px var(--accent) inset;}
+.cal-ol-w{display:none;}
 .cal-ol-lbl{font-size:11px;font-weight:600;color:var(--text2);}
 .cal-ol-add{font-size:12px;font-weight:600;color:var(--accent);}
 .cal-ol-bias{font-size:13px;font-weight:700;}
@@ -497,17 +498,24 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .kpi{min-height:100px;padding:16px;}
 }
 @media(max-width:640px){
-  .cal-grid{grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;}
-  .cal-dow{font-size:10px;padding:6px 0;}
+  /* Tradezella-style phone calendar: thin W (weekly outlook) strip + tall day squares */
+  .cal-grid{grid-template-columns:18px repeat(7,minmax(0,1fr));gap:4px;}
+  .cal-dow{font-size:11px;padding:7px 0;}
   .cal-dow.cal-dow-wk{display:none;}
-  .cal-cell{min-height:54px;padding:4px;}
-  .cal-day-num{font-size:10px;}
-  .cal-day-pnl{font-size:10px;margin-top:4px;}
-  .cal-day-meta{display:none;}
-  .cal-week{grid-column:1/-1;flex-direction:row;align-items:center;padding:7px 10px;gap:10px;margin-bottom:6px;}
-  .cal-week-pnl{font-size:14px;margin-left:auto;}
-  .cal-ol{grid-column:1/-1;flex-direction:row;flex-wrap:wrap;align-items:center;padding:7px 10px;gap:4px 10px;margin-top:6px;}
-  .cal-ol .pm-prog{flex:1 0 100%;}
+  .cal-dow.cal-dow-ol{display:block;visibility:hidden;padding:0;}
+  .cal-cell{min-height:104px;padding:5px 4px;}
+  .cal-day-num{font-size:12px;}
+  .cal-day-pnl{font-size:10.5px;margin-top:6px;letter-spacing:-.2px;}
+  .cal-day-meta{font-size:9px;}
+  .cal-day-meta+.cal-day-meta{display:none;}
+  .cal-week{display:none;}
+  .cal-ol{padding:0;gap:0;border-radius:6px;align-items:center;justify-content:center;border-style:dashed;}
+  .cal-ol>*:not(.cal-ol-w){display:none!important;}
+  .cal-ol-w{display:block!important;font-size:10px;font-weight:800;color:var(--accent);}
+  .cal-ol.has{border-style:solid;}
+  .cal-ol.ol-bull{background:var(--green-dim);border-color:var(--green);} .cal-ol.ol-bull .cal-ol-w{color:var(--green);}
+  .cal-ol.ol-bear{background:var(--red-dim);border-color:var(--red);} .cal-ol.ol-bear .cal-ol-w{color:var(--red);}
+  .cal-ol.cur{box-shadow:0 0 0 2px var(--accent) inset;}
   .cal-mstats{margin-left:0;width:100%;}
   .chart-box{height:240px;}
   .dd-menu{position:fixed;left:16px;right:16px;top:auto;min-width:0;}
@@ -2274,10 +2282,10 @@ function weekCellHTML(key){
   const t=ymd(new Date()),cur=t>=key&&t<ymd(addDays(key,7));
   const flags=[...new Set([...auto.filter(a=>!a.info).map(a=>a.short),...newsWeekFlags(key),...(w?.events||[])])];
   const flagHTML=flags.length?`<div class="cal-ol-flags">${flags.slice(0,4).map(f=>`<span>${esc(f)}</span>`).join('')}${flags.length>4?`<span>+${flags.length-4}</span>`:''}</div>`:'';
-  if(!has)return`<div class="cal-ol${cur?' cur':''}" onclick="openWeekPanel('${key}')"><div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div><div class="cal-ol-add">+ Plan week</div>${flagHTML}</div>`;
+  if(!has)return`<div class="cal-ol${cur?' cur':''}" onclick="openWeekPanel('${key}')" title="Weekly outlook"><span class="cal-ol-w">W</span><div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div><div class="cal-ol-add">+ Plan week</div>${flagHTML}</div>`;
   const b={bull:['Bullish','var(--green)'],bear:['Bearish','var(--red)'],neutral:['Neutral','var(--accent)']}[w.bias];
   const done=(w.checklist||[]).length;
-  return`<div class="cal-ol has${cur?' cur':''}" onclick="openWeekPanel('${key}')">
+  return`<div class="cal-ol has${cur?' cur':''}${w.bias?' ol-'+w.bias:''}" onclick="openWeekPanel('${key}')"><span class="cal-ol-w">W</span>
     <div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div>
     <div class="cal-ol-bias"><span class="cal-ol-k">Bias:</span> <span style="color:${b?b[1]:'var(--text2)'}">${b?b[0]:'not set'}</span></div>
     ${w.invalid?`<div class="cal-ol-inv" title="Bias invalidated if: ${esc(w.invalid)}"><mark>✕ Invalid if:</mark> ${esc(w.invalid)}</div>`:w.bias?`<div class="cal-ol-inv missing" title="Open the weekly outlook and fill in section 7"><b>⚠ No invalidation set</b></div>`:''}
