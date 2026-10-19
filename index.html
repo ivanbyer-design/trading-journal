@@ -2671,7 +2671,17 @@ function mkBlockHTML(scope){
     </div>
   </div>`;
 }
-function mkRender(scope){const el=document.getElementById('mk-'+scope);if(!el)return;el.outerHTML=mkBlockHTML(scope);mkHydrate();}
+// Read-only gallery: big image + thumbnails, tap to open full screen
+function mkViewHTML(scope){
+  const cs=mkObj(scope)?.charts||[];if(!cs.length)return'';
+  const i=Math.min(mkSel[scope],cs.length-1),c=cs[i],src=mkSrc(c);
+  return`<div class="mk sm" id="mk-${scope}">
+    <div class="mk-view"><img class="mk-img" data-mk="${c.kind==='img'?c.id:''}"${src?` src="${esc(src)}"`:''} alt="Chart" onclick="mkOpen(this.src)" onerror="this.outerHTML='<div class=&quot;mk-missing&quot;>Image could not load. If it was uploaded on another device, pull from cloud to sync it.</div>'"></div>
+    ${c.label||cs.length>1?`<div class="mk-bar">${c.label?`<span style="font-size:12px;color:var(--text2)">${esc(c.label)}</span>`:''}
+      ${cs.length>1?`<div class="mk-thumbs">${cs.map((x,j)=>`<button class="mk-thumb${j===i?' on':''}" onclick="mkSel['${scope}']=${j};mkRender('${scope}')"><img data-mk="${x.kind==='img'?x.id:''}"${mkSrc(x)?` src="${esc(mkSrc(x))}"`:''} alt="">${x.label?`<i>${esc(x.label)}</i>`:'<i></i>'}</button>`).join('')}</div>`:''}</div>`:''}
+  </div>`;
+}
+function mkRender(scope){const el=document.getElementById('mk-'+scope);if(!el)return;el.outerHTML=scope==='tr'?mkViewHTML(scope):mkBlockHTML(scope);mkHydrate();}
 // Fill in uploaded images from IndexedDB after they are in the DOM
 function mkHydrate(){
   document.querySelectorAll('img[data-mk]').forEach(async im=>{
@@ -2682,7 +2692,6 @@ function mkHydrate(){
 // Which image block a paste should land in
 function mkPasteScope(){
   if(document.getElementById('tradeModal')?.classList.contains('open'))return'mt';
-  if(document.getElementById('tradePanel')?.classList.contains('open'))return'tr';
   if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':dayView==='note'?'note':null;
   if(document.getElementById('panel-strategies')?.classList.contains('active')&&stUI.id&&stUI.tab==='breakdown')return'st';
   return null;
@@ -3410,11 +3419,11 @@ function openTradeDetail(id){
       ${drawTradeDiagram(t)}
     </div>
 
-    <!-- Screenshot -->
+    ${mkObj('tr')?.charts?.length?`<!-- Screenshots (view only; add/remove in Edit trade) -->
     <div class="tp-section">
-      <div class="tp-section-title">Chart Screenshot</div>
-      ${mkBlockHTML('tr')}
-    </div>
+      <div class="tp-section-title">Chart Screenshot${t.charts.length>1?'s':''}</div>
+      ${mkViewHTML('tr')}
+    </div>`:''}
 
     <!-- Stats -->
     <div class="tp-section">
