@@ -3267,6 +3267,16 @@ function closeM(id){
 ══════════════════════════════════════════════ */
 let activeTradePanelId=null;
 
+function setTradeAccount(id,sel){
+  const t=trades.find(x=>x.id===id);if(!t)return;
+  let a=sel.value;
+  if(a==='__new'){a=(prompt('New account name')||'').trim();if(!a){sel.value=t.account||'Default';return;}}
+  if(a===(t.account||'Default'))return;
+  if(!allAccounts().includes(a)){accountNames.push(a);saveAccountNames();}
+  t.account=a;saveTrades();renderAcctOpts();updateFileChips();refreshAll();
+  const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
+  toast(`Moved to "${a}"`,'success');
+}
 function setTradeLevel(id,key,inp){
   const t=trades.find(x=>x.id===id);if(!t)return;
   const v=inp.value.trim(),n=parseFloat(v);
@@ -3386,6 +3396,8 @@ function openTradeDetail(id){
     <!-- Stats -->
     <div class="tp-section">
       <div class="tp-section-title">Trade Stats</div>
+      <div class="tp-field"><label>Account</label>
+        <select onchange="setTradeAccount('${id}',this)">${allAccounts().map(a=>`<option${a===acct?' selected':''}>${esc(a)}</option>`).join('')}<option value="__new">+ New account…</option></select></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
         <div class="tp-field"><label>Stop Loss (initial)</label>
           <input type="number" step="0.25" value="${t.stop??''}" placeholder="e.g. 7735.25" onchange="setTradeLevel('${id}','stop',this)"></div>
