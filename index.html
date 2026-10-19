@@ -753,6 +753,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .mk-thumb.on{border-color:var(--accent);}
 .mk-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
 .mk-thumb i{position:absolute;left:0;right:0;bottom:0;font-style:normal;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mk-more{display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;}
+.mk-more span{font-size:11px;color:var(--text3);flex:1 1 100%;}
+.mk-more input[type=text]{flex:1;min-width:0;height:32px;font-size:12px;}
+.mk-more .btn{height:32px;font-size:12px;padding:0 12px;}
 .mk-thumb.add{border-style:dashed;background:none;color:var(--accent);font-size:22px;display:flex;align-items:center;justify-content:center;}
 .mk-light{position:fixed;inset:0;z-index:2000;background:rgba(5,3,12,.94);display:none;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;}
 .mk-light.open{display:flex;}
@@ -2648,7 +2652,12 @@ function mkBlockHTML(scope){
     </div>
     <div class="mk-bar">
       <input class="mk-label" value="${esc(c.label||'')}" placeholder="Label, e.g. NQ Daily / 4H" oninput="mkLabel('${scope}',this.value)">
-      ${cs.length>1?`<div class="mk-thumbs">${cs.map((x,j)=>`<button class="mk-thumb${j===i?' on':''}" onclick="mkPick('${scope}',${j})"><img data-mk="${x.kind==='img'?x.id:''}"${mkSrc(x)?` src="${esc(mkSrc(x))}"`:''} alt="">${x.label?`<i>${esc(x.label)}</i>`:'<i></i>'}</button>`).join('')}</div>`:''}
+      <div class="mk-thumbs">${cs.map((x,j)=>`<button class="mk-thumb${j===i?' on':''}" onclick="mkPick('${scope}',${j})"><img data-mk="${x.kind==='img'?x.id:''}"${mkSrc(x)?` src="${esc(mkSrc(x))}"`:''} alt="">${x.label?`<i>${esc(x.label)}</i>`:'<i></i>'}</button>`).join('')}${mkFileBtn('+','mk-thumb add',`mkAddFiles('${scope}',this.files)`).replace('<div ','<div title="Add more images" ')}</div>
+    </div>
+    <div class="mk-more">
+      <span>${cs.length} image${cs.length!==1?'s':''} · drop, paste or tap + to add more</span>
+      <input type="text" placeholder="or paste a TradingView / image link" onkeydown="if(event.key==='Enter')mkAddUrl('${scope}',this.value)">
+      <button class="btn" onclick="mkAddUrl('${scope}',this.previousElementSibling.value)">Embed link</button>
     </div>
   </div>`;
 }
