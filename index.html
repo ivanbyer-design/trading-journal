@@ -562,6 +562,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-seg button.on.neu,.pm-seg button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent);}
 .pm-rate{display:flex;align-items:center;gap:10px;margin-top:12px;}
 .pm-rate span{font-size:13px;color:var(--text2);width:92px;}
+.pm-rate .pm-seg{flex:1;}
 .pm-rate .pm-seg button{min-width:0;height:32px;}
 .pm-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-bottom:10px;}
 .pm-levels label,.pm-risk label,.pm .fg>label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--text2);}
@@ -690,6 +691,34 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .st-cmp b{font-size:15px;}
 @media(max-width:1100px){.st-kpis{grid-template-columns:repeat(4,minmax(0,1fr));}.st-an{grid-template-columns:1fr;}}
 @media(max-width:700px){.st-doc{grid-template-columns:1fr;}.st-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.st-name{font-size:22px;}.st-tabs{gap:18px;}}
+/* chart markup block (premarket + weekly) */
+.mk{margin-bottom:20px;}
+.mk-drop{border:2px dashed var(--border2);border-radius:14px;min-height:280px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:28px 20px;text-align:center;background:var(--surface2);transition:border-color .15s,background .15s;}
+.mk-drop.drag{border-color:var(--accent);background:var(--accent-soft);}
+.mk-drop-ic{width:54px;height:54px;border-radius:14px;background:var(--accent-soft);color:var(--accent);display:flex;align-items:center;justify-content:center;}
+.mk-drop b{font-size:17px;color:var(--text);}
+.mk-drop span{font-size:13px;color:var(--text2);max-width:440px;line-height:1.6;}
+.mk-add{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center;margin-top:6px;width:100%;max-width:560px;}
+.mk-add input[type=text]{flex:1;min-width:200px;height:38px;font-family:var(--font-d);font-size:13px;}
+.mk-add .btn{height:38px;font-size:13px;padding:0 16px;}
+.mk-view{position:relative;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:#0b0916;}
+.mk-view.drag{box-shadow:0 0 0 3px var(--accent);}
+.mk-img{display:block;width:100%;max-height:74vh;min-height:220px;object-fit:contain;cursor:zoom-in;}
+.mk-missing{min-height:240px;display:flex;align-items:center;justify-content:center;color:#aaa4c6;font-size:13px;padding:20px;text-align:center;}
+.mk-tools{position:absolute;top:10px;right:10px;display:flex;gap:6px;}
+.mk-tools button,.mk-tools .file-input-btn{height:32px;padding:0 11px;border-radius:8px;border:1px solid rgba(255,255,255,.18);background:rgba(15,10,30,.72);color:#fff;font-family:var(--font-d);font-size:12px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:5px;backdrop-filter:blur(6px);}
+.mk-tools button:hover,.mk-tools .file-input-btn:hover{background:rgba(108,93,211,.9);}
+.mk-bar{display:flex;align-items:center;gap:10px;margin-top:10px;flex-wrap:wrap;}
+.mk-label{flex:1;min-width:180px;max-width:360px;height:34px;font-family:var(--font-d);font-size:13px;}
+.mk-thumbs{display:flex;gap:8px;flex-wrap:wrap;}
+.mk-thumb{width:84px;height:54px;border-radius:8px;border:2px solid var(--border);overflow:hidden;cursor:pointer;background:#0b0916;padding:0;position:relative;}
+.mk-thumb.on{border-color:var(--accent);}
+.mk-thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.mk-thumb i{position:absolute;left:0;right:0;bottom:0;font-style:normal;font-size:9px;font-weight:700;color:#fff;background:rgba(0,0,0,.55);padding:1px 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.mk-thumb.add{border-style:dashed;background:none;color:var(--accent);font-size:22px;display:flex;align-items:center;justify-content:center;}
+.mk-light{position:fixed;inset:0;z-index:2000;background:rgba(5,3,12,.94);display:none;align-items:center;justify-content:center;padding:20px;cursor:zoom-out;}
+.mk-light.open{display:flex;}
+.mk-light img{max-width:100%;max-height:100%;object-fit:contain;}
 </style>
 </head>
 <body>
@@ -1889,7 +1918,7 @@ let dayView='trades',dayChart=null,daySaveTimer=null;
 function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 function openDayPanel(key,view){
-  flushDaySave();selectedWeek=null;
+  flushDaySave();mkSel.pm=0;selectedWeek=null;
   selectedDay=key;
   renderCalendar();
   const dayTrades=tradesByDay(filteredTrades())[key]||[];
@@ -1937,7 +1966,7 @@ function renderDayModal(){
   if(dayChart){dayChart.destroy();dayChart=null;}
   const body=document.getElementById('dmBody');
   if(dayView==='note')body.innerHTML=noteViewHTML(key);
-  else if(dayView==='plan')body.innerHTML=planViewHTML(key);
+  else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();}
   else{body.innerHTML=tradesViewHTML(dayTrades,st);if(dayTrades.length)drawDayChart(dayTrades);}
   body.scrollTop=0;
 }
@@ -2013,7 +2042,7 @@ function pmCopyLast(){
   const prev=Object.keys(premarket).filter(k=>k<selectedDay&&pmHasContent(premarket[k])).sort().pop();
   if(!prev){toast('No earlier plan to copy','error');return;}
   const src=premarket[prev];
-  premarket[selectedDay]={...JSON.parse(JSON.stringify(src)),checklist:[],review:'',updated:new Date().toISOString()};
+  premarket[selectedDay]={...JSON.parse(JSON.stringify(src)),checklist:[],review:'',updated:new Date().toISOString()};delete premarket[selectedDay].charts;
   saveDayData();renderDayModal();toast(`Copied plan from ${fdate(prev+'T12:00:00')}`,'success');
 }
 function planViewHTML(key){
@@ -2027,6 +2056,7 @@ function planViewHTML(key){
     <div class="pm-title">Premarket plan</div>
     <div class="pm-sub">Map out the session before the open. Saves automatically.
       <button class="btn" style="font-size:12px" onclick="pmCopyLast()">⧉ Copy last plan</button></div>
+    ${mkBlockHTML('pm')}
     <div class="pm-grid">
       <div class="pm-card">
         <div class="pm-h"><span class="n">1</span>Market bias</div>
@@ -2150,7 +2180,7 @@ function weekCellHTML(key){
 }
 
 function openWeekPanel(key){
-  flushDaySave();selectedDay=null;selectedWeek=key;dayView='week';
+  flushDaySave();selectedDay=null;selectedWeek=key;dayView='week';mkSel.wk=0;
   document.getElementById('dayPanel').classList.add('open');
   renderDayModal();
 }
@@ -2189,7 +2219,7 @@ function wkCopyLast(){
   const prev=Object.keys(weekly).filter(k=>k<selectedWeek&&pmHasContent(weekly[k])).sort().pop();
   if(!prev){toast('No earlier outlook to copy','error');return;}
   const src=JSON.parse(JSON.stringify(weekly[prev]));
-  ['news1','news2','news3','news4','news5','events','checklist','review','reviewWhy','lesson'].forEach(f=>delete src[f]);
+  ['news1','news2','news3','news4','news5','events','checklist','review','reviewWhy','lesson','charts'].forEach(f=>delete src[f]);
   weekly[selectedWeek]={...src,updated:new Date().toISOString()};
   saveDayData();renderDayModal();toast(`Carried over levels and context from week of ${fdate(prev+'T12:00:00')}`,'success');
 }
@@ -2204,7 +2234,7 @@ function renderWeekModal(){
   if(dayChart){dayChart.destroy();dayChart=null;}
   const body=document.getElementById('dmBody');
   body.innerHTML=weekViewHTML(key);body.scrollTop=0;
-  wkRenderPsy();
+  wkRenderPsy();mkHydrate();
 }
 
 function weekViewHTML(key){
@@ -2227,6 +2257,7 @@ function weekViewHTML(key){
     <div class="pm-title">Weekly outlook</div>
     <div class="pm-sub">Build the big picture before Sunday's open, then plan each day inside it. Saves automatically.
       <button class="btn" style="font-size:12px" onclick="wkCopyLast()">⧉ Carry over last week</button></div>
+    ${mkBlockHTML('wk')}
     ${auto.length?`<div class="wk-auto">${auto.map(a=>`<div class="${a.info?'info':''}">${esc(a.text)}</div>`).join('')}</div>`:''}
     <div class="pm-grid">
       <div class="pm-card full">
@@ -2326,6 +2357,112 @@ function weekViewHTML(key){
     </div>
   </div>`;
 }
+
+/* ── Chart markup images (premarket + weekly) ── */
+// Uploaded images live in IndexedDB (localStorage is too small); plans only keep {id,kind,url,label}.
+let mkDbP=null;const mkCache={};const mkSel={pm:0,wk:0};
+function mkDb(){
+  if(!mkDbP)mkDbP=new Promise((res,rej)=>{const r=indexedDB.open('edgeflow',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
+  return mkDbP;
+}
+async function imgPut(id,data){mkCache[id]=data;const db=await mkDb();return new Promise((res,rej)=>{const tx=db.transaction('images','readwrite');tx.objectStore('images').put(data,id);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}
+async function imgGet(id){if(mkCache[id])return mkCache[id];try{const db=await mkDb();return await new Promise(res=>{const q=db.transaction('images').objectStore('images').get(id);q.onsuccess=()=>{if(q.result)mkCache[id]=q.result;res(q.result||null);};q.onerror=()=>res(null);});}catch(e){return null;}}
+async function imgDel(id){delete mkCache[id];try{const db=await mkDb();db.transaction('images','readwrite').objectStore('images').delete(id);}catch(e){}}
+function allChartRefs(){const ids=new Set();[premarket,weekly].forEach(o=>Object.values(o).forEach(p=>(p?.charts||[]).forEach(c=>{if(c.kind==='img')ids.add(c.id);})));return ids;}
+function mkSrc(c){return c.kind==='url'?c.url:(mkCache[c.id]||'');}
+function tvToImg(u){
+  u=u.trim();const m=u.match(/tradingview\.com\/x\/([A-Za-z0-9]+)/);
+  if(m)return`https://s3.tradingview.com/snapshots/${m[1][0].toLowerCase()}/${m[1]}.png`;
+  return/^https?:\/\//i.test(u)?u:'';
+}
+function compressImage(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{
+      const max=2200,sc=Math.min(1,max/Math.max(im.width,im.height));
+      const c=document.createElement('canvas');c.width=Math.round(im.width*sc);c.height=Math.round(im.height*sc);
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      let d=c.toDataURL('image/webp',.9);if(!d.startsWith('data:image/webp'))d=c.toDataURL('image/jpeg',.9);
+      res(d);
+    };
+    im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Could not read image'));};
+    im.src=url;
+  });
+}
+function mkObj(scope,create){
+  const store=scope==='wk'?weekly:premarket,k=scope==='wk'?selectedWeek:selectedDay;
+  if(!k)return null;if(!store[k]&&create)store[k]={};return store[k];
+}
+function mkTouch(scope){const o=mkObj(scope,true);o.updated=new Date().toISOString();saveDayData();setDayStatus();mkRender(scope);}
+async function mkAddFiles(scope,files){
+  const imgs=[...(files||[])].filter(f=>f.type.startsWith('image/'));if(!imgs.length)return;
+  const o=mkObj(scope,true);o.charts=o.charts||[];
+  for(const f of imgs){
+    try{const id='img_'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);await imgPut(id,await compressImage(f));o.charts.push({id,kind:'img'});}
+    catch(e){toast('Could not add image: '+e.message,'error');}
+  }
+  mkSel[scope]=o.charts.length-1;mkTouch(scope);toast('Chart markup added','success');
+}
+function mkAddUrl(scope,raw){
+  const url=tvToImg(raw||'');if(!url){toast('Paste a TradingView snapshot link or an image URL','error');return;}
+  const o=mkObj(scope,true);o.charts=o.charts||[];o.charts.push({id:'url_'+Date.now().toString(36),kind:'url',url});
+  mkSel[scope]=o.charts.length-1;mkTouch(scope);
+}
+function mkRemove(scope,btn){
+  if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Tap to confirm';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent='✕ Remove';}},3000);return;}
+  const o=mkObj(scope);const c=o?.charts?.[mkSel[scope]];if(!c)return;
+  o.charts.splice(mkSel[scope],1);if(c.kind==='img')imgDel(c.id);
+  if(!o.charts.length)delete o.charts;
+  mkSel[scope]=Math.max(0,mkSel[scope]-1);mkTouch(scope);
+}
+function mkPick(scope,i){mkSel[scope]=i;mkRender(scope);}
+function mkLabel(scope,v){const o=mkObj(scope);const c=o?.charts?.[mkSel[scope]];if(!c)return;c.label=v;queueDaySave(()=>{});const t=document.querySelector(`#mk-${scope} .mk-thumb.on i`);if(t)t.textContent=v;}
+function mkOpen(src){if(!src)return;let l=document.getElementById('mkLight');if(!l){l=document.createElement('div');l.id='mkLight';l.className='mk-light';l.onclick=()=>l.classList.remove('open');l.innerHTML='<img alt="">';document.body.appendChild(l);}l.querySelector('img').src=src;l.classList.add('open');}
+function mkDragAttrs(scope){return`ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');mkAddFiles('${scope}',event.dataTransfer.files)"`;}
+function mkBlockHTML(scope){
+  const o=mkObj(scope)||{},cs=o.charts||[];
+  const what=scope==='wk'?'weekly':'premarket';
+  const fileBtn=(lbl,cls)=>`<div class="${cls} file-input-btn">${lbl}<input type="file" accept="image/*" multiple onchange="mkAddFiles('${scope}',this.files);this.value=''"></div>`;
+  if(!cs.length)return`<div class="mk" id="mk-${scope}"><div class="mk-drop" ${mkDragAttrs(scope)}>
+      <div class="mk-drop-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.6"/></svg></div>
+      <b>Add your ${what} chart markup</b>
+      <span>Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.</span>
+      <div class="mk-add">${fileBtn('Choose image','btn primary')}
+        <input type="text" placeholder="https://www.tradingview.com/x/…" onkeydown="if(event.key==='Enter')mkAddUrl('${scope}',this.value)">
+        <button class="btn" onclick="mkAddUrl('${scope}',this.previousElementSibling.value)">Embed link</button></div>
+    </div></div>`;
+  const i=Math.min(mkSel[scope],cs.length-1),c=cs[i],src=mkSrc(c);
+  return`<div class="mk" id="mk-${scope}">
+    <div class="mk-view" ${mkDragAttrs(scope)}>
+      ${src||c.kind==='img'?`<img class="mk-img" data-mk="${c.kind==='img'?c.id:''}"${src?` src="${esc(src)}"`:''} alt="Chart markup" onclick="mkOpen(this.src)" onerror="this.outerHTML='<div class=&quot;mk-missing&quot;>Image could not load. If it was uploaded on another device, pull from cloud to sync it.</div>'">`:''}
+      <div class="mk-tools"><button onclick="mkOpen(document.querySelector('#mk-${scope} .mk-img')?.src)">⤢ Full screen</button>${fileBtn('+ Add','')}<button onclick="mkRemove('${scope}',this)">✕ Remove</button></div>
+    </div>
+    <div class="mk-bar">
+      <input class="mk-label" value="${esc(c.label||'')}" placeholder="Label, e.g. NQ Daily / 4H" oninput="mkLabel('${scope}',this.value)">
+      ${cs.length>1?`<div class="mk-thumbs">${cs.map((x,j)=>`<button class="mk-thumb${j===i?' on':''}" onclick="mkPick('${scope}',${j})"><img data-mk="${x.kind==='img'?x.id:''}"${mkSrc(x)?` src="${esc(mkSrc(x))}"`:''} alt="">${x.label?`<i>${esc(x.label)}</i>`:'<i></i>'}</button>`).join('')}</div>`:''}
+    </div>
+  </div>`;
+}
+function mkRender(scope){const el=document.getElementById('mk-'+scope);if(!el)return;el.outerHTML=mkBlockHTML(scope);mkHydrate();}
+// Fill in uploaded images from IndexedDB after the block is in the DOM
+function mkHydrate(){
+  document.querySelectorAll('img[data-mk]').forEach(async im=>{
+    const id=im.dataset.mk;if(!id||im.getAttribute('src'))return;
+    const d=await imgGet(id);if(d)im.src=d;else im.dispatchEvent(new Event('error'));
+  });
+}
+// Paste a screenshot or a TradingView link straight into the open plan
+document.addEventListener('paste',e=>{
+  if(!document.getElementById('dayPanel')?.classList.contains('open'))return;
+  const scope=selectedWeek?'wk':dayView==='plan'?'pm':null;if(!scope)return;
+  const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile());
+  if(files.length){e.preventDefault();mkAddFiles(scope,files);return;}
+  const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea')return;
+  const t=e.clipboardData?.getData('text')||'';if(/tradingview\.com\/x\/|^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(t.trim())){e.preventDefault();mkAddUrl(scope,t);}
+});
+// Backup + cloud helpers
+async function collectImages(ids){const out={};for(const id of ids){const d=await imgGet(id);if(d)out[id]=d;}return out;}
+async function storeImages(map){for(const[id,d] of Object.entries(map||{}))if(typeof d==='string'&&d.startsWith('data:image/'))await imgPut(id,d);}
 
 /* ── autosave ── */
 let dayPendingFn=null;
@@ -2910,6 +3047,7 @@ function isPWA(){
 
 async function exportBackup(){
   const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies};
+  data.images=await collectImages(allChartRefs());
   const json=JSON.stringify(data,null,2);
   const filename=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
   // On iOS PWA, use Web Share API so user can save to Files, AirDrop, etc.
@@ -2960,6 +3098,7 @@ function confirmBackupImport(){
   if(data.accountNames)accountNames=[...new Set([...accountNames,...data.accountNames])];
   if(data.dayNotes)dayNotes={...data.dayNotes,...dayNotes};
   if(data.premarket)premarket={...data.premarket,...premarket};
+  if(data.images)storeImages(data.images);
   if(data.weekly)weekly={...data.weekly,...weekly};
   if(data.strategies){const have=new Set(strategies.map(x=>x.id));strategies=[...strategies,...data.strategies.filter(x=>!have.has(x.id))];saveStrategies();}
   saveDayData();
@@ -3017,7 +3156,11 @@ async function pushToCloud(){
   const token=cloudCfg.token||(document.getElementById('cfgGhToken')?.value||'').trim();
   if(!token){toast('Enter your GitHub token in Settings → Cloud Sync','error');nav('settings');return;}
   const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies},null,2);
-  const body=JSON.stringify({description:'EdgeFlow Trading Journal — Cloud Backup',public:false,files:{'edgeflow-data.json':{content:payload}}});
+  const files={'edgeflow-data.json':{content:payload}};
+  const refs=allChartRefs(),synced=new Set(cloudCfg.gistId?(cloudCfg.syncedImgs||[]):[]);
+  for(const id of refs)if(!synced.has(id)){const d=await imgGet(id);if(d)files[`img-${id}.txt`]={content:d};}
+  if(cloudCfg.gistId)for(const id of synced)if(!refs.has(id))files[`img-${id}.txt`]=null;
+  const body=JSON.stringify({description:'EdgeFlow Trading Journal — Cloud Backup',public:false,files});
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
   try{
     const gistId=cloudCfg.gistId;
@@ -3026,7 +3169,7 @@ async function pushToCloud(){
       :await fetch('https://api.github.com/gists',{method:'POST',headers,body});
     if(!res.ok){const e=await res.json();throw new Error(e.message||`HTTP ${res.status}`);}
     const gist=await res.json();
-    cloudCfg={...cloudCfg,token,gistId:gist.id,lastSync:new Date().toISOString()};
+    cloudCfg={...cloudCfg,token,gistId:gist.id,lastSync:new Date().toISOString(),syncedImgs:Object.keys(gist.files||{}).filter(f=>f.startsWith('img-')).map(f=>f.slice(4,-4))};
     localStorage.setItem('ef_cloud',JSON.stringify(cloudCfg));
     updateCloudUI();
     toast('Pushed to cloud ✓','success');
@@ -3055,6 +3198,12 @@ async function pullFromCloud(){
     saveDayData();
     if(data.settings){Object.assign(settings,data.settings);localStorage.setItem('ef_settings',JSON.stringify(settings));}
     saveTrades();saveAccountNames();
+    const imgFiles=Object.entries(gist.files||{}).filter(([f])=>f.startsWith('img-'));
+    for(const[f,meta] of imgFiles){
+      const id=f.slice(4,-4);if(!allChartRefs().has(id)||await imgGet(id))continue;
+      try{const d=meta.truncated||!meta.content?await (await fetch(meta.raw_url)).text():meta.content;if(d.startsWith('data:image/'))await imgPut(id,d);}catch(e){}
+    }
+    cloudCfg.syncedImgs=imgFiles.map(([f])=>f.slice(4,-4));
     cloudCfg.lastSync=new Date().toISOString();
     localStorage.setItem('ef_cloud',JSON.stringify(cloudCfg));
     selectedAccounts.clear();
