@@ -461,6 +461,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-ol-lbl{font-size:11px;font-weight:600;color:var(--text2);}
 .cal-ol-add{font-size:12px;font-weight:600;color:var(--accent);}
 .cal-ol-bias{font-size:13px;font-weight:700;}
+.cal-ol-k{font-weight:600;color:var(--text2);}
 .cal-ol-meta{font-size:10px;color:var(--text2);line-height:1.35;overflow:hidden;text-overflow:ellipsis;}
 .cal-ol-flags{display:flex;flex-wrap:wrap;gap:3px;}
 .cal-ol-flags span{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--red-dim);color:var(--red);white-space:nowrap;}
@@ -2257,7 +2258,7 @@ function weekCellHTML(key){
   const done=(w.checklist||[]).length;
   return`<div class="cal-ol has${cur?' cur':''}" onclick="openWeekPanel('${key}')">
     <div class="cal-ol-lbl">Week of ${+key.slice(5,7)}/${+key.slice(8)}</div>
-    <div class="cal-ol-bias" style="color:${b?b[1]:'var(--text2)'}">${b?b[0]:'No bias set'}</div>
+    <div class="cal-ol-bias"><span class="cal-ol-k">Bias:</span> <span style="color:${b?b[1]:'var(--text2)'}">${b?b[0]:'not set'}</span></div>
     ${w.draw?`<div class="cal-ol-meta" title="${esc(w.draw)}">→ ${esc(w.draw.split('\n')[0].slice(0,40))}</div>`:''}
     ${flagHTML}
     <div class="pm-prog"><i style="width:${done/WK_CHECKLIST.length*100}%"></i></div>
