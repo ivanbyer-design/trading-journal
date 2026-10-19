@@ -586,6 +586,110 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .pm-risk{grid-template-columns:1fr 1fr 1fr;}
   .dm-hbtn{height:34px;font-size:13px;padding:0 11px;}
 }
+/* ══ STRATEGIES ══ */
+.st-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px;flex-wrap:wrap;font-family:var(--font-d);}
+.st-top-sub{font-size:13px;color:var(--text2);}
+.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,290px),1fr));gap:16px;}
+.st-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px;cursor:pointer;font-family:var(--font-d);position:relative;overflow:hidden;transition:border-color .15s,transform .15s;}
+.st-card:hover{border-color:var(--accent);transform:translateY(-1px);}
+.st-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--st-c,var(--accent));}
+.st-card-name{font-size:17px;font-weight:700;color:var(--text);margin:8px 0 4px;}
+.st-card-meta{font-size:12px;color:var(--text2);min-height:16px;}
+.st-card-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px;padding-top:14px;border-top:1px solid var(--border);}
+.st-card-stats div{font-size:11px;color:var(--text2);}
+.st-card-stats b{display:block;font-size:15px;color:var(--text);margin-top:2px;}
+.st-new{border:1.5px dashed var(--border2);border-radius:var(--r);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:170px;cursor:pointer;color:var(--accent);font-family:var(--font-d);font-size:14px;font-weight:600;background:none;}
+.st-new:hover{border-color:var(--accent);background:var(--accent-soft);}
+.st-status{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;background:var(--accent-soft);color:var(--accent);}
+.st-status.active{background:var(--green-dim);color:var(--green);}
+.st-status.retired{background:var(--surface2);color:var(--text3);}
+.st-empty{grid-column:1/-1;text-align:center;padding:50px 20px;color:var(--text2);font-family:var(--font-d);font-size:14px;border:1px dashed var(--border2);border-radius:var(--r);}
+.st-empty b{display:block;font-size:17px;color:var(--text);margin-bottom:6px;}
+
+.st-back{background:none;border:none;color:var(--accent);font-family:var(--font-d);font-size:13px;font-weight:600;cursor:pointer;padding:0;margin-bottom:10px;}
+.st-head{display:flex;align-items:flex-start;gap:12px;flex-wrap:wrap;margin-bottom:6px;}
+.st-name{flex:1;min-width:220px;font-family:var(--font-d);font-size:28px;font-weight:700;color:var(--text);background:none;border:none;padding:0;border-radius:6px;}
+.st-name:focus{background:var(--surface2);}
+.st-head-btns{display:flex;gap:8px;}
+.st-props{display:flex;flex-wrap:wrap;gap:10px 18px;margin:8px 0 18px;font-family:var(--font-d);}
+.st-prop{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text2);}
+.st-prop input,.st-prop select{width:auto;min-width:110px;background:none;border:1px solid transparent;padding:4px 8px;font-family:var(--font-d);font-size:13px;color:var(--text);}
+.st-prop input:hover,.st-prop select:hover,.st-prop input:focus{border-color:var(--border2);background:var(--surface2);}
+.st-tabs{display:flex;gap:24px;border-bottom:1px solid var(--border);margin-bottom:18px;}
+.st-tab{background:none;border:none;border-bottom:2px solid transparent;padding:6px 0 10px;margin-bottom:-1px;font-family:var(--font-d);font-size:15px;font-weight:600;color:var(--text2);cursor:pointer;}
+.st-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.st-tab small{font-size:11px;background:var(--surface2);border-radius:8px;padding:1px 7px;margin-left:5px;color:var(--text2);}
+
+.st-doc{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.st-sec{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 18px;font-family:var(--font-d);}
+.st-sec.full{grid-column:1/-1;}
+.st-sec h4{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:600;color:var(--text);margin-bottom:4px;}
+.st-sec h4 i{font-style:normal;font-size:15px;}
+.st-sec p{font-size:12px;color:var(--text3);margin-bottom:10px;}
+.st-sec textarea{width:100%;min-height:96px;font-family:var(--font-d);font-size:13px;line-height:1.65;background:var(--surface2);}
+.st-links{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+.st-links a{font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;padding:5px 10px;border:1px solid var(--border2);border-radius:8px;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.st-links img{height:110px;border-radius:8px;border:1px solid var(--border);}
+
+.st-kpis{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px;margin-bottom:16px;}
+.st-kpi{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;font-family:var(--font-d);}
+.st-kpi div{font-size:12px;color:var(--text2);}
+.st-kpi b{display:block;font-size:19px;font-weight:700;color:var(--text);margin-top:4px;}
+
+.db-bar{display:flex;align-items:center;gap:8px;margin-bottom:10px;flex-wrap:wrap;font-family:var(--font-d);}
+.db-bar input,.db-bar select{width:auto;font-family:var(--font-d);font-size:13px;height:34px;padding:0 10px;}
+.db-bar .grow{flex:1;}
+.db-wrap{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);overflow:auto;max-height:70vh;}
+.db{border-collapse:separate;border-spacing:0;font-family:var(--font-d);min-width:100%;}
+.db th{position:sticky;top:0;z-index:2;background:var(--th-bg);color:var(--text2);font-size:13px;font-weight:600;letter-spacing:0;text-transform:none;text-align:left;padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);white-space:nowrap;font-family:var(--font-d);}
+.db th button{all:unset;display:flex;align-items:center;gap:6px;padding:10px 10px;cursor:pointer;width:100%;box-sizing:border-box;}
+.db th button:hover{background:var(--accent-soft);}
+.db th .ty{color:var(--text3);font-size:11px;width:14px;text-align:center;}
+.db th .so{margin-left:auto;color:var(--accent);font-size:10px;}
+.db th.db-add{width:44px;border-right:none;}
+.db th.db-add button{justify-content:center;font-size:16px;color:var(--text3);}
+.db td{padding:0;border-bottom:1px solid var(--border);border-right:1px solid var(--border);font-size:13px;color:var(--text);vertical-align:middle;background:var(--surface);}
+.db tr:hover td{background:var(--surface2);}
+.db td input,.db td select{border:none;border-radius:0;background:transparent;font-family:var(--font-d);font-size:13px;color:var(--text);padding:9px 10px;height:38px;width:100%;}
+.db td input:focus,.db td select:focus{background:var(--accent-soft);box-shadow:inset 0 0 0 2px var(--accent);}
+.db td input[type=checkbox]{width:18px;height:18px;margin:0 auto;display:block;accent-color:var(--accent);}
+.db td.num input{text-align:right;}
+.db td.idx{width:44px;text-align:center;color:var(--text3);font-size:12px;border-right:1px solid var(--border);position:relative;}
+.db td.idx button{display:none;position:absolute;inset:0;border:none;background:none;color:var(--red);font-size:16px;cursor:pointer;}
+.db tr:hover td.idx span{visibility:hidden;}
+.db tr:hover td.idx button{display:block;}
+.db td.url{display:flex;align-items:center;}
+.db td.url a{padding:0 10px;color:var(--accent);text-decoration:none;font-size:14px;}
+.db .pill-sel{appearance:none;-webkit-appearance:none;cursor:pointer;}
+.db select[data-k=outcome]:not(.v){color:var(--text3);font-style:italic;}
+.db .pill-sel.v{width:auto;max-width:100%;height:24px;margin:7px 8px;padding:0 10px;border-radius:12px;font-weight:600;font-size:12px;}
+.db td.r-pos input{color:var(--green);font-weight:600;} .db td.r-neg input{color:var(--red);font-weight:600;}
+.db-new{all:unset;display:block;width:100%;box-sizing:border-box;padding:11px 14px;font-family:var(--font-d);font-size:13px;color:var(--text3);cursor:pointer;}
+.db-new:hover{background:var(--surface2);color:var(--accent);}
+.db-foot{font-family:var(--font-d);font-size:12px;color:var(--text3);margin-top:8px;}
+.c0{background:rgba(108,93,211,.16);color:#7c6fe0;} .c1{background:rgba(45,184,125,.16);color:#2db87d;} .c2{background:rgba(240,87,90,.16);color:#f0575a;}
+.c3{background:rgba(245,165,36,.18);color:#d98e0b;} .c4{background:rgba(56,152,236,.16);color:#3898ec;} .c5{background:rgba(214,92,170,.16);color:#d65caa;} .c6{background:rgba(120,120,140,.16);color:var(--text2);}
+
+.db-pop{position:fixed;z-index:900;background:var(--surface);border:1px solid var(--border2);border-radius:10px;box-shadow:0 12px 40px rgba(10,5,30,.25);padding:12px;width:260px;display:none;flex-direction:column;gap:9px;font-family:var(--font-d);}
+.db-pop.open{display:flex;}
+.db-pop label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--text2);}
+.db-pop input,.db-pop select{font-family:var(--font-d);font-size:13px;}
+.db-pop .row{display:flex;gap:8px;}
+.db-pop .row .btn{flex:1;justify-content:center;font-size:12px;}
+.db-pop small{font-size:11px;color:var(--text3);}
+
+.st-an{display:grid;grid-template-columns:2fr 1fr;gap:16px;}
+.st-an .tz-card{min-width:0;}
+.st-grp{width:100%;font-family:var(--font-d);font-size:13px;}
+.st-grp th{font-size:12px;text-transform:none;letter-spacing:0;color:var(--text2);font-weight:600;padding:8px 6px;}
+.st-grp td{padding:9px 6px;color:var(--text);font-size:13px;}
+.st-grp td.n,.st-grp th.n{text-align:right;}
+.st-grp-wrap{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:16px;margin-top:16px;}
+.st-cmp{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px 14px;font-family:var(--font-d);font-size:13px;align-items:center;}
+.st-cmp .h{font-size:12px;color:var(--text2);font-weight:600;}
+.st-cmp b{font-size:15px;}
+@media(max-width:1100px){.st-kpis{grid-template-columns:repeat(4,minmax(0,1fr));}.st-an{grid-template-columns:1fr;}}
+@media(max-width:700px){.st-doc{grid-template-columns:1fr;}.st-kpis{grid-template-columns:repeat(2,minmax(0,1fr));}.st-name{font-size:22px;}.st-tabs{gap:18px;}}
 </style>
 </head>
 <body>
@@ -618,6 +722,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   <nav class="nav">
     <div class="nav-item active" data-nav="dashboard" onclick="nav('dashboard')"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="3" y="3" width="8" height="10" rx="1.5"/><rect x="13" y="3" width="8" height="6" rx="1.5"/><rect x="3" y="15" width="8" height="6" rx="1.5"/><rect x="13" y="11" width="8" height="10" rx="1.5"/></svg>Dashboard</div>
     <div class="nav-item" data-nav="trades" onclick="nav('trades')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Trades</div>
+    <div class="nav-item" data-nav="strategies" onclick="nav('strategies')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2.5z"/><path d="M4 19.5A2 2 0 0 1 6 18h13"/><path d="M9 7h6M9 11h4"/></svg>Strategies</div>
     <div class="nav-sep"></div>
     <div class="nav-item" data-nav="settings" onclick="nav('settings')"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>Settings</div>
   </nav>
@@ -820,6 +925,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
       </div>
       <div class="card"><div id="allTradesTable"></div></div>
     </div>
+
+    <!-- ══ STRATEGIES ══ -->
+    <div class="panel" id="panel-strategies"><div id="stratRoot"></div></div>
 
     <!-- ══ SETTINGS ══ -->
     <div class="panel" id="panel-settings">
@@ -1252,14 +1360,15 @@ function nav(id){
   document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
   document.getElementById('panel-'+id).classList.add('active');
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.nav===id));
-  const titles={dashboard:'Dashboard',trades:'Trades',settings:'Settings'};
+  const titles={dashboard:'Dashboard',trades:'Trades',strategies:'Strategies',settings:'Settings'};
   document.getElementById('topTitle').textContent=titles[id]||id;
-  document.getElementById('topCrumb').textContent=id==='settings'?'Account':'Tracking';
-  document.getElementById('pgActions').style.display=id==='settings'?'none':'';
+  document.getElementById('topCrumb').textContent=id==='settings'?'Account':id==='strategies'?'Playbook':'Tracking';
+  document.getElementById('pgActions').style.display=id==='settings'||id==='strategies'?'none':'';
   closeDayPanel();
   closeTradePanel();
   if(id==='dashboard')renderDashboard();
   if(id==='trades')renderTrades();
+  if(id==='strategies'){stUI.id=null;renderStrategies();}
   if(id==='settings'){
     document.getElementById('cfgBal').value=settings.startingBalance;
     document.getElementById('cfgDLL').value=settings.dailyLossLimit;
@@ -2239,6 +2348,302 @@ function setDayStatus(){const s=document.getElementById('dmStatus');if(s)s.textC
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('dayPanel').classList.contains('open')&&!document.getElementById('tradePanel').classList.contains('open'))closeDayPanel();});
 
 /* ══════════════════════════════════════════════
+   STRATEGIES (playbook + backtest database)
+══════════════════════════════════════════════ */
+let strategies=[];
+try{strategies=JSON.parse(localStorage.getItem('ef_strategies')||'[]');}catch(e){}
+let stSaveTimer=null,stChart=null;
+const stUI={id:null,tab:'breakdown',sort:null,q:'',fOutcome:''};
+function saveStrategies(){try{localStorage.setItem('ef_strategies',JSON.stringify(strategies));}catch(e){}}
+function stQueueSave(){clearTimeout(stSaveTimer);stSaveTimer=setTimeout(saveStrategies,400);}
+function stUid(){return Math.random().toString(36).slice(2,10);}
+function stCur(){return strategies.find(s=>s.id===stUI.id);}
+const ST_COLORS=['#6c5dd3','#2db87d','#3898ec','#f5a524','#d65caa','#f0575a','#14b8a6'];
+const ST_TYPES={text:'Aa',number:'#',date:'▦',select:'▾',checkbox:'☑',url:'↗'};
+const ST_SECTIONS=[
+  ['thesis','💡','The idea','Why does this edge exist? Who is trapped or forced to act?','e.g. Price sweeps the Asia low into London open, then reverses as trapped shorts cover…'],
+  ['conditions','🧭','Market conditions','HTF context, bias and the type of day this works on','e.g. Daily bullish, price in discount, no red-folder news in the first hour…'],
+  ['risk','⚖️','Risk','Size per trade and max attempts per day','e.g. 1% per trade, max 2 attempts per session'],
+  ['entry','🎯','Entry criteria','Every box that must be ticked before you click buy or sell, one per line','1. Liquidity sweep of a key level\n2. Displacement + market structure shift on 5m\n3. Entry on the FVG retrace'],
+  ['stop','🛑','Stop loss','Where it goes and why','e.g. Above the swing high that caused the shift, min 10 pts'],
+  ['targets','🏁','Targets & management','Take-profits, partials, break-even rules','e.g. TP1 at 2R (take 50%), move stop to BE, runner to the opposing liquidity'],
+  ['avoid','🚫','Don\'t take it when…','Conditions that invalidate the setup','e.g. Within 15 min of high-impact news, after 11:30 ET, choppy overlapping candles'],
+  ['mistakes','🧠','Common mistakes','What you tend to get wrong with this setup','e.g. Entering before the structure shift closes'],
+  ['examples','🖼️','Examples','Paste chart links (TradingView, image URLs), one per line','https://www.tradingview.com/x/…']
+];
+function stDefaultProps(){return[
+  {key:'date',name:'Date',type:'date',core:1},
+  {key:'symbol',name:'Symbol',type:'text'},
+  {key:'side',name:'Side',type:'select',options:['Long','Short']},
+  {key:'session',name:'Session',type:'select',options:['Asia','London','NY AM','NY PM']},
+  {key:'outcome',name:'Outcome',type:'select',options:['Win','Loss','BE'],core:1},
+  {key:'r',name:'R multiple',type:'number',core:1},
+  {key:'pnl',name:'P&L $',type:'number'},
+  {key:'grade',name:'Grade',type:'select',options:['A+','A','B','C']},
+  {key:'notes',name:'Notes',type:'text'},
+  {key:'link',name:'Chart',type:'url'}];}
+
+function stOutcome(r){const o=r.outcome;if(o==='Win'||o==='Loss'||o==='BE')return o;const v=parseFloat(r.r);return isFinite(v)?(v>0?'Win':v<0?'Loss':'BE'):'';}
+function stSorted(rows){return[...rows].sort((a,b)=>(a.date||'').localeCompare(b.date||''));}
+function stStats(rows){
+  const rs=stSorted(rows).filter(r=>stOutcome(r));
+  const n=rs.length,R=rs.map(r=>parseFloat(r.r)).map(v=>isFinite(v)?v:0);
+  const wins=rs.filter(r=>stOutcome(r)==='Win').length,losses=rs.filter(r=>stOutcome(r)==='Loss').length;
+  const gw=R.filter(v=>v>0).reduce((a,b)=>a+b,0),gl=Math.abs(R.filter(v=>v<0).reduce((a,b)=>a+b,0));
+  const tot=gw-gl;let c=0,pk=0,dd=0,st=0,mst=0;const curve=[];
+  rs.forEach((r,i)=>{c+=R[i];curve.push(+c.toFixed(2));pk=Math.max(pk,c);dd=Math.max(dd,pk-c);if(stOutcome(r)==='Loss'){st++;mst=Math.max(mst,st);}else if(stOutcome(r)==='Win')st=0;});
+  const pnl=rs.reduce((s,r)=>s+(parseFloat(r.pnl)||0),0);
+  return{n,wins,losses,be:n-wins-losses,wr:n?wins/n*100:0,pf:gl?gw/gl:gw?Infinity:0,tot,exp:n?tot/n:0,
+    avgW:wins?gw/wins:0,avgL:losses?gl/losses:0,dd,streak:mst,pnl,curve,labels:rs.map(r=>r.date?shortDate(r.date):'')};
+}
+const fR=(v,d=2)=>(v>0?'+':'')+(+v).toFixed(d)+'R';
+const fPF=v=>isFinite(v)?v.toFixed(2):'∞';
+function stLive(s){
+  const nm=(s.name||'').trim().toLowerCase();if(!nm)return[];
+  return trades.filter(t=>(t.setup||'').trim().toLowerCase()===nm);
+}
+
+function renderStrategies(){
+  const el=document.getElementById('stratRoot');if(!el)return;
+  if(stChart){stChart.destroy();stChart=null;}
+  const s=stCur();
+  if(!s){stUI.id=null;el.innerHTML=stListHTML();return;}
+  el.innerHTML=stDetailHTML(s);
+  if(stUI.tab==='breakdown')el.querySelectorAll('.st-sec textarea').forEach(stAutosize);
+  if(stUI.tab==='analytics')stDrawCurve(s);
+}
+function stListHTML(){
+  const cards=strategies.map((s,i)=>{
+    const st=stStats(s.rows||[]);
+    return`<div class="st-card" style="--st-c:${s.color||ST_COLORS[i%ST_COLORS.length]}" onclick="stOpen('${s.id}')">
+      <span class="st-status ${s.status||'testing'}">${{active:'Active',retired:'Retired'}[s.status]||'Testing'}</span>
+      <div class="st-card-name">${esc(s.name||'Untitled strategy')}</div>
+      <div class="st-card-meta">${[s.market,s.timeframe,s.session].filter(Boolean).map(esc).join(' · ')||'No details yet'}</div>
+      <div class="st-card-stats">
+        <div>Trades<b>${st.n}</b></div>
+        <div>Win %<b>${st.n?fpct(st.wr):'--'}</b></div>
+        <div>Total R<b style="color:${st.tot>0?'var(--green)':st.tot<0?'var(--red)':'var(--text)'}">${st.n?fR(st.tot,1):'--'}</b></div>
+        <div>PF<b>${st.n?fPF(st.pf):'--'}</b></div>
+      </div>
+    </div>`;}).join('');
+  return`<div class="st-top"><div class="st-top-sub">Your playbook. Break down each setup, then log backtests to prove the edge.</div>
+      <button class="btn primary" style="height:36px;font-size:13px" onclick="stNew()">+ New strategy</button></div>
+    <div class="st-grid">${cards||'<div class="st-empty"><b>No strategies yet</b>Create one to write out its rules and start a backtest database.</div>'}
+      ${strategies.length?'<button class="st-new" onclick="stNew()"><span style="font-size:22px">+</span>New strategy</button>':''}</div>`;
+}
+function stNew(){
+  const s={id:stUid(),name:'',status:'testing',color:ST_COLORS[strategies.length%ST_COLORS.length],props:stDefaultProps(),rows:[],created:new Date().toISOString()};
+  strategies.push(s);saveStrategies();stUI.id=s.id;stUI.tab='breakdown';stUI.sort=null;stUI.q='';stUI.fOutcome='';renderStrategies();
+  setTimeout(()=>document.getElementById('stName')?.focus(),50);
+}
+function stOpen(id){stUI.id=id;stUI.tab='breakdown';stUI.sort=null;stUI.q='';stUI.fOutcome='';renderStrategies();document.getElementById('mainContent')?.scrollTo?.(0,0);}
+function stBack(){saveStrategies();stUI.id=null;renderStrategies();}
+function stTab(t){stUI.tab=t;renderStrategies();}
+function stSet(field,val){const s=stCur();if(!s)return;s[field]=val;s.updated=new Date().toISOString();stQueueSave();}
+function stAutosize(t){t.style.height='auto';t.style.height=Math.max(96,t.scrollHeight+2)+'px';}
+function stDup(){
+  const s=stCur();const c=JSON.parse(JSON.stringify(s));c.id=stUid();c.name=(s.name||'Untitled')+' (copy)';c.rows=[];c.created=new Date().toISOString();
+  strategies.push(c);saveStrategies();stOpen(c.id);toast('Duplicated without backtest rows','success');
+}
+function stDel(btn){
+  if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Tap again to delete';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent='Delete';}},3000);return;}
+  strategies=strategies.filter(x=>x.id!==stUI.id);saveStrategies();stUI.id=null;renderStrategies();toast('Strategy deleted','success');
+}
+
+function stDetailHTML(s){
+  const st=stStats(s.rows||[]);
+  const opt=(v,l,cur)=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`;
+  const prop=(f,l,ph)=>`<div class="st-prop">${l}<input value="${esc(s[f]||'')}" placeholder="${ph}" oninput="stSet('${f}',this.value)"></div>`;
+  return`<button class="st-back" onclick="stBack()">← All strategies</button>
+    <div class="st-head">
+      <input class="st-name" id="stName" value="${esc(s.name||'')}" placeholder="Untitled strategy" oninput="stSet('name',this.value)" onchange="renderStrategies()">
+      <div class="st-head-btns"><button class="btn" onclick="stDup()">⧉ Duplicate</button><button class="btn danger" onclick="stDel(this)">Delete</button></div>
+    </div>
+    <div class="st-props">
+      <div class="st-prop">Status<select onchange="stSet('status',this.value)">${opt('testing','🧪 Testing',s.status||'testing')}${opt('active','✅ Active',s.status)}${opt('retired','📦 Retired',s.status)}</select></div>
+      ${prop('market','Market','e.g. NQ, ES')}${prop('timeframe','Timeframes','e.g. 1H bias / 5m entry')}${prop('session','Session','e.g. NY AM 9:30–11:00')}${prop('stype','Type','e.g. Reversal')}
+    </div>
+    <div class="st-tabs">
+      <button class="st-tab${stUI.tab==='breakdown'?' active':''}" onclick="stTab('breakdown')">Breakdown</button>
+      <button class="st-tab${stUI.tab==='backtest'?' active':''}" onclick="stTab('backtest')">Backtest<small>${(s.rows||[]).length}</small></button>
+      <button class="st-tab${stUI.tab==='analytics'?' active':''}" onclick="stTab('analytics')">Analytics</button>
+    </div>
+    ${stUI.tab==='breakdown'?stBreakdownHTML(s):stUI.tab==='backtest'?`<div id="stKpis">${stKpisHTML(st)}</div>${stDbBarHTML()}<div id="stDbArea">${stDbHTML(s)}</div>`:stAnalyticsHTML(s,st)}`;
+}
+function stBreakdownHTML(s){
+  return`<div class="st-doc">${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='examples'?' full':''}">
+    <h4><i>${ic}</i>${t}</h4><p>${hint}</p>
+    <textarea placeholder="${esc(ph)}" oninput="stSet('${f}',this.value);stAutosize(this)${f==='examples'?';stRenderLinks(this.value)':''}">${esc(s[f]||'')}</textarea>
+    ${f==='examples'?`<div class="st-links" id="stLinks">${stLinksHTML(s[f])}</div>`:''}
+  </div>`).join('')}</div>`;
+}
+function stLinksHTML(v){
+  return(v||'').split(/\s+/).filter(u=>/^https?:\/\//i.test(u)).map(u=>/\.(png|jpe?g|gif|webp)(\?|$)/i.test(u)?`<a href="${esc(u)}" target="_blank" rel="noopener" style="padding:0;border:none;max-width:none"><img src="${esc(u)}" alt=""></a>`:`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\//,''))}</a>`).join('');
+}
+function stRenderLinks(v){const el=document.getElementById('stLinks');if(el)el.innerHTML=stLinksHTML(v);}
+function stKpisHTML(st){
+  const k=(l,v,c)=>`<div class="st-kpi"><div>${l}</div><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
+  const pc=v=>v>0?'var(--green)':v<0?'var(--red)':'';
+  return`<div class="st-kpis">${k('Trades',st.n)}${k('Win rate',st.n?fpct(st.wr):'--')}${k('Profit factor',st.n?fPF(st.pf):'--')}${k('Expectancy',st.n?fR(st.exp):'--',pc(st.exp))}
+    ${k('Total R',st.n?fR(st.tot,1):'--',pc(st.tot))}${k('Avg win / loss',st.n?`${st.avgW.toFixed(2)} / ${st.avgL.toFixed(2)}`:'--')}${k('Max drawdown',st.n?'-'+st.dd.toFixed(1)+'R':'--')}${k('Worst loss streak',st.n?st.streak:'--')}</div>`;
+}
+
+/* ── database ── */
+function stPillCls(p,v){if(!v)return'';if(p.key==='outcome')return{Win:'c1',Loss:'c2',BE:'c0'}[v]||'c6';const i=(p.options||[]).indexOf(v);return'c'+(i<0?6:i%6);}
+function stCellHTML(p,r){
+  const v=r[p.key]??'',on=`'${r.id}','${p.key}'`;
+  if(p.type==='select')return`<td><select data-k="${p.key}" class="pill-sel${v?' v '+stPillCls(p,v):''}" onchange="stCell(${on},this.value);this.className='pill-sel'+(this.value?' v '+stPillCls(stProp('${p.key}'),this.value):'')"><option value="">${p.key==='outcome'&&!v&&stOutcome(r)?stOutcome(r)+' (auto)':''}</option>${(p.options||[]).map(o=>`<option${o===v?' selected':''}>${esc(o)}</option>`).join('')}</select></td>`;
+  if(p.type==='checkbox')return`<td><input type="checkbox"${v?' checked':''} onchange="stCell(${on},this.checked)"></td>`;
+  if(p.type==='number'){const n=parseFloat(v);return`<td class="num${p.key==='r'&&n>0?' r-pos':p.key==='r'&&n<0?' r-neg':''}"><input type="number" step="any" value="${esc(v)}" oninput="stCell(${on},this.value);${p.key==='r'?`this.parentElement.className='num'+(this.value>0?' r-pos':this.value<0?' r-neg':'')`:''}"></td>`;}
+  if(p.type==='date')return`<td><input type="date" value="${esc(v)}" onchange="stCell(${on},this.value)"></td>`;
+  if(p.type==='url')return`<td><div class="url" style="display:flex;align-items:center"><input value="${esc(v)}" placeholder="" oninput="stCell(${on},this.value)">${v?`<a href="${esc(v)}" target="_blank" rel="noopener" style="padding:0 10px;color:var(--accent);text-decoration:none">↗</a>`:''}</div></td>`;
+  return`<td><input value="${esc(v)}" oninput="stCell(${on},this.value)"${p.key==='notes'?' style="min-width:220px"':''}></td>`;
+}
+function stFillDatalist(){const d=document.getElementById('stratNames');if(d)d.innerHTML=strategies.filter(s=>s.name).map(s=>`<option value="${esc(s.name)}">`).join('');}
+function stProp(key){return(stCur()?.props||[]).find(p=>p.key===key);}
+function stVisibleRows(s){
+  let rows=[...(s.rows||[])];
+  if(stUI.fOutcome)rows=rows.filter(r=>stOutcome(r)===stUI.fOutcome);
+  if(stUI.q){const q=stUI.q.toLowerCase();rows=rows.filter(r=>Object.values(r).some(v=>String(v).toLowerCase().includes(q)));}
+  if(stUI.sort){const{key,dir}=stUI.sort,p=stProp(key),num=p?.type==='number';
+    rows.sort((a,b)=>{const x=a[key]??'',y=b[key]??'';if(x===''&&y!=='')return 1;if(y===''&&x!=='')return-1;return(num?(parseFloat(x)||0)-(parseFloat(y)||0):String(x).localeCompare(String(y)))*dir;});}
+  return rows;
+}
+function stDbBarHTML(){
+  return`<div class="db-bar">
+      <input class="grow" placeholder="Search rows…" value="${esc(stUI.q)}" oninput="stUI.q=this.value;stRefreshDb()" style="max-width:260px">
+      <select onchange="stUI.fOutcome=this.value;stRefreshDb()"><option value="">All outcomes</option>${['Win','Loss','BE'].map(o=>`<option${stUI.fOutcome===o?' selected':''}>${o}</option>`).join('')}</select>
+      <span class="grow"></span>
+      <button class="btn" onclick="stExportCsv()">↓ CSV</button>
+      <button class="btn primary" onclick="stAddRow()">+ New</button>
+    </div>`;
+}
+function stDbHTML(s){
+  const rows=stVisibleRows(s);
+  const head=s.props.map(p=>`<th style="min-width:${p.type==='checkbox'?70:p.type==='number'?100:p.type==='date'?140:p.type==='select'?120:150}px"><button onclick="stPropMenu('${p.key}',this,event)"><span class="ty">${ST_TYPES[p.type]}</span>${esc(p.name)}${stUI.sort?.key===p.key?`<span class="so">${stUI.sort.dir>0?'▲':'▼'}</span>`:''}</button></th>`).join('');
+  return`<div class="db-wrap" id="stDb"><table class="db"><thead><tr><th style="width:44px"></th>${head}<th class="db-add"><button title="Add property" onclick="stAddPropMenu(this,event)">+</button></th></tr></thead>
+      <tbody>${rows.map((r,i)=>`<tr data-id="${r.id}"><td class="idx"><span>${i+1}</span><button title="Delete row" onclick="stDelRow('${r.id}')">×</button></td>${s.props.map(p=>stCellHTML(p,r)).join('')}<td></td></tr>`).join('')}</tbody>
+    </table><button class="db-new" onclick="stAddRow()">+ New row</button></div>
+    <div class="db-foot">${rows.length} of ${(s.rows||[]).length} rows · Click a column header to sort, rename or delete it. Outcome is filled from R if left blank.${stUI.sort?' · <a href="#" style="color:var(--accent)" onclick="event.preventDefault();stUI.sort=null;stRefreshDb()">Clear sort</a>':''}</div>`;
+}
+function stRefreshDb(){
+  const s=stCur();if(!s)return;
+  const area=document.getElementById('stDbArea');if(!area)return;
+  const sc=document.getElementById('stDb')?.scrollLeft||0;
+  area.innerHTML=stDbHTML(s);
+  document.getElementById('stDb').scrollLeft=sc;
+  stRefreshKpis();
+}
+function stRefreshKpis(){const k=document.getElementById('stKpis');if(k)k.innerHTML=stKpisHTML(stStats(stCur().rows||[]));}
+function stCell(id,key,val){
+  const s=stCur();const r=s.rows.find(x=>x.id===id);if(!r)return;
+  if(val===''||val===false)delete r[key];else r[key]=val;
+  if(key==='r'||key==='outcome'){const o=document.querySelector(`#stDb tr[data-id="${id}"] select[data-k="outcome"]`);if(o)o.options[0].textContent=!r.outcome&&stOutcome(r)?stOutcome(r)+' (auto)':'';}
+  stQueueSave();stRefreshKpis();
+}
+function stAddRow(){
+  const s=stCur();const last=stSorted(s.rows).pop();
+  const r={id:stUid(),date:last?.date||ymd(new Date())};
+  if(last)['symbol','side','session'].forEach(k=>{if(last[k]&&s.props.some(p=>p.key===k))r[k]=last[k];});
+  s.rows.push(r);saveStrategies();stUI.sort=null;stUI.q='';stUI.fOutcome='';stRefreshDb();
+  const wrap=document.getElementById('stDb');wrap.scrollTop=wrap.scrollHeight;
+  const tr=wrap.querySelector('tbody tr:last-child');tr?.querySelector('td:nth-child(3) input, td:nth-child(3) select')?.focus();
+  document.querySelector('.st-tab small').textContent=s.rows.length;
+}
+function stDelRow(id){const s=stCur();s.rows=s.rows.filter(r=>r.id!==id);saveStrategies();stRefreshDb();document.querySelector('.st-tab small').textContent=s.rows.length;}
+function stExportCsv(){
+  const s=stCur();const q=v=>`"${String(v??'').replace(/"/g,'""')}"`;
+  const csv=[s.props.map(p=>q(p.name)).join(','),...stSorted(s.rows).map(r=>s.props.map(p=>q(r[p.key])).join(','))].join('\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));a.download=`${(s.name||'strategy').replace(/[^\w-]+/g,'_')}-backtest.csv`;a.click();
+}
+
+/* ── property popovers ── */
+function stPop(){let p=document.getElementById('dbPop');if(!p){p=document.createElement('div');p.id='dbPop';p.className='db-pop';p.onclick=e=>e.stopPropagation();document.body.appendChild(p);}return p;}
+function stClosePop(){document.getElementById('dbPop')?.classList.remove('open');}
+document.addEventListener('click',stClosePop);
+function stPlacePop(p,anchor){
+  const b=anchor.getBoundingClientRect();p.classList.add('open');
+  p.style.left=Math.max(8,Math.min(b.left,window.innerWidth-p.offsetWidth-8))+'px';
+  p.style.top=Math.min(b.bottom+4,window.innerHeight-p.offsetHeight-8)+'px';
+}
+function stPropMenu(key,btn,e){
+  e.stopPropagation();const p=stProp(key),pop=stPop();
+  pop.innerHTML=`<label>Property name</label><input id="dbpName" value="${esc(p.name)}" onkeydown="if(event.key==='Enter')stSaveProp('${key}')">
+    <small>Type: ${p.type}${p.core?' · used for stats':''}</small>
+    ${p.type==='select'?`<label>Options (comma separated)</label><input id="dbpOpts" value="${esc((p.options||[]).join(', '))}"${key==='outcome'?' disabled':''}>`:''}
+    <div class="row"><button class="btn" onclick="stSortBy('${key}',1)">▲ Sort asc</button><button class="btn" onclick="stSortBy('${key}',-1)">▼ Sort desc</button></div>
+    <div class="row"><button class="btn primary" onclick="stSaveProp('${key}')">Save</button>${p.core?'':`<button class="btn danger" onclick="stDelProp('${key}',this)">Delete</button>`}</div>`;
+  stPlacePop(pop,btn);document.getElementById('dbpName').select();
+}
+function stSortBy(key,dir){stUI.sort={key,dir};stClosePop();stRefreshDb();}
+function stSaveProp(key){
+  const p=stProp(key);const n=document.getElementById('dbpName').value.trim();if(n)p.name=n;
+  const o=document.getElementById('dbpOpts');if(o&&!o.disabled)p.options=[...new Set(o.value.split(',').map(x=>x.trim()).filter(Boolean))];
+  saveStrategies();stClosePop();stRefreshDb();
+}
+function stDelProp(key,btn){
+  if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Confirm';return;}
+  const s=stCur();s.props=s.props.filter(p=>p.key!==key);s.rows.forEach(r=>delete r[key]);if(stUI.sort?.key===key)stUI.sort=null;
+  saveStrategies();stClosePop();stRefreshDb();
+}
+function stAddPropMenu(btn,e){
+  e.stopPropagation();const pop=stPop();
+  pop.innerHTML=`<label>New property</label><input id="dbpName" placeholder="e.g. HTF bias, Entry model, Followed rules">
+    <label>Type</label><select id="dbpType" onchange="document.getElementById('dbpOptWrap').style.display=this.value==='select'?'':'none'">
+      ${Object.keys(ST_TYPES).map(t=>`<option value="${t}">${ST_TYPES[t]}  ${t[0].toUpperCase()+t.slice(1)}</option>`).join('')}</select>
+    <div id="dbpOptWrap" style="display:none;flex-direction:column;gap:6px"><label>Options (comma separated)</label><input id="dbpOpts" placeholder="e.g. Bullish, Bearish, Neutral"></div>
+    <div class="row"><button class="btn primary" onclick="stAddProp()">Add property</button></div>`;
+  stPlacePop(pop,btn);document.getElementById('dbpName').focus();
+}
+function stAddProp(){
+  const name=document.getElementById('dbpName').value.trim();if(!name){toast('Give the property a name','error');return;}
+  const type=document.getElementById('dbpType').value;
+  const p={key:'p_'+stUid(),name,type};
+  if(type==='select')p.options=[...new Set(document.getElementById('dbpOpts').value.split(',').map(x=>x.trim()).filter(Boolean))];
+  stCur().props.push(p);saveStrategies();stClosePop();stRefreshDb();
+  const w=document.getElementById('stDb');if(w)w.scrollLeft=w.scrollWidth;
+}
+
+/* ── analytics ── */
+function stGroupHTML(title,rows,keyFn,order){
+  const g={};rows.forEach(r=>{const k=keyFn(r);if(!k||!stOutcome(r))return;(g[k]=g[k]||[]).push(r);});
+  const ks=Object.keys(g);if(order)ks.sort((a,b)=>(order.indexOf(a)+1||99)-(order.indexOf(b)+1||99));if(!ks.length)return'';
+  return`<div class="tz-card"><div class="tz-card-h">${esc(title)}</div><div class="tz-card-b"><table class="st-grp">
+    <thead><tr><th></th><th class="n">Trades</th><th class="n">Win %</th><th class="n">Total R</th><th class="n">Exp.</th></tr></thead>
+    <tbody>${ks.map(k=>{const st=stStats(g[k]);return`<tr><td style="font-weight:600">${esc(k)}</td><td class="n">${st.n}</td><td class="n">${fpct(st.wr)}</td><td class="n" style="color:${st.tot>0?'var(--green)':st.tot<0?'var(--red)':'inherit'};font-weight:600">${fR(st.tot,1)}</td><td class="n">${fR(st.exp)}</td></tr>`;}).join('')}</tbody></table></div></div>`;
+}
+function stAnalyticsHTML(s,st){
+  const rows=s.rows||[];
+  if(!st.n)return stKpisHTML(st)+'<div class="st-empty"><b>No backtest data yet</b>Log trades in the Backtest tab to see the equity curve and breakdowns.</div>';
+  const live=stLive(s),ls=calcStats(live);
+  const dows=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const groups=[stGroupHTML('By weekday',rows,r=>r.date?dows[new Date(r.date+'T12:00:00').getDay()]:'',['Mon','Tue','Wed','Thu','Fri','Sat','Sun']),
+    ...s.props.filter(p=>p.type==='select'&&p.key!=='outcome').map(p=>stGroupHTML('By '+p.name.toLowerCase(),rows,r=>r[p.key],p.options)),
+    ...s.props.filter(p=>p.type==='checkbox').map(p=>stGroupHTML(p.name,rows,r=>r[p.key]?'Yes':'No',['Yes','No']))].join('');
+  return`${stKpisHTML(st)}
+    <div class="st-an">
+      <div class="tz-card"><div class="tz-card-h">Backtest equity curve (R)</div><div class="tz-card-b"><div class="chart-box"><canvas id="stCurve"></canvas></div></div></div>
+      <div class="tz-card"><div class="tz-card-h">Backtest vs live <i class="info" title="Live = journal trades whose Setup field matches this strategy's name exactly">i</i></div><div class="tz-card-b">
+        ${live.length?`<div class="st-cmp"><span></span><span class="h">Backtest</span><span class="h">Live</span>
+          <span>Trades</span><b>${st.n}</b><b>${ls.total}</b>
+          <span>Win rate</span><b>${fpct(st.wr)}</b><b style="color:${ls.wr<st.wr-10?'var(--red)':'inherit'}">${fpct(ls.wr)}</b>
+          <span>Profit factor</span><b>${fPF(st.pf)}</b><b>${isFinite(ls.pf)?ls.pf.toFixed(2):'∞'}</b>
+          <span>Net</span><b>${fR(st.tot,1)}</b><b style="color:${ls.netPnl>=0?'var(--green)':'var(--red)'}">${fmoney(ls.netPnl)}</b></div>
+          <div class="pm-hint" style="margin:14px 0 0">If live win rate is well below backtest, check whether you're following the entry criteria.</div>`
+        :`<div class="pm-hint" style="margin:0;line-height:1.7">No live trades tagged yet. Open a trade from the Trades page and set its <b>Setup</b> to <b>${esc(s.name||'this strategy\'s name')}</b> to compare live results against the backtest.</div>`}
+      </div></div>
+    </div>
+    <div class="st-grp-wrap">${groups}</div>`;
+}
+function stDrawCurve(s){
+  const st=stStats(s.rows||[]);const c=document.getElementById('stCurve');if(!c)return;
+  const sc=chartScales();sc.y.ticks.callback=v=>v+'R';
+  stChart=new Chart(c,{type:'line',data:{labels:['Start',...st.labels],datasets:[{data:[0,...st.curve],borderColor:'#7c6fe0',borderWidth:2,tension:.2,pointRadius:0,pointHoverRadius:4,
+    fill:{target:'origin',above:'rgba(45,184,125,.28)',below:'rgba(240,87,90,.28)'}}]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`Cumulative: ${fR(c.raw)}`}}},scales:sc}});
+}
+
+/* ══════════════════════════════════════════════
    TRADE LOG
 ══════════════════════════════════════════════ */
 function renderTrades(){
@@ -2430,7 +2835,7 @@ function openTradeDetail(id){
       <div class="tp-section-title">Notes</div>
       <div class="tp-field">
         <label>Setup / Strategy</label>
-        <input type="text" value="${(t.setup||'').replace(/"/g,'&quot;')}" placeholder="e.g. Break & Retest, VWAP Reclaim"
+        <input type="text" value="${(t.setup||'').replace(/"/g,'&quot;')}" placeholder="e.g. Break & Retest, VWAP Reclaim" list="stratNames" onfocus="stFillDatalist()"
           onblur="patchTrade('${id}',{setup:this.value})">
       </div>
       <div class="tp-field">
@@ -2504,7 +2909,7 @@ function isPWA(){
 }
 
 async function exportBackup(){
-  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly};
+  const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies};
   const json=JSON.stringify(data,null,2);
   const filename=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
   // On iOS PWA, use Web Share API so user can save to Files, AirDrop, etc.
@@ -2556,6 +2961,7 @@ function confirmBackupImport(){
   if(data.dayNotes)dayNotes={...data.dayNotes,...dayNotes};
   if(data.premarket)premarket={...data.premarket,...premarket};
   if(data.weekly)weekly={...data.weekly,...weekly};
+  if(data.strategies){const have=new Set(strategies.map(x=>x.id));strategies=[...strategies,...data.strategies.filter(x=>!have.has(x.id))];saveStrategies();}
   saveDayData();
   saveTrades();saveAccountNames();refreshAll();updateFileChips();renderAcctOpts();
   toast(`Merged ${fresh.length} new trade${fresh.length!==1?'s':''} from backup`,'success');
@@ -2610,7 +3016,7 @@ function updateCloudUI(){
 async function pushToCloud(){
   const token=cloudCfg.token||(document.getElementById('cfgGhToken')?.value||'').trim();
   if(!token){toast('Enter your GitHub token in Settings → Cloud Sync','error');nav('settings');return;}
-  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly},null,2);
+  const payload=JSON.stringify({version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies},null,2);
   const body=JSON.stringify({description:'EdgeFlow Trading Journal — Cloud Backup',public:false,files:{'edgeflow-data.json':{content:payload}}});
   const headers={Authorization:`Bearer ${token}`,'Content-Type':'application/json'};
   try{
@@ -2645,6 +3051,7 @@ async function pullFromCloud(){
     if(data.dayNotes)dayNotes=data.dayNotes;
     if(data.premarket)premarket=data.premarket;
     if(data.weekly)weekly=data.weekly;
+    if(data.strategies){strategies=data.strategies;saveStrategies();}
     saveDayData();
     if(data.settings){Object.assign(settings,data.settings);localStorage.setItem('ef_settings',JSON.stringify(settings));}
     saveTrades();saveAccountNames();
@@ -2744,6 +3151,7 @@ function refreshAll(){
   const id=active.id.replace('panel-','');
   if(id==='dashboard')renderDashboard();
   else if(id==='trades')renderTrades();
+  else if(id==='strategies')renderStrategies();
 }
 
 /* ══════════════════════════════════════════════
@@ -2763,5 +3171,6 @@ function init(){
 }
 init();
 </script>
+<datalist id="stratNames"></datalist>
 </body>
 </html>
