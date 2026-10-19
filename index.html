@@ -2380,7 +2380,7 @@ function weekViewHTML(key){
         <div class="pm-h"><span class="n">4</span>Psych whole-number levels</div>
         <div class="pm-hint">Round numbers attract orders, stops and reactions</div>
         <div class="fg"><label>Current price</label>${inp('psyPrice','e.g. 24,912',';wkRenderPsy()')}</div>
-        <div class="fg" style="margin-top:10px"><label>Step</label>${seg('psyStep',[['10','10'],['25','25'],['50','50'],['100','100'],['250','250'],['500','500'],['1000','1K']])}</div>
+        <div class="fg" style="margin-top:10px"><label>Points between levels</label><div class="pm-hint" style="margin:0 0 6px">e.g. 50 on ES shows 7700, 7750, 7800… · 250 on NQ shows 25,000, 25,250…</div>${seg('psyStep',[['10','10'],['25','25'],['50','50'],['100','100'],['250','250'],['500','500'],['1000','1K']])}</div>
         <div class="wk-psy" id="wkPsy"></div>
         <div style="margin-top:10px">${ta('psyNotes','Which round numbers matter this week? e.g. 25,000 is untested, first touch likely reacts',2)}</div>
       </div>
