@@ -3409,18 +3409,18 @@ function setTradeAccount(id,sel){
   const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
   toast(`Moved to "${a}"`,'success');
 }
-// Stop / target field with ▲ ▼ nudges (one tick each); shows the default level until the trade gets its own
+// Stop / target field with ▲ ▼ nudges (one point each); shows the default level until the trade gets its own
 function tpLevelHTML(t,key){
   const own=tradeLevelSet(t,key),px=key==='stop'?tradeStopPx(t):tradeTargetPx(t),pts=key==='stop'?tradeRiskPts(t):tradeRewardPts(t);
   const lbl=key==='stop'?'Stop Loss (initial)':'Take Profit';
-  const btn=(d,ch)=>`<button type="button" class="lvl-btn" title="${d>0?'Up':'Down'} 1 tick" onclick="nudgeTradeLevel('${t.id}','${key}',${d})">${ch}</button>`;
+  const btn=(d,ch)=>`<button type="button" class="lvl-btn" title="${d>0?'Up':'Down'} 1 point" onclick="nudgeTradeLevel('${t.id}','${key}',${d})">${ch}</button>`;
   return`<div class="tp-field"><label>${lbl} <span style="font-weight:500;color:var(--text3);text-transform:none;letter-spacing:0">${pts!=null?pts.toFixed(2)+' pts':''}${own?` · <a href="#" style="color:var(--accent)" onclick="event.preventDefault();resetTradeLevel('${t.id}','${key}')">reset</a>`:' · default'}</span></label>
     <div class="lvl-row">${btn(-1,'▼')}<input type="number" step="0.25" value="${px!=null?px.toFixed(2):''}" onchange="setTradeLevel('${t.id}','${key}',this)">${btn(1,'▲')}</div></div>`;
 }
 function nudgeTradeLevel(id,key,d){
   const t=trades.find(x=>x.id===id);if(!t)return;
   const cur=key==='stop'?tradeStopPx(t):tradeTargetPx(t);if(cur==null)return;
-  const n=Math.round((cur+d*.25)*4)/4;
+  const n=Math.round((cur+d)*4)/4;
   const err=(key==='stop'?stopSideErr:targetSideErr)(t.direction,t.entry,n);
   if(err){toast(err,'error');return;}
   t[key]=n;
