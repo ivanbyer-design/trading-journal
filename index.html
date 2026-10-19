@@ -3339,13 +3339,27 @@ function isPWA(){
   return window.navigator.standalone===true||window.matchMedia('(display-mode:standalone)').matches;
 }
 
-async function exportBackup(){
+async function backupJSON(){
   const data={version:1,exportedAt:new Date().toISOString(),trades,settings,accountNames,dayNotes,premarket,weekly,strategies,noteCharts};
   data.images=await collectImages(allChartRefs());
-  const json=JSON.stringify(data,null,2);
+  return JSON.stringify(data,null,2);
+}
+async function exportBackup(){
   const filename=`edgeflow-backup-${new Date().toISOString().slice(0,10)}.json`;
-  // On iOS PWA, use Web Share API so user can save to Files, AirDrop, etc.
-  if(navigator.canShare&&navigator.share){
+  // Desktop Chrome/Edge: open a Save As window (must happen right on the click, before any other await)
+  if(window.showSaveFilePicker){
+    let handle;
+    try{handle=await window.showSaveFilePicker({suggestedName:filename,types:[{description:'EdgeFlow backup',accept:{'application/json':['.json']}}]});}
+    catch(e){if(e.name==='AbortError')return;handle=null;}
+    if(handle){
+      try{const w=await handle.createWritable();await w.write(await backupJSON());await w.close();toast(`Backup saved as ${handle.name} ✓`,'success');}
+      catch(e){toast('Could not save backup: '+e.message,'error');}
+      return;
+    }
+  }
+  const json=await backupJSON();
+  // iPhone/iPad (no Save As window): share sheet → Save to Files, AirDrop, etc.
+  if(navigator.canShare&&navigator.share&&/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)){
     try{
       const file=new File([json],filename,{type:'application/json'});
       if(navigator.canShare({files:[file]})){
@@ -3354,9 +3368,8 @@ async function exportBackup(){
       }
     }catch(e){if(e.name==='AbortError')return;}
   }
-  // Fallback: trigger download
-  const blob=new Blob([json],{type:'application/json'});
-  const url=URL.createObjectURL(blob);
+  // Other browsers (e.g. Firefox): regular download
+  const url=URL.createObjectURL(new Blob([json],{type:'application/json'}));
   const a=document.createElement('a');
   a.href=url;a.download=filename;
   document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
