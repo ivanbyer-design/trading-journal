@@ -1164,6 +1164,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="fg full"><label>Notes</label><textarea id="t-notes" rows="3" placeholder="What did you see? Why this trade?"></textarea></div>
       </div>
       <div style="margin-top:12px;">
+        <label style="display:block;margin-bottom:7px;">Chart Screenshot</label>
+        <div id="mk-mt"></div>
+      </div>
+      <div style="margin-top:12px;">
         <label style="display:block;margin-bottom:7px;">Emotional State</label>
         <div class="tags-wrap" id="emoWrap">
           <span class="stag" onclick="togEmo(this,'😤 Revenge')">😤 Revenge</span>
@@ -2484,7 +2488,7 @@ function weekViewHTML(key){
 
 /* ── Chart / screenshot images (plans, notes, strategies, trades, backtest rows) ── */
 // Uploaded images live in IndexedDB (localStorage is too small); owners only keep {id,kind,url,label}.
-let mkDbP=null;const mkCache={};const mkSel={pm:0,wk:0,note:0,st:0,tr:0};
+let mkDbP=null;const mkCache={};const mkSel={pm:0,wk:0,note:0,st:0,tr:0,mt:0};
 function mkDb(){
   if(!mkDbP)mkDbP=new Promise((res,rej)=>{const r=indexedDB.open('edgeflow',1);r.onupgradeneeded=()=>r.result.createObjectStore('images');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});
   return mkDbP;
@@ -2535,10 +2539,12 @@ const MK_TEXT={
   wk:['Add your weekly chart markup','Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.'],
   note:['Add screenshots from the session','Your executions, what price did vs. your plan. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
   st:['Add your A+ model chart','An annotated example of the perfect version of this setup. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
-  tr:['Add a chart screenshot','Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.']
+  tr:['Add a chart screenshot','Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
+  mt:['Add a chart screenshot','Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.']
 };
 function mkObj(scope,create){
   if(scope==='st')return stCur();
+  if(scope==='mt')return mtDraft;
   if(scope==='tr'){
     const t=trades.find(x=>x.id===activeTradePanelId);
     if(t&&t.screenshot&&!t.charts){const u=tvToImg(t.screenshot);if(u)t.charts=[{id:'url_'+t.id,kind:'url',url:u}];delete t.screenshot;saveTrades();}
@@ -2550,10 +2556,11 @@ function mkObj(scope,create){
 function mkSave(scope){
   if(scope==='st'){saveStrategies();return;}
   if(scope==='tr'){saveTrades();return;}
+  if(scope==='mt')return;
   if(scope==='note'&&selectedDay&&!noteCharts[selectedDay]?.charts)delete noteCharts[selectedDay];
   saveDayData();setDayStatus();
 }
-function mkTouch(scope){const o=mkObj(scope,true);if(scope==='pm'||scope==='wk')o.updated=new Date().toISOString();mkSave(scope);mkRender(scope);}
+function mkTouch(scope){const o=mkObj(scope,true);if(!o)return;if(scope==='pm'||scope==='wk')o.updated=new Date().toISOString();mkSave(scope);mkRender(scope);}
 async function mkAddFiles(scope,files){
   const add=await mkEntries(files);if(!add.length)return;
   const o=mkObj(scope,true);if(!o)return;o.charts=[...(o.charts||[]),...add];
@@ -2567,21 +2574,21 @@ function mkAddUrl(scope,raw){
 function mkRemove(scope,btn){
   if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Tap to confirm';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent='✕ Remove';}},3000);return;}
   const o=mkObj(scope);const c=o?.charts?.[mkSel[scope]];if(!c)return;
-  o.charts.splice(mkSel[scope],1);if(c.kind==='img')imgDel(c.id);
+  o.charts.splice(mkSel[scope],1);if(c.kind==='img'&&scope!=='mt')imgDel(c.id);
   if(!o.charts.length)delete o.charts;
   mkSel[scope]=Math.max(0,mkSel[scope]-1);mkTouch(scope);
 }
 function mkPick(scope,i){mkSel[scope]=i;mkRender(scope);}
 function mkLabel(scope,v){
   const o=mkObj(scope);const c=o?.charts?.[mkSel[scope]];if(!c)return;c.label=v;
-  if(scope==='st')stQueueSave();else if(scope==='tr')saveTrades();else queueDaySave(()=>{});
+  if(scope==='st')stQueueSave();else if(scope==='mt');else if(scope==='tr')saveTrades();else queueDaySave(()=>{});
   const t=document.querySelector(`#mk-${scope} .mk-thumb.on i`);if(t)t.textContent=v;
 }
 function mkOpen(src){if(!src)return;let l=document.getElementById('mkLight');if(!l){l=document.createElement('div');l.id='mkLight';l.className='mk-light';l.onclick=()=>l.classList.remove('open');l.innerHTML='<img alt="">';document.body.appendChild(l);}l.querySelector('img').src=src;l.classList.add('open');}
 function mkDragAttrs(scope){return`ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();event.stopPropagation();this.classList.remove('drag');mkAddFiles('${scope}',event.dataTransfer.files)"`;}
 function mkFileBtn(lbl,cls,onchange){return`<div class="${cls} file-input-btn">${lbl}<input type="file" accept="image/*" multiple onchange="${onchange};this.value=''"></div>`;}
 function mkBlockHTML(scope){
-  const o=mkObj(scope)||{},cs=o.charts||[],sm=scope==='tr'?' sm':'';
+  const o=mkObj(scope)||{},cs=o.charts||[],sm=scope==='tr'||scope==='mt'?' sm':'';
   const fileBtn=(lbl,cls)=>mkFileBtn(lbl,cls,`mkAddFiles('${scope}',this.files)`);
   if(!cs.length)return`<div class="mk${sm}" id="mk-${scope}"><div class="mk-drop" ${mkDragAttrs(scope)}>
       <div class="mk-drop-ic"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 16l5-5 4 4 3-3 6 6"/><circle cx="16" cy="9" r="1.6"/></svg></div>
@@ -2613,6 +2620,7 @@ function mkHydrate(){
 }
 // Which image block a paste should land in
 function mkPasteScope(){
+  if(document.getElementById('tradeModal')?.classList.contains('open'))return'mt';
   if(document.getElementById('tradePanel')?.classList.contains('open'))return'tr';
   if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':dayView==='note'?'note':null;
   if(document.getElementById('panel-strategies')?.classList.contains('active')&&stUI.id&&stUI.tab==='breakdown')return'st';
@@ -3127,8 +3135,13 @@ function renderTrades(){
 /* ══════════════════════════════════════════════
    MANUAL TRADE MODAL
 ══════════════════════════════════════════════ */
+// Images being edited in the manual trade modal; committed to the trade only on Save
+let mtDraft={},mtOrig=[];
+function mtIds(cs){return(cs||[]).filter(c=>c.kind==='img').map(c=>c.id);}
 function openTradeModal(id=null){
   editId=id;emotions=[];
+  const ot=id&&trades.find(x=>x.id===id);
+  mtOrig=ot?.charts||[];mtDraft={charts:mtOrig.map(c=>({...c}))};if(!mtDraft.charts.length)delete mtDraft.charts;mkSel.mt=0;
   document.querySelectorAll('#emoWrap .stag').forEach(s=>s.classList.remove('sel'));
   const now=new Date();
   document.getElementById('t-date').value=new Date(now-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
@@ -3147,6 +3160,7 @@ function openTradeModal(id=null){
     }
   }
   document.getElementById('tradeMTitle').textContent=id?'Edit Trade':'Log Trade';
+  mkRender('mt');
   document.getElementById('tradeModal').classList.add('open');
 }
 
@@ -3164,14 +3178,20 @@ function saveTrade(){
     symbol:sym,direction:dir,entry,exit,contracts:qty,pnl,
     date:new Date(document.getElementById('t-date').value).toISOString(),
     duration:'',notes:document.getElementById('t-notes').value,setup:'',emotions,source:'manual'};
-  if(editId){const i=trades.findIndex(x=>x.id===editId);if(i!==-1)trades[i]=t;}
+  if(mtDraft.charts?.length)t.charts=mtDraft.charts;
+  const keep=new Set(mtIds(t.charts));mtIds(mtOrig).forEach(x=>{if(!keep.has(x))imgDel(x);});
+  mtOrig=t.charts||[];
+  if(editId){const i=trades.findIndex(x=>x.id===editId);if(i!==-1)trades[i]={...trades[i],...t,charts:t.charts};}
   else trades.unshift(t);
   saveTrades();renderAcctOpts();updateFileChips();refreshAll();closeM('tradeModal');
   toast(editId?'Trade updated ✓':'Trade logged ✓','success');
 }
 
 function togEmo(el,e){el.classList.toggle('sel');if(el.classList.contains('sel'))emotions.push(e);else emotions=emotions.filter(x=>x!==e);}
-function closeM(id){document.getElementById(id).classList.remove('open');}
+function closeM(id){
+  if(id==='tradeModal'){const keep=new Set(mtIds(mtOrig));mtIds(mtDraft.charts).forEach(x=>{if(!keep.has(x))imgDel(x);});mtDraft={};}
+  document.getElementById(id).classList.remove('open');
+}
 
 /* ══════════════════════════════════════════════
    TRADE DETAIL PANEL
