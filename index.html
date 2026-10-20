@@ -1691,8 +1691,8 @@ function importCSV(text,filename,acctName){
   const openPos=imported.openPositions||0;
   if(!imported.length){toast('No valid trades found in file'+(openPos?` (${openPos} open position${openPos!==1?'s':''} skipped)`:''),'error');return;}
 
-  const keys=new Set(trades.map(t=>`${t.account}|${t.symbol}|${t.entry}|${t.date}`));
-  const fresh=imported.filter(t=>!keys.has(`${t.account}|${t.symbol}|${t.entry}|${t.date}`));
+  // skip anything already journaled: same entry, or a position in the same account+symbol overlapping in time
+  const fresh=imported.filter(t=>!trades.some(o=>sameTrade(o,t)));
 
   if(fresh.length){
     trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -1706,6 +1706,22 @@ function importCSV(text,filename,acctName){
   }
 }
 
+function tradeSpan(t){const s=new Date(t.date).getTime();return[s,t.exitDate?new Date(t.exitDate).getTime():s];}
+function sameTrade(a,b){
+  if((a.account||'Default')!==(b.account||'Default')||a.symbol!==b.symbol)return false;
+  if(a.entry===b.entry&&a.date===b.date)return true;
+  const[s1,e1]=tradeSpan(a),[s2,e2]=tradeSpan(b);
+  return s1===s2||(s1<e2&&s2<e1);
+}
+// Drop exact duplicate trades already stored, keeping the copy with the most journaling on it
+function dedupeTrades(){
+  const score=t=>(t.notes?2:0)+(t.setup?2:0)+(t.charts?.length?2:0)+(t.emotions?.length||0)+(t.stop!=null)+(t.target!=null);
+  const best=new Map();
+  for(const t of trades){const k=[t.account||'Default',t.symbol,t.direction,t.date,t.entry,t.exit,t.contracts].join('|');const o=best.get(k);if(!o||score(t)>score(o))best.set(k,t);}
+  if(best.size===trades.length)return 0;
+  const keep=new Set(best.values()),n=trades.length-keep.size;
+  trades=trades.filter(t=>keep.has(t));saveTrades();return n;
+}
 function parseTradovatePerf(rows,hdrs,acct){
   return rows.map((row,i)=>{
     const g=(...n)=>getVal(row,hdrs,...n);
@@ -1765,15 +1781,16 @@ function parseFills(rows,hdrs,acct){
     const ts=parseDate(g(row,'time executed','time','datetime','date','timestamp','trade time','filled','tradetime'));
     const seqM=(g(row,'fillid','fill id','ticket','orderid','order id','execid','execution id')||'').match(/(\d+)\D*$/);
     const comm=Math.abs(parseDollar(g(row,'commission','commissions','fee','fees'))||0);
-    return{sym,isBuy,price,qty,ts,t:new Date(ts).getTime(),seq:seqM?parseInt(seqM[1]):null,row:i,comm};
+    return{sym,isBuy,price,qty,ts,t:new Date(ts).getTime(),seq:seqM?parseInt(seqM[1]):null,row:i,comm,src:g(row,'account','accountname','account name')};
   }).filter(Boolean);
   // equal timestamps: order by ticket/fill number, else by file order (newest-first files reversed)
   const newestFirst=fills.length>1&&fills[0].t>fills[fills.length-1].t;
   fills.sort((a,b)=>a.t-b.t||(a.seq!==null&&b.seq!==null&&a.seq!==b.seq?a.seq-b.seq:(newestFirst?b.row-a.row:a.row-b.row)));
-  const bySym={};for(const f of fills){if(!bySym[f.sym])bySym[f.sym]=[];bySym[f.sym].push(f);}
+  // positions are tracked per broker account (an "All Accounts" export mixes them) and symbol
+  const bySym={};for(const f of fills){const k=f.src+'|'+f.sym;if(!bySym[k])bySym[k]=[];bySym[k].push(f);}
   const result=[];let idx=0,openPositions=0;const stamp=Date.now();
-  for(const[sym,sf]of Object.entries(bySym)){
-    const tv=TICK[sym]||5;let pos=0,cur=null;
+  for(const sf of Object.values(bySym)){
+    const sym=sf[0].sym,tv=TICK[sym]||5;let pos=0,cur=null;
     for(const fill of sf){
       let rem=fill.qty;const commPer=fill.comm/fill.qty;
       while(rem>0){
@@ -3953,6 +3970,7 @@ function refreshAll(){
    INIT
 ══════════════════════════════════════════════ */
 function init(){
+  dedupeTrades();
   applyTheme(localStorage.getItem('tz_theme')||'light');
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   document.getElementById('cfgBal').value=settings.startingBalance;
