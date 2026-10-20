@@ -1103,7 +1103,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
       <div class="card" style="margin-bottom:12px;">
         <div class="card-header"><div class="card-title">News Calendar</div></div>
         <p style="font-size:12px;color:var(--text2);margin-bottom:14px;font-family:var(--font-d);line-height:1.8">
-          Economic events from ForexFactory, shown on the calendar and in your premarket and weekly plans. Times are US Eastern.
+          Economic events from ForexFactory, shown on the calendar and in your premarket and weekly plans. Times are shown in the time zone you pick below.
           The feed is synced every 4 hours and covers the current week. New weeks appear on Sunday.
         </p>
         <div id="newsSettings"></div>
@@ -2817,6 +2817,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElement
 const NEWS_BASE='https://raw.githubusercontent.com/ivanbyer-design/trading-journal/news-data/news/';
 const NEWS_IMP={High:['Red','h'],Medium:['Orange','m'],Low:['Yellow','l'],Holiday:['Holiday','hol']};
 const NEWS_CURS=['USD','EUR','GBP','JPY','CAD','AUD','NZD','CHF','CNY'];
+const NEWS_TZS=[['America/New_York','Eastern'],['America/Chicago','Central'],['America/Denver','Mountain'],['America/Los_Angeles','Pacific']];
 // feed title → weekly-outlook event chip
 const NEWS_MAP=[['FOMC decision',/federal funds rate|fomc statement|fomc press/i],['FOMC minutes',/fomc meeting minutes/i],['Fed chair speaks',/fed chair/i],
   ['Fed speakers',/fomc member|\bspeaks\b/i],['CPI',/\bcpi\b/i],['PPI',/\bppi\b/i],['PCE',/\bpce\b/i],['NFP',/non-farm employment change/i],['JOLTS',/jolts/i],
@@ -2824,7 +2825,7 @@ const NEWS_MAP=[['FOMC decision',/federal funds rate|fomc statement|fomc press/i
   ['Bond auctions',/bond auction|note auction/i]];
 let newsCache={};const newsPending={};let newsUiTimer=null;
 try{newsCache=JSON.parse(localStorage.getItem('ef_news')||'{}');}catch(e){}
-function newsCfg(){settings.news=Object.assign({on:true,cur:['USD'],imp:['High','Medium']},settings.news||{});return settings.news;}
+function newsCfg(){settings.news=Object.assign({on:true,cur:['USD'],imp:['High','Medium'],tz:'America/New_York'},settings.news||{});return settings.news;}
 function newsSaveCfg(){localStorage.setItem('ef_settings',JSON.stringify(settings));}
 function newsWeekOf(day){const d=new Date(day+'T12:00:00');d.setDate(d.getDate()-d.getDay());return ymd(d);}
 function newsLoad(wk,force){
@@ -2848,13 +2849,24 @@ function newsLoad(wk,force){
     .finally(()=>{delete newsPending[wk];});
 }
 function newsQueueUI(){clearTimeout(newsUiTimer);newsUiTimer=setTimeout(()=>{if(selectedDay&&!selectedWeek&&dayView==='trades'&&document.getElementById('dayPanel')?.classList.contains('open'))renderDayModal();if(document.getElementById('calCells')&&document.getElementById('panel-dashboard')?.classList.contains('active'))renderCalendar();newsFill();if(document.getElementById('newsSettings'))renderNewsSettings();},60);}
+// feed times are ET; this gives 'YYYY-MM-DDTHH:MM' in the chosen time zone (all-day events keep their date)
+const newsLocCache=new Map();
+function newsLocal(e){
+  const tz=newsCfg().tz,k=tz+'|'+e.date;let v=newsLocCache.get(k);if(v)return v;
+  if(e.date.slice(11,16)==='00:00'||tz==='America/New_York')v=e.date.slice(0,16);
+  else{const p={};new Intl.DateTimeFormat('en-CA',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date(e.date)).forEach(x=>p[x.type]=x.value);
+    v=`${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;}
+  newsLocCache.set(k,v);return v;
+}
 function newsMatchCur(e,cfg){return cfg.cur.includes('All')||cfg.cur.includes(e.cur);}
-// filtered events for one ET day; holidays for the chosen currencies always show
+// filtered events for one day in the chosen time zone; holidays for the chosen currencies always show
 function newsFor(day,anyImpact){
   const cfg=newsCfg(),wk=newsCache[newsWeekOf(day)];if(!cfg.on||!wk?.events)return[];
-  return wk.events.filter(e=>e.date.slice(0,10)===day&&newsMatchCur(e,cfg)&&(anyImpact||e.imp==='Holiday'||cfg.imp.includes(e.imp))).sort((a,b)=>a.date.localeCompare(b.date));
+  // early-Sunday ET events can land on Saturday west of ET, so a Saturday also checks the next week's file
+  const next=new Date(day+'T12:00:00').getDay()===6?newsCache[newsWeekOf(ymd(addDays(day,1)))]?.events||[]:[];
+  return[...wk.events,...next].filter(e=>newsLocal(e).slice(0,10)===day&&newsMatchCur(e,cfg)&&(anyImpact||e.imp==='Holiday'||cfg.imp.includes(e.imp))).sort((a,b)=>newsLocal(a).localeCompare(newsLocal(b)));
 }
-function newsTime(e){const t=e.date.slice(11,16);if(t==='00:00')return'All day';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')}${h<12?'am':'pm'}`;}
+function newsTime(e){const t=e.date.slice(11,16)==='00:00'?'00:00':newsLocal(e).slice(11,16);if(t==='00:00')return'All day';const[h,m]=t.split(':').map(Number);return`${h%12||12}:${String(m).padStart(2,'0')}${h<12?'am':'pm'}`;}
 function newsShort(t){const m=NEWS_MAP.find(([,re])=>re.test(t));return m?m[0]:t.replace(/\s+(m\/m|y\/y|q\/q)$/i,'').slice(0,14);}
 const NEWS_ICON='<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>';
 function newsCellHTML(day){
@@ -2886,7 +2898,7 @@ function newsFill(){
       const m=NEWS_MAP.find(([,re])=>re.test(e.t));if(!m)return;
       const f=found[m[0]]=found[m[0]]||{imp:'Low',days:new Set(),lines:[]};
       if(rank[e.imp]>rank[f.imp])f.imp=e.imp;
-      const dn=DAYS[new Date(e.date.slice(0,10)+'T12:00:00').getDay()];f.days.add(dn);f.lines.push(`${dn} ${newsTime(e)} ${e.t} (${NEWS_IMP[e.imp][0]} folder)`);
+      const dn=DAYS[new Date(newsLocal(e).slice(0,10)+'T12:00:00').getDay()];f.days.add(dn);f.lines.push(`${dn} ${newsTime(e)} ${e.t} (${NEWS_IMP[e.imp][0]} folder)`);
     });
     document.querySelectorAll('.wk-chip[data-ev]').forEach(b=>{
       const f=found[b.dataset.ev];b.querySelector('.wk-when')?.remove();
@@ -2921,6 +2933,7 @@ function renderNewsSettings(){
   const chip=(on,label,js,cls='')=>`<button type="button" class="wk-chip ${cls}${on?' on':''}" onclick="${js}">${label}</button>`;
   el.innerHTML=`
     <div class="nws-row"><label class="nws-lbl">Show news</label>${chip(cfg.on,cfg.on?'On':'Off',"newsSet('on')")}</div>
+    <div class="nws-row"><label class="nws-lbl">Time zone</label>${NEWS_TZS.map(([z,n])=>chip(cfg.tz===z,n,`newsSet('tz','${z}')`)).join('')}</div>
     <div class="nws-row"><label class="nws-lbl">Impact</label>${['High','Medium','Low'].map(i=>chip(cfg.imp.includes(i),NEWS_IMP[i][0],`newsSet('imp','${i}')`,'imp-'+NEWS_IMP[i][1])).join('')}</div>
     <div class="nws-row"><label class="nws-lbl">Currencies</label>${[...NEWS_CURS,'All'].map(c=>chip(cfg.cur.includes(c),c,`newsSet('cur','${c}')`)).join('')}</div>
     <div class="nws-row" style="margin-top:6px"><span class="nws-meta">${cur?.events?`This week: ${cur.events.length} events · feed updated ${cur.fetched?new Date(cur.fetched).toLocaleString('en-US',{weekday:'short',hour:'numeric',minute:'2-digit'}):'—'}`:cur?'No data for this week yet (ForexFactory publishes on Sunday)':'Not loaded yet'}</span>
@@ -2929,6 +2942,7 @@ function renderNewsSettings(){
 function newsSet(k,v){
   const cfg=newsCfg();
   if(k==='on')cfg.on=!cfg.on;
+  else if(k==='tz'){cfg.tz=v;newsSaveCfg();newsQueueUI();return;}
   else{const s=new Set(cfg[k]);if(k==='cur'&&v==='All'){cfg.cur=s.has('All')?['USD']:['All'];}else{s.delete('All');s.has(v)?s.delete(v):s.add(v);cfg[k]=[...s];if(!cfg[k].length)cfg[k]=k==='cur'?['USD']:['High'];}}
   newsSaveCfg();renderNewsSettings();
 }
