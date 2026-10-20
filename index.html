@@ -1628,8 +1628,19 @@ function parseDollar(s){
   return isNaN(n)?null:(neg?-n:n);
 }
 
+const MONS=['jan','feb','mar','apr','may','jun','jul','aug','sep','oct','nov','dec'];
 function parseDate(s){
   if(!s)return new Date().toISOString();
+  // MotiveWave: "Oct-20 9:11:08.672 AM" or "Oct-20-2026 ..." (year optional, inferred so it's never in the future)
+  const mw=s.trim().match(/^([A-Za-z]{3})[-\s](\d{1,2})(?:[-,\s]+(\d{4}))?\s+(\d{1,2}):(\d{2})(?::(\d{2})(?:\.(\d{1,3}))?)?\s*(AM|PM)?$/i);
+  if(mw&&MONS.includes(mw[1].toLowerCase())){
+    let h=parseInt(mw[4]);const ap=(mw[8]||'').toUpperCase();
+    if(ap==='PM'&&h!==12)h+=12;if(ap==='AM'&&h===12)h=0;
+    const mk=y=>new Date(y,MONS.indexOf(mw[1].toLowerCase()),parseInt(mw[2]),h,parseInt(mw[5]),parseInt(mw[6]||0),parseInt((mw[7]||'0').padEnd(3,'0')));
+    let d=mk(mw[3]?parseInt(mw[3]):new Date().getFullYear());
+    if(!mw[3]&&d-new Date()>86400000)d=mk(d.getFullYear()-1);
+    if(!isNaN(d))return d.toISOString();
+  }
   let d=new Date(s);if(!isNaN(d))return d.toISOString();
   const m=s.match(/(\d{1,2})\/(\d{1,2})\/(\d{2,4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?/i);
   if(m){
@@ -1643,9 +1654,11 @@ function parseDate(s){
   return new Date().toISOString();
 }
 
+const SYM_ALIAS={EP:'ES',ENQ:'NQ'};// CQG/AMP codes MotiveWave reports
 function rootSym(s){
   if(!s)return'';
-  const u=s.trim().toUpperCase();
+  const u=s.trim().toUpperCase().replace(/\.[A-Z]+$/,'');
+  const a=u.match(/^(ENQ|EP)(?=[FGHJKMNQUVXZ]\d{1,2}$|$)/);if(a)return SYM_ALIAS[a[1]];
   const m=u.match(/^(MNQ|MES|MYM|M2K|MBT|NQ|ES|YM|RTY|CL|GC|SI|NG|ZB|ZN|ZF|ZT|6E|6J|6B|6A|6C)/);
   return m?m[1]:u.replace(/[0-9\s].*$/,'').slice(0,3);
 }
@@ -1669,13 +1682,14 @@ function importCSV(text,filename,acctName){
   let imported=[];let format='';
   if(hasBuyPrice&&hasSellPrice){format='Tradovate Performance';imported=parseTradovatePerf(data,hdrs,acctName);}
   else if(hasEntry&&hasExit){format='Pre-paired';imported=parsePaired(data,hdrs,acctName);}
-  else if(hasFill&&hasAction&&hasSym){format='Fill-based';imported=parseFills(data,hdrs,acctName);}
+  else if(hasFill&&hasAction&&hasSym){format=getCol(hdrs,'underlying')!==-1&&getCol(hdrs,'ticket','orderid')!==-1?'MotiveWave executions':'Fill-based';imported=parseFills(data,hdrs,acctName);}
   else{
     toast('Could not detect format. Columns: '+rawHdrs.slice(0,6).join(', ')+'...','error');
     console.log('Full headers:',rawHdrs);return;
   }
 
-  if(!imported.length){toast('No valid trades found in file','error');return;}
+  const openPos=imported.openPositions||0;
+  if(!imported.length){toast('No valid trades found in file'+(openPos?` (${openPos} open position${openPos!==1?'s':''} skipped)`:''),'error');return;}
 
   const keys=new Set(trades.map(t=>`${t.account}|${t.symbol}|${t.entry}|${t.date}`));
   const fresh=imported.filter(t=>!keys.has(`${t.account}|${t.symbol}|${t.entry}|${t.date}`));
@@ -1686,7 +1700,7 @@ function importCSV(text,filename,acctName){
     updateFileChips();
     renderAcctOpts();
     refreshAll();
-    toast(`✓ ${fresh.length} trade${fresh.length!==1?'s':''} imported as "${acctName}"  (${format})`,'success');
+    toast(`✓ ${fresh.length} trade${fresh.length!==1?'s':''} imported as "${acctName}"  (${format})${openPos?` · ${openPos} open position${openPos!==1?'s':''} skipped`:''}`,'success');
   } else {
     toast('All trades already imported (duplicates skipped)','info');
   }
@@ -1738,35 +1752,51 @@ function parsePaired(rows,hdrs,acct){
   }).filter(Boolean);
 }
 
+// Fills -> one trade per position, flat to flat (scale-ins/outs averaged, flips split)
 function parseFills(rows,hdrs,acct){
   const g=(row,...n)=>getVal(row,hdrs,...n);
-  const fills=rows.map(row=>{
-    const sym=rootSym(g(row,'symbol','contract','ticker','instrument','name'));if(!sym)return null;
+  const fills=rows.map((row,i)=>{
+    const sym=rootSym(g(row,'underlying')||g(row,'symbol','contract','ticker','instrument','name'));if(!sym)return null;
     const action=g(row,'action','buysell','buy/sell','side','bs').toUpperCase();
     const isBuy=action.startsWith('B');
-    const price=parseFloat(g(row,'fillprice','fill price','avgfillprice','avg fill price','price','executionprice','execution price','tradeprice','average price'));
+    const price=parseFloat(g(row,'fillprice','fill price','avgfillprice','avg fill price','price','executionprice','execution price','tradeprice','average price').replace(/,/g,''));
     if(!price)return null;
-    const qty=parseInt(g(row,'qty','quantity','fillquantity','fill quantity','filled','size','contracts'))||1;
+    const qty=Math.abs(parseInt(g(row,'qty','quantity','fillquantity','fill quantity','filled','size','contracts')))||1;
     const ts=parseDate(g(row,'time executed','time','datetime','date','timestamp','trade time','filled','tradetime'));
-    return{sym,isBuy,price,qty,ts};
+    const seqM=(g(row,'fillid','fill id','ticket','orderid','order id','execid','execution id')||'').match(/(\d+)\D*$/);
+    const comm=Math.abs(parseDollar(g(row,'commission','commissions','fee','fees'))||0);
+    return{sym,isBuy,price,qty,ts,t:new Date(ts).getTime(),seq:seqM?parseInt(seqM[1]):null,row:i,comm};
   }).filter(Boolean);
-  fills.sort((a,b)=>new Date(a.ts)-new Date(b.ts));
+  // equal timestamps: order by ticket/fill number, else by file order (newest-first files reversed)
+  const newestFirst=fills.length>1&&fills[0].t>fills[fills.length-1].t;
+  fills.sort((a,b)=>a.t-b.t||(a.seq!==null&&b.seq!==null&&a.seq!==b.seq?a.seq-b.seq:(newestFirst?b.row-a.row:a.row-b.row)));
   const bySym={};for(const f of fills){if(!bySym[f.sym])bySym[f.sym]=[];bySym[f.sym].push(f);}
-  const result=[];let idx=0;
+  const result=[];let idx=0,openPositions=0;const stamp=Date.now();
   for(const[sym,sf]of Object.entries(bySym)){
-    const tv=TICK[sym]||5;const queue=[];
+    const tv=TICK[sym]||5;let pos=0,cur=null;
     for(const fill of sf){
-      let rem=fill.qty;
-      while(rem>0&&queue.length&&queue[0].isBuy!==fill.isBuy){
-        const lot=queue[0];const cq=Math.min(rem,lot.rem);
-        lot.rem-=cq;rem-=cq;if(lot.rem===0)queue.shift();
-        const dir=lot.isBuy?'LONG':'SHORT';
-        const pnl=parseFloat(((dir==='LONG'?fill.price-lot.price:lot.price-fill.price)*cq*(tv/.25)).toFixed(2));
-        result.push({id:`csv-${idx++}-${Date.now()}`,account:acct,symbol:sym,direction:dir,entry:lot.price,exit:fill.price,contracts:cq,pnl,date:lot.ts,exitDate:fill.ts,duration:'',setup:'',notes:'',emotions:[],source:'csv'});
+      let rem=fill.qty;const commPer=fill.comm/fill.qty;
+      while(rem>0){
+        if(!cur){cur={dir:fill.isBuy?'LONG':'SHORT',inQ:0,inPx:0,outQ:0,outPx:0,max:0,comm:0,date:fill.ts,exitDate:fill.ts};}
+        const adding=(cur.dir==='LONG')===fill.isBuy;
+        const q=adding?rem:Math.min(rem,Math.abs(pos));
+        if(adding){cur.inQ+=q;cur.inPx+=fill.price*q;pos+=fill.isBuy?q:-q;cur.max=Math.max(cur.max,Math.abs(pos));}
+        else{cur.outQ+=q;cur.outPx+=fill.price*q;pos+=fill.isBuy?q:-q;cur.exitDate=fill.ts;}
+        cur.comm+=commPer*q;rem-=q;
+        if(pos===0){
+          const entry=cur.inPx/cur.inQ,exit=cur.outPx/cur.outQ;
+          const gross=(cur.dir==='LONG'?cur.outPx-cur.inPx:cur.inPx-cur.outPx)*(tv/.25);
+          result.push({id:`csv-${idx++}-${stamp}`,account:acct,symbol:sym,direction:cur.dir,
+            entry:parseFloat(entry.toFixed(4)),exit:parseFloat(exit.toFixed(4)),contracts:cur.max,
+            pnl:parseFloat((gross-cur.comm).toFixed(2)),...(cur.comm?{commission:parseFloat(cur.comm.toFixed(2))}:{}),
+            date:cur.date,exitDate:cur.exitDate,duration:'',setup:'',notes:'',emotions:[],source:'csv'});
+          cur=null;
+        }
       }
-      if(rem>0)queue.push({isBuy:fill.isBuy,price:fill.price,rem,ts:fill.ts});
     }
+    if(cur)openPositions++;
   }
+  result.openPositions=openPositions;
   return result;
 }
 
