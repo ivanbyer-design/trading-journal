@@ -530,6 +530,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .tp-hdr-btns{display:flex;gap:6px;flex-shrink:0;}
 .tp-edit{height:28px;padding:0 10px;border-radius:var(--r-sm);border:1px solid var(--border);background:transparent;color:var(--text2);cursor:pointer;font-family:var(--font-d);font-size:11px;font-weight:700;}
 .tp-edit:hover{color:var(--text);border-color:var(--accent);}
+.tp-del:hover,.tp-del[data-armed]{color:var(--red);border-color:var(--red);background:var(--red-dim);}
 .dm-overlay{position:fixed;inset:0;background:rgba(15,10,30,.55);z-index:790;display:none;align-items:center;justify-content:center;padding:28px;}
 .dm-overlay.open{display:flex;}
 .dm{background:var(--surface);border-radius:14px;width:100%;max-width:1200px;max-height:calc(100vh - 56px);display:flex;flex-direction:column;box-shadow:0 24px 70px rgba(10,5,30,.35);overflow:hidden;font-family:var(--font-d);}
@@ -1241,6 +1242,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
     </div>
     <div class="tp-hdr-btns">
       <button class="tp-edit" onclick="openTradeModal(activeTradePanelId)">✎ Edit trade</button>
+      <button class="tp-edit tp-del" onclick="deleteTrade(activeTradePanelId,this)">🗑 Delete</button>
       <button class="tp-close" onclick="closeTradePanel()">×</button>
     </div>
   </div>
@@ -3610,6 +3612,17 @@ function toggleTpEmo(el,id,emo){
   patchTrade(id,{emotions:updated});
 }
 
+function deleteTrade(id,btn){
+  if(!id)return;
+  if(!btn.dataset.armed){btn.dataset.armed=1;btn.textContent='Tap again to delete';setTimeout(()=>{if(btn.isConnected){delete btn.dataset.armed;btn.textContent='🗑 Delete';}},3000);return;}
+  delete btn.dataset.armed;btn.textContent='🗑 Delete';
+  const gone=trades.find(x=>x.id===id);
+  trades=trades.filter(x=>x.id!==id);saveTrades();
+  const keep=allChartRefs();(gone?.charts||[]).forEach(c=>{if(c?.kind==='img'&&!keep.has(c.id))imgDel(c.id);});
+  closeTradePanel();refreshAll();
+  if(selectedDay&&document.getElementById('dayPanel').classList.contains('open'))renderDayModal();
+  toast('Trade deleted','success');
+}
 function closeTradePanel(){
   activeTradePanelId=null;
   document.getElementById('tradePanel').classList.remove('open');
