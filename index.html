@@ -576,6 +576,12 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dm-table th{background:var(--th-bg);color:var(--text2);font-size:14px;font-weight:600;text-transform:none;letter-spacing:0;padding:14px 12px;border-bottom:none;white-space:nowrap;}
 .dm-table td{font-size:14px;color:var(--text);padding:20px 12px;font-family:var(--font-d);white-space:nowrap;}
 .dm-table tr:hover td{background:var(--surface2);}
+.dm-table th.dm-wrap{white-space:normal;width:90px;line-height:1.3;}
+.dm-table td.dm-qn{width:100%;min-width:220px;padding-top:0;padding-bottom:0;}
+.dm-qn-in{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:8px 10px;font:inherit;color:var(--text);}
+.dm-qn-in:hover{border-color:var(--border);}
+.dm-qn-in:focus{outline:none;border-color:var(--accent);background:var(--surface);}
+.dm-qn-in::placeholder{color:var(--text3);}
 .tick-pill{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:4px 10px;font-size:13px;color:var(--text2);}
 .replay-btn{width:22px;height:22px;border-radius:50%;border:none;background:var(--accent);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
 .replay-btn:hover{background:var(--accent2);}
@@ -2289,7 +2295,7 @@ function tradesViewHTML(dt,st){
       </div>
     </div>
     <div class="dm-table"><table>
-      <thead><tr><th>Open time</th><th>Ticker</th><th>Side</th><th>Instrument</th><th>Net P&amp;L</th><th>Net ROI</th><th>Realized R-Multiple</th><th>Strategy</th><th style="text-align:center">Replay</th></tr></thead>
+      <thead><tr><th>Open time</th><th>Ticker</th><th>Side</th><th>Instrument</th><th>Net P&amp;L</th><th>Net ROI</th><th class="dm-wrap">Realized R-Multiple</th><th>Quick Notes</th><th style="text-align:center">Replay</th></tr></thead>
       <tbody>${dt.map(t=>{
         const roi=t.pnl/bal*100;
         return`<tr style="cursor:pointer" onclick="openTradeDetail('${t.id}')">
@@ -2300,11 +2306,12 @@ function tradesViewHTML(dt,st){
           <td style="color:${pc(t.pnl)};font-weight:600">${fmoney(t.pnl)}</td>
           <td>${roi<0?'(':''}${Math.abs(roi).toFixed(2)}%${roi<0?')':''}</td>
           <td>${fRm(tradeR(t))}</td>
-          <td>${t.setup?esc(t.setup):'--'}</td>
+          <td class="dm-qn"><input class="dm-qn-in" placeholder="Describe the trade…" value="${esc(t.quickNote||'')}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur()" onchange="setQuickNote('${t.id}',this.value)"></td>
           <td style="text-align:center"><button class="replay-btn" title="Open trade" onclick="event.stopPropagation();openTradeDetail('${t.id}')">${play}</button></td>
         </tr>`;}).join('')}</tbody>
     </table></div>`;
 }
+function setQuickNote(id,v){const t=trades.find(x=>x.id===id);if(!t)return;v=v.trim();if(v)t.quickNote=v;else delete t.quickNote;saveTrades();}
 function drawDayChart(dt){
   let c=0;const data=[0,...dt.map(t=>+(c+=t.pnl).toFixed(2))];
   dayChart=new Chart(document.getElementById('dayC'),{type:'line',
