@@ -577,8 +577,8 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dm-table td{font-size:14px;color:var(--text);padding:20px 12px;font-family:var(--font-d);white-space:nowrap;}
 .dm-table tr:hover td{background:var(--surface2);}
 .dm-table th.dm-wrap{white-space:normal;width:90px;line-height:1.3;}
-.dm-table td.dm-qn{width:100%;min-width:220px;padding-top:0;padding-bottom:0;}
-.dm-qn-in{width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:8px 10px;font:inherit;color:var(--text);}
+.dm-table td.dm-qn{width:100%;min-width:220px;max-width:420px;padding-top:6px;padding-bottom:6px;white-space:normal;}
+.dm-qn-in{display:block;resize:none;overflow:hidden;field-sizing:content;line-height:1.4;white-space:pre-wrap;overflow-wrap:anywhere;width:100%;border:1px solid transparent;background:transparent;border-radius:6px;padding:8px 10px;font:inherit;color:var(--text);}
 .dm-qn-in:hover{border-color:var(--border);}
 .dm-qn-in:focus{outline:none;border-color:var(--accent);background:var(--surface);}
 .dm-qn-in::placeholder{color:var(--text3);}
@@ -2306,7 +2306,7 @@ function tradesViewHTML(dt,st){
           <td style="color:${pc(t.pnl)};font-weight:600">${fmoney(t.pnl)}</td>
           <td>${roi<0?'(':''}${Math.abs(roi).toFixed(2)}%${roi<0?')':''}</td>
           <td>${fRm(tradeR(t))}</td>
-          <td class="dm-qn"><input class="dm-qn-in" placeholder="Describe the trade…" value="${esc(t.quickNote||'')}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter')this.blur()" onchange="setQuickNote('${t.id}',this.value)"></td>
+          <td class="dm-qn"><textarea class="dm-qn-in" rows="1" placeholder="Describe the trade…" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onchange="setQuickNote('${t.id}',this.value)">${esc(t.quickNote||'')}</textarea></td>
           <td style="text-align:center"><button class="replay-btn" title="Open trade" onclick="event.stopPropagation();openTradeDetail('${t.id}')">${play}</button></td>
         </tr>`;}).join('')}</tbody>
     </table></div>`;
