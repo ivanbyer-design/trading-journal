@@ -1106,6 +1106,8 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="form-grid" style="max-width:440px;">
           <div class="fg"><label>Starting Balance</label><input type="number" id="cfgBal" value="50000" onchange="saveSettings()"></div>
           <div class="fg"><label>Daily Loss Limit ($)</label><input type="number" id="cfgDLL" value="1000" onchange="saveSettings()"></div>
+          <div class="fg"><label>Fees / Contract, Micros ($ round turn)</label><input type="number" step="0.01" id="cfgFeeMicro" value="1" onchange="saveSettings()"></div>
+          <div class="fg"><label>Fees / Contract, Minis ($ round turn)</label><input type="number" step="0.01" id="cfgFeeMini" value="4" onchange="saveSettings()"></div>
         </div>
       </div>
 
@@ -1353,6 +1355,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
    CONSTANTS & STATE
 ══════════════════════════════════════════════ */
 const TICK={NQ:5,ES:12.5,MNQ:.5,MES:1.25,CL:10,GC:10,RTY:5,YM:5};
+// Round-turn fees per contract, for exports that only give gross P&L (Tradovate Performance)
+const FEE_DEFAULT={feeMicro:1,feeMini:4};
+const feeSetting=k=>settings[k]??FEE_DEFAULT[k];
+const feePerContract=sym=>feeSetting(/^M(NQ|ES|YM|2K|CL|GC)$/.test(sym)?'feeMicro':'feeMini');
 const MONTHS=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DAYS=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const ACCT_COLORS=['#6c5dd3','#2db87d','#e35dbc','#e8a93a','#3fa7f0','#56b4c8','#d47878'];
@@ -1566,6 +1572,7 @@ function nav(id){
   if(id==='settings'){
     document.getElementById('cfgBal').value=settings.startingBalance;
     document.getElementById('cfgDLL').value=settings.dailyLossLimit;
+    document.getElementById('cfgFeeMicro').value=feeSetting('feeMicro');document.getElementById('cfgFeeMini').value=feeSetting('feeMini');
     document.getElementById('cfgStop').value=defStopPts();document.getElementById('cfgTarget').value=defTargetPts();
     updateCloudUI();
     renderNewsSettings();newsLoad(newsWeekOf(ymd(new Date())));
@@ -1715,7 +1722,14 @@ function importCSV(text,filename,acctName){
   if(!imported.length){toast('No valid trades found in file'+(openPos?` (${openPos} open position${openPos!==1?'s':''} skipped)`:''),'error');return;}
 
   // skip anything already journaled: same entry, or a position in the same account+symbol overlapping in time
-  const fresh=imported.filter(t=>!trades.some(o=>sameTrade(o,t)));
+  let feeFixed=0;
+  const fresh=imported.filter(t=>{
+    const o=trades.find(o=>sameTrade(o,t));if(!o)return true;
+    if(t.commission&&o.commission==null&&o.source==='csv'&&o.entry===t.entry&&o.exit===t.exit&&o.contracts===t.contracts){o.pnl=t.pnl;o.commission=t.commission;feeFixed++;}
+    return false;
+  });
+  if(feeFixed&&!fresh.length){saveTrades();refreshAll();toast(`✓ Fees applied to ${feeFixed} already-imported trade${feeFixed!==1?'s':''}`,'success');return;}
+  if(feeFixed)toast(`Fees applied to ${feeFixed} already-imported trade${feeFixed!==1?'s':''}`,'info');
 
   if(fresh.length){
     trades=[...fresh,...trades].sort((a,b)=>new Date(b.date)-new Date(a.date));
@@ -1762,8 +1776,10 @@ function parseTradovatePerf(rows,hdrs,acct){
     const exit=dir==='LONG'?sellPrice:buyPrice;
     const tv=TICK[sym]||12.5;
     const calcPnl=parseFloat(((dir==='LONG'?exit-entry:entry-exit)*qty*(tv/.25)).toFixed(2));
+    // Tradovate's pnl column is gross; take fees off so it matches the report's net Total P/L
+    const commission=parseFloat((feePerContract(sym)*qty).toFixed(2));
     return{id:`csv-${i}-${Date.now()}`,account:acct,symbol:sym,direction:dir,entry,exit,contracts:qty,
-      pnl:pnl!==null?pnl:calcPnl,date:boughtTs,exitDate:soldTs,
+      pnl:parseFloat(((pnl!==null?pnl:calcPnl)-commission).toFixed(2)),...(commission?{commission}:{}),date:boughtTs,exitDate:soldTs,
       duration:g('duration','dur')||'',setup:'',notes:'',emotions:[],source:'csv'};
   }).filter(Boolean);
 }
@@ -1852,6 +1868,7 @@ function saveTrades(){localStorage.setItem('ef_trades',JSON.stringify(trades));}
 function saveSettings(){
   settings.startingBalance=parseFloat(document.getElementById('cfgBal').value)||50000;
   settings.dailyLossLimit=parseFloat(document.getElementById('cfgDLL').value)||1000;
+  for(const[k,id]of[['feeMicro','cfgFeeMicro'],['feeMini','cfgFeeMini']]){const v=parseFloat(document.getElementById(id).value);settings[k]=v>=0?v:FEE_DEFAULT[k];}
   const sp=parseFloat(document.getElementById('cfgStop').value),tp=parseFloat(document.getElementById('cfgTarget').value);
   settings.defStopPts=sp>0?sp:5;settings.defTargetPts=tp>0?tp:10;
   document.getElementById('cfgStop').value=settings.defStopPts;document.getElementById('cfgTarget').value=settings.defTargetPts;
@@ -4020,6 +4037,7 @@ function init(){
   const now=new Date();calYear=now.getFullYear();calMonth=now.getMonth();
   document.getElementById('cfgBal').value=settings.startingBalance;
   document.getElementById('cfgDLL').value=settings.dailyLossLimit;
+  document.getElementById('cfgFeeMicro').value=feeSetting('feeMicro');document.getElementById('cfgFeeMini').value=feeSetting('feeMini');
   updateFileChips();
   renderAcctOpts();
   renderFilterUI();
