@@ -628,6 +628,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-h .n{width:22px;height:22px;border-radius:6px;background:var(--accent-soft);color:var(--accent);font-size:12px;font-weight:700;display:inline-flex;align-items:center;justify-content:center;}
 .pm-hint{font-size:12px;color:var(--text3);margin:-6px 0 10px;}
 .pm textarea,.pm input{font-family:var(--font-d);font-size:13px;}
+.grow-ta{min-height:84px;field-sizing:content;overflow:hidden;resize:none;}
 .pm textarea{min-height:84px;field-sizing:content;overflow:hidden;resize:none;}
 .pm-seg{display:flex;gap:6px;flex-wrap:wrap;}
 .pm-seg button{flex:1;min-width:76px;height:38px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text2);font-family:var(--font-d);font-size:13px;font-weight:600;cursor:pointer;}
@@ -1239,7 +1240,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <div class="fg"><label>P&amp;L ($)</label><input type="number" id="t-pnl" step="0.01" placeholder="auto-calculated"></div>
         <div class="fg"><label>Account</label><input type="text" id="t-acct" placeholder="Account name"></div>
         <div class="fg"><label>Strategy</label><select id="t-setup"></select></div>
-        <div class="fg full"><label>Notes</label><textarea id="t-notes" rows="3" placeholder="What did you see? Why this trade?"></textarea></div>
+        <div class="fg full"><label>Notes</label><textarea id="t-notes" class="grow-ta" rows="3" placeholder="What did you see? Why this trade?"></textarea></div>
       </div>
       <div style="margin-top:12px;">
         <label style="display:block;margin-bottom:7px;">Chart Screenshot</label>
@@ -3703,8 +3704,8 @@ function openTradeDetail(id){
       <div class="tp-section-title">Notes</div>
       <div class="tp-field">
         <label>Trade Notes</label>
-        <textarea rows="4" placeholder="What did you see? Why this trade? What would you do differently?"
-          onblur="patchTrade('${id}',{notes:this.value})">${t.notes||''}</textarea>
+        <textarea class="grow-ta" rows="4" placeholder="What did you see? Why this trade? What would you do differently?"
+          onblur="patchTrade('${id}',{notes:this.value})">${esc(t.notes||'')}</textarea>
       </div>
     </div>
 
