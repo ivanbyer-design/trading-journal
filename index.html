@@ -488,6 +488,27 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .cal-ol-flags{display:flex;flex-wrap:wrap;gap:3px;}
 .cal-ol-flags span{font-size:9px;font-weight:700;padding:1px 6px;border-radius:8px;background:var(--red-dim);color:var(--red);white-space:nowrap;}
 .cal-ol .pm-prog{height:4px;margin:2px 0 0;}
+/* narrow calendar card (split screen): weekly columns fold away so day cells get the room; ◀ Weekly reopens them */
+.cal-card{container-type:inline-size;}
+.cal-side-btn{display:none;height:32px;padding:0 12px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--accent);font-family:var(--font-d);font-size:12px;font-weight:600;cursor:pointer;}
+.cal-side-btn:hover{border-color:var(--accent);}
+@container (max-width:860px){
+  .cal-side-btn{display:inline-flex;align-items:center;gap:6px;}
+  .cal-grid:not(.sides-open){grid-template-columns:22px repeat(7,minmax(0,1fr));gap:6px;}
+  .cal-grid:not(.sides-open) .cal-dow.cal-dow-wk{display:none;}
+  .cal-grid:not(.sides-open) .cal-dow.cal-dow-ol{display:block;visibility:hidden;padding:0;}
+  .cal-grid:not(.sides-open) .cal-week{display:none;}
+  .cal-grid:not(.sides-open) .cal-ol{padding:0;gap:0;border-radius:6px;align-items:center;justify-content:center;}
+  .cal-grid:not(.sides-open) .cal-ol>*:not(.cal-ol-w){display:none!important;}
+  .cal-grid:not(.sides-open) .cal-ol-w{display:block;font-size:11px;font-weight:800;color:var(--accent);}
+  .cal-grid:not(.sides-open) .cal-ol.ol-bull{background:var(--green-dim);border-color:var(--green);}
+  .cal-grid:not(.sides-open) .cal-ol.ol-bull .cal-ol-w{color:var(--green);}
+  .cal-grid:not(.sides-open) .cal-ol.ol-bear{background:var(--red-dim);border-color:var(--red);}
+  .cal-grid:not(.sides-open) .cal-ol.ol-bear .cal-ol-w{color:var(--red);}
+  .cal-grid:not(.sides-open) .cal-cell{padding:8px 7px;}
+  .cal-grid:not(.sides-open) .cal-day-pnl{font-size:16px;}
+  .cal-grid:not(.sides-open) .cal-day-meta{font-size:11.5px;}
+}
 
 @media(max-width:768px){
   .tz-header{padding-left:6px;padding-right:10px;}
@@ -521,6 +542,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .cal-ol.cur{box-shadow:0 0 0 2px var(--accent) inset;}
   .cal-mstats{margin-left:0;width:100%;}
   .chart-box{height:240px;}
+  .cal-side-btn{display:none!important;}
   .dd-menu{position:fixed;left:16px;right:16px;top:auto;min-width:0;}
 }
 
@@ -1041,13 +1063,14 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
             </div>
             <div class="tz-card-b"><div class="recent-wrap" id="recentTable"></div></div>
           </div>
-          <div class="tz-card">
+          <div class="tz-card cal-card">
             <div class="tz-card-h">
               <div class="cal-head">
                 <button class="cal-arrow" onclick="calMove(-1)" aria-label="Previous month">◀</button>
                 <div class="cal-nav-title" id="calTitle"></div>
                 <button class="cal-arrow" onclick="calMove(1)" aria-label="Next month">▶</button>
                 <button class="pill-btn" style="height:32px" onclick="calToday()">This month</button>
+                <button class="cal-side-btn" id="calSideBtn" onclick="calToggleSides()" title="Show or hide the weekly outlook and weekly totals"></button>
                 <div class="cal-mstats">Monthly stats: <span class="day-pill" id="calMPnl">$0</span><span class="day-pill" id="calMDays">0 days</span></div>
               </div>
             </div>
@@ -2147,7 +2170,9 @@ function renderCalendar(ft){
     const wc=wPnl>0?'var(--green)':wPnl<0?'var(--red)':'var(--text)';
     html+=`<div class="cal-week"><div class="cal-week-lbl">Week ${wk}</div><div class="cal-week-pnl" style="color:${wc}">${fcompact(wPnl)}</div><span class="day-pill">${wDays} day${wDays!==1?'s':''}</span></div>`;
   }
-  document.getElementById('calCells').innerHTML=html;
+  const grid=document.getElementById('calCells');
+  grid.innerHTML=html;grid.classList.toggle('sides-open',calSidesOpen);
+  document.getElementById('calSideBtn').textContent=calSidesOpen?'Hide weekly ▶':'◀ Weekly';
   const mp=document.getElementById('calMPnl');
   mp.textContent=fcompact(mPnl);
   mp.className='day-pill'+(mPnl>0?' g':mPnl<0?' r':'');
@@ -2155,6 +2180,8 @@ function renderCalendar(ft){
 }
 
 function calMove(dir){calMonth+=dir;if(calMonth>11){calMonth=0;calYear++;}if(calMonth<0){calMonth=11;calYear--;}renderCalendar();}
+let calSidesOpen=false;try{calSidesOpen=localStorage.getItem('ef_calsides')==='1';}catch(e){}
+function calToggleSides(){calSidesOpen=!calSidesOpen;try{localStorage.setItem('ef_calsides',calSidesOpen?'1':'0');}catch(e){}renderCalendar();}
 function calToday(){calYear=new Date().getFullYear();calMonth=new Date().getMonth();renderCalendar();}
 
 /* ══════════════════════════════════════════════
