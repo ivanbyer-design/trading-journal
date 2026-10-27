@@ -2343,42 +2343,46 @@ function planViewHTML(key){
       <button class="btn" style="font-size:12px" onclick="pmCopyLast()">⧉ Copy last plan</button></div>
     ${mkBlockHTML('pm')}
     <div class="pm-grid">
+      <div class="pm-card full">
+        <div class="pm-h"><span class="n">1</span>Market condition</div>
+        ${seg('condition',[['balance','Balanced','neu'],['imbUp','Imbalanced up','bull'],['imbDown','Imbalanced down','bear']])}
+        <div style="margin-top:10px">${ta('conditionWhy','Why? e.g. Opened inside yesterday\'s value, rotating between VAH and VAL',2)}</div>
+      </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">1</span>Market bias</div>
+        <div class="pm-h"><span class="n">2</span>Market bias</div>
         ${seg('bias',[['bull','Bullish','bull'],['neutral','Neutral','neu'],['bear','Bearish','bear']])}
         <div style="margin-top:10px">${ta('biasWhy','Why? e.g. Gapped up above yesterday\'s value area, holding overnight high',2)}</div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">2</span>Mindset check</div>
+        <div class="pm-h"><span class="n">3</span>Mindset check</div>
         <div class="pm-rate" style="margin-top:0"><span>Sleep</span>${seg('sleep',rate)}</div>
         <div class="pm-rate"><span>Focus</span>${seg('focus',rate)}</div>
         <div class="pm-rate"><span>Mood</span>${seg('mood',rate)}</div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">3</span>Key levels</div>
-        <div class="pm-levels">
-          <div class="fg"><label>Prev. day high</label>${inp('pdh','e.g. 21450.25')}</div>
-          <div class="fg"><label>Prev. day low</label>${inp('pdl','e.g. 21302.00')}</div>
-          <div class="fg"><label>Overnight high</label>${inp('onh','e.g. 21480.50')}</div>
-          <div class="fg"><label>Overnight low</label>${inp('onl','e.g. 21398.75')}</div>
+        <div class="pm-h"><span class="n">4</span>Key levels</div>
+        <div class="pm-levels" style="grid-template-columns:repeat(3,1fr)">
+          <div class="fg"><label>Prev. day VAH</label>${inp('vah','e.g. 21440.00')}</div>
+          <div class="fg"><label>Prev. day POC</label>${inp('poc','e.g. 21385.50')}</div>
+          <div class="fg"><label>Prev. day VAL</label>${inp('val','e.g. 21320.25')}</div>
         </div>
-        ${ta('levels','Other levels: VWAP, value area, round numbers, gaps…',2)}
+        ${ta('levels','Other levels: VWAP, prev. day high/low, overnight high/low, gaps…',2)}
       </div>
       <div class="pm-card nw-wrap">
-        <div class="pm-h"><span class="n">4</span>News &amp; events</div>
+        <div class="pm-h"><span class="n">5</span>News &amp; events</div>
         <div class="pm-hint">Times to stay flat or size down</div>
         <div class="nw-list" data-day="${key}"></div>
         ${ta('news','e.g. 8:30 CPI, 10:00 ISM, 2:00 FOMC minutes',4)}
       </div>
       <div class="pm-card full">
-        <div class="pm-h"><span class="n">5</span>Game plan</div>
+        <div class="pm-h"><span class="n">6</span>Game plan</div>
         <div class="pm-levels" style="grid-template-columns:1fr 1fr;gap:12px">
           <div class="fg"><label>A+ setup I'm waiting for</label>${ta('setup','e.g. Opening range break and retest of ONH, with volume',3)}</div>
-          <div class="fg"><label>If / then scenarios</label>${ta('scenarios','If we hold above PDH → look for longs on pullbacks to it.\nIf we lose ONL → stay flat until 10:00.',3)}</div>
+          <div class="fg"><label>If / then scenarios</label>${ta('scenarios','If we accept back inside value → target the POC, then VAL.\nIf we hold above VAH → look for longs on pullbacks to it.',3)}</div>
         </div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">6</span>Risk rules for today</div>
+        <div class="pm-h"><span class="n">7</span>Risk rules for today</div>
         <div class="pm-risk">
           <div class="fg"><label>Max loss ($)</label>${inp('maxLoss',String(settings.dailyLossLimit||''),'number')}</div>
           <div class="fg"><label>Max trades</label>${inp('maxTrades','e.g. 3','number')}</div>
@@ -2387,13 +2391,13 @@ function planViewHTML(key){
         <div style="margin-top:10px">${ta('stopRule','When do I stop for the day? e.g. 2 losses in a row',2)}</div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">7</span>Pre-session checklist</div>
+        <div class="pm-h"><span class="n">8</span>Pre-session checklist</div>
         <div class="pm-prog"><i id="pmProg" style="width:${done/PM_CHECKLIST.length*100}%"></i></div>
         <div class="pm-hint" id="pmProgTxt" style="margin:0 0 4px">${done} of ${PM_CHECKLIST.length} done</div>
         ${PM_CHECKLIST.map((c,i)=>`<label class="pm-check"><input type="checkbox"${(p.checklist||[]).includes(i)?' checked':''} onchange="pmCheck(${i},this.checked)">${c}</label>`).join('')}
       </div>
       <div class="pm-card full">
-        <div class="pm-h"><span class="n">8</span>After the session: did I follow my plan?</div>
+        <div class="pm-h"><span class="n">9</span>After the session: did I follow my plan?</div>
         ${seg('review',[['yes','Yes','bull'],['partly','Partly','neu'],['no','No','bear']])}
         <div style="margin-top:10px">${ta('reviewWhy','What pulled me off the plan, or what helped me stick to it?',2)}</div>
       </div>
