@@ -594,7 +594,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dm-btn.primary:hover{background:var(--accent2);}
 
 /* note + premarket plan views */
-.dm-overlay.wk-mode #dmPlanBtn,.dm-overlay.wk-mode #dmNoteBtn,.dm-overlay.wk-mode #dmTradesBtn{display:none!important;}
+.dm-overlay.wk-mode #dmPlanBtn,.dm-overlay.wk-mode #dmNoteBtn,.dm-overlay.wk-mode #dmTradesBtn,.dm-overlay.wk-mode #dmAddBtn{display:none!important;}
 .wk-auto{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
 .wk-auto div{font-size:12px;font-weight:600;padding:6px 11px;border-radius:8px;background:var(--red-dim);color:var(--red);border:1px solid var(--red);}
 .wk-auto div.info{background:var(--accent-soft);color:var(--accent);border-color:var(--accent);}
@@ -1202,6 +1202,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
         <button class="dm-hbtn" id="dmPlanBtn" onclick="setDayView('plan')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12l2 2 4-4"/><path d="M9 17h6"/></svg>Premarket plan</button>
         <button class="dm-hbtn" id="dmNoteBtn" onclick="setDayView('note')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="3"/><path d="M8 2v4M16 2v4M8 11h8M8 15h5"/></svg>View note</button>
         <button class="dm-hbtn" id="dmTradesBtn" onclick="setDayView('trades')" style="display:none">← Trades</button>
+        <button class="dm-hbtn" id="dmAddBtn" onclick="openTradeModal(null,selectedDay)">+ Add trade</button>
       </div>
     </div>
     <div class="dm-body" id="dmBody"></div>
@@ -2280,7 +2281,7 @@ function renderDayModal(){
 }
 
 function tradesViewHTML(dt,st){
-  if(!dt.length)return`<div class="dm-empty"><b>No trades on this day</b>Use <b style="display:inline;color:var(--accent)">Premarket plan</b> to map out the session before the open.</div>`;
+  if(!dt.length)return`<div class="dm-empty"><b>No trades on this day</b>Use <b style="display:inline;color:var(--accent)">+ Add trade</b> to log one by hand, or <b style="display:inline;color:var(--accent)">Premarket plan</b> to map out the session before the open.</div>`;
   const vol=dt.reduce((s,t)=>s+(+t.contracts||0),0);
   const comm=dt.reduce((s,t)=>s+(+t.commission||+t.fees||0),0);
   const gross=st.netPnl+comm;
@@ -3402,13 +3403,15 @@ function renderTrades(){
 // Images being edited in the manual trade modal; committed to the trade only on Save
 let mtDraft={},mtOrig=[];
 function mtIds(cs){return(cs||[]).filter(c=>c.kind==='img').map(c=>c.id);}
-function openTradeModal(id=null){
+function openTradeModal(id=null,day=null){
   editId=id;emotions=[];
   const ot=id&&trades.find(x=>x.id===id);
   mtOrig=ot?.charts||[];mtDraft={charts:mtOrig.map(c=>({...c}))};if(!mtDraft.charts.length)delete mtDraft.charts;mkSel.mt=0;
   document.querySelectorAll('#emoWrap .stag').forEach(s=>s.classList.remove('sel'));
   const now=new Date();
-  document.getElementById('t-date').value=new Date(now-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  const nowLocal=new Date(now-now.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  // Logging from a day: today keeps the current time, any other day starts at the open
+  document.getElementById('t-date').value=day&&day!==nowLocal.slice(0,10)?`${day}T09:30`:nowLocal;
   document.getElementById('t-acct').value=allAccounts()[0]||'';
   document.getElementById('t-stop').value='';document.getElementById('t-target').value='';
   mtFillStrategies(ot?.setup||'');
@@ -3426,7 +3429,7 @@ function openTradeModal(id=null){
     }
   }
   document.getElementById('tradeMTitle').textContent=id?'Edit Trade':'Log Trade';
-  if(!id)document.getElementById('t-pnl').value='';
+  if(!id){['t-entry','t-exit','t-pnl','t-notes'].forEach(k=>document.getElementById(k).value='');document.getElementById('t-qty').value=1;}
   document.getElementById('t-pnl').dataset.auto=mtAutoPnl();
   mkRender('mt');mtRHint();
   document.getElementById('tradeModal').classList.add('open');
@@ -3446,6 +3449,7 @@ function saveTrade(){
   const exit=parseFloat(document.getElementById('t-exit').value);
   const qty=parseInt(document.getElementById('t-qty').value)||1;
   if(!entry||!exit){toast('Enter entry and exit prices','error');return;}
+  if(!document.getElementById('t-date').value){toast('Enter a date and time','error');return;}
   const stop=parseFloat(document.getElementById('t-stop').value);
   if(isFinite(stop)&&stopSideErr(dir,entry,stop)){toast(stopSideErr(dir,entry,stop),'error');return;}
   const target=parseFloat(document.getElementById('t-target').value);
@@ -3466,8 +3470,10 @@ function saveTrade(){
   if(editId){const i=trades.findIndex(x=>x.id===editId);if(i!==-1)trades[i]={...trades[i],...t,charts:t.charts,stop:t.stop,target:t.target};}
   else trades.unshift(t);
   saveTrades();renderAcctOpts();updateFileChips();refreshAll();closeM('tradeModal');
+  if(selectedDay&&!selectedWeek&&document.getElementById('dayPanel').classList.contains('open'))openDayPanel(dayKey(t.date),'trades');
   if(editId&&activeTradePanelId===editId&&document.getElementById('tradePanel').classList.contains('open'))openTradeDetail(editId);
-  toast(editId?'Trade updated ✓':'Trade logged ✓','success');
+  if(!filteredTrades().some(x=>x.id===t.id))toast('Trade saved, but your current filters hide it','info');
+  else toast(editId?'Trade updated ✓':'Trade logged ✓','success');
 }
 
 function mtAutoPnl(){
