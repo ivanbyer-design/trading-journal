@@ -736,6 +736,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 /* trading-calculator look */
 .dj-calc{background:linear-gradient(180deg,var(--surface),var(--surface2));}
 .pc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.pc-sym{width:100%;height:44px;margin-bottom:12px;font-family:var(--font-d);font-size:14px;font-weight:700;border-radius:9px;}
 .pc-syms{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
 .pc-syms button,.pc-syms select{flex:1;min-width:58px;height:42px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 4px;width:auto;}
 .pc-syms button small{font-size:9.5px;font-weight:600;color:var(--text3);}
@@ -2682,8 +2683,7 @@ function djPosHTML(key){
   const st=djState(key),more=Object.keys(PT_VAL).filter(x=>!DJ_MAIN.includes(x));
   const chips=[2,3,4,5,6,8,10,12,15,20];if(st.r.stop&&!chips.includes(st.r.stop)){chips.push(st.r.stop);chips.sort((a,b)=>a-b);}
   return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'1'};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
-    <div class="pc-syms">${DJ_MAIN.map(x=>`<button class="${x===st.sym?'on':''}" onclick="djPos.sym='${x}';djRender('djPos',djPosHTML)">${x}<small>$${PT_VAL[x]}/pt</small></button>`).join('')}
-      <select class="${more.includes(st.sym)?'on':''}" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)"><option value="">More</option>${more.map(x=>`<option${x===st.sym?' selected':''}>${x}</option>`).join('')}</select></div>
+    <div class="pc-f"><span>Instrument</span><select class="pc-sym" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)">${Object.keys(PT_VAL).map(x=>`<option value="${x}"${x===st.sym?' selected':''}>${x} · $${PT_VAL[x]}/pt</option>`).join('')}</select></div>
     <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
       <div class="pc-stepper"><button onclick="djStep(-1)" aria-label="Smaller stop">−</button>
         <div class="pc-stop"><b>${st.stop?+st.stop.toFixed(2):'—'}</b><small>pts</small></div>
