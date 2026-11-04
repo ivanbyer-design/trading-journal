@@ -3607,7 +3607,7 @@ function tpChecklistHTML(t){
   const grade=ckGrade(pct,n);
   const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   return`<div class="tp-ck${pct===1?' all':''}">
-    <div class="tp-ck-head"><span>Entry checklist</span><span class="tp-ck-score"><b class="tp-ck-grade" style="color:${col};border-color:${col}">Grade ${grade}</b><b style="color:${col}">${n}/${items.length}</b></span></div>
+    <div class="tp-ck-head"><span>Entry checklist</span><span class="tp-ck-score"><b class="tp-ck-grade" style="color:${col};border-color:${col}">Grade: ${grade}</b><b style="color:${col}">${n}/${items.length}</b></span></div>
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="tpCheck('${t.id}','${x.id}',${!on.has(x.id)})">
       <span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
@@ -3620,7 +3620,7 @@ function tradeCk(t){
 }
 function tpGradeRender(t){
   const el=document.getElementById('tpGrade');if(!el)return;const c=t&&tradeCk(t);
-  el.innerHTML=c?`<span class="tp-grade-badge" style="color:${c.col};border-color:${c.col}" title="Checklist: ${c.n} of ${c.total} ticked">Grade ${c.grade.replace('✓ ','')}</span>`:'';
+  el.innerHTML=c?`<span class="tp-grade-badge" style="color:${c.col};border-color:${c.col}" title="Checklist: ${c.n} of ${c.total} ticked">Grade: ${c.grade.replace('✓ ','')}</span>`:'';
 }
 function ckGrade(pct,n){if(!n)return'—';return pct>=1?'✓ A+':pct>=.8?'A':pct>=.6?'B':pct>=.4?'C':'D';}
 function tpCheck(tid,iid,v){
