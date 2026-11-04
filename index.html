@@ -3070,14 +3070,10 @@ const ST_COLORS=['#6c5dd3','#2db87d','#3898ec','#f5a524','#d65caa','#f0575a','#1
 const ST_TYPES={text:'Aa',number:'#',date:'▦',select:'▾',checkbox:'☑',url:'↗',image:'▣'};
 const ST_SECTIONS=[
   ['thesis','💡','The idea','Why does this edge exist? Who is trapped or forced to act?','e.g. Price sweeps the Asia low into London open, then reverses as trapped shorts cover…'],
-  ['conditions','🧭','Market conditions','HTF context, bias and the type of day this works on','e.g. Daily bullish, price in discount, no red-folder news in the first hour…'],
-  ['risk','⚖️','Risk','Size per trade and max attempts per day','e.g. 1% per trade, max 2 attempts per session'],
   ['entry','🎯','Entry criteria','Every box that must be ticked before you click buy or sell, one per line','1. Liquidity sweep of a key level\n2. Displacement + market structure shift on 5m\n3. Entry on the FVG retrace'],
-  ['stop','🛑','Stop loss','Where it goes and why','e.g. Above the swing high that caused the shift, min 10 pts'],
   ['targets','🏁','Targets & management','Take-profits, partials, break-even rules','e.g. TP1 at 2R (take 50%), move stop to BE, runner to the opposing liquidity'],
   ['avoid','🚫','Don\'t take it when…','Conditions that invalidate the setup','e.g. Within 15 min of high-impact news, after 11:30 ET, choppy overlapping candles'],
-  ['mistakes','🧠','Common mistakes','What you tend to get wrong with this setup','e.g. Entering before the structure shift closes'],
-  ['examples','🖼️','Examples','Paste chart links (TradingView, image URLs), one per line','https://www.tradingview.com/x/…']
+  ['mistakes','🧠','Common mistakes','What you tend to get wrong with this setup','e.g. Entering before the structure shift closes']
 ];
 function stDefaultProps(){return[
   {key:'date',name:'Date',type:'date',core:1},
@@ -3193,7 +3189,7 @@ function stDetailHTML(s){
     ${stUI.tab==='breakdown'?stBreakdownHTML(s):stUI.tab==='backtest'?`<div id="stKpis">${stKpisHTML(st)}</div>${stDbBarHTML()}<div id="stDbArea">${stDbHTML(s)}</div>`:stAnalyticsHTML(s,st)}`;
 }
 function stBreakdownHTML(s){
-  return`${mkBlockHTML('st')}<div class="st-doc"><div class="st-sec full" id="stCk">${stChecklistEdHTML(s)}</div>${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='examples'?' full':''}">
+  return`${mkBlockHTML('st')}<div class="st-doc"><div class="st-sec full" id="stCk">${stChecklistEdHTML(s)}</div>${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='mistakes'?' full':''}">
     <h4><i>${ic}</i>${t}</h4><p>${hint}</p>
     <textarea placeholder="${esc(ph)}" oninput="stSet('${f}',this.value);stAutosize(this)${f==='examples'?';stRenderLinks(this.value)':''}">${esc(s[f]||'')}</textarea>
     ${f==='examples'?`<div class="st-links" id="stLinks">${stLinksHTML(s[f])}</div>`:''}
