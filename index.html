@@ -767,6 +767,22 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-runs span{font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
 .dj-runs .ok{color:var(--green);background:rgba(45,184,125,.12);}
 .dj-runs .miss{color:#f5a524;background:rgba(245,165,36,.12);}
+.pc-sim{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border2);font-family:var(--font-d);}
+.pc-sim-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
+.pc-sim-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.pc-sim-btns button{height:48px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);font-family:var(--font-d);font-weight:800;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.2;}
+.pc-sim-btns button small{font-size:10.5px;font-weight:600;color:var(--text3);}
+.pc-sim-btns .w{color:var(--green);border-color:rgba(45,184,125,.45);} .pc-sim-btns .w:hover{background:rgba(45,184,125,.14);}
+.pc-sim-btns .l{color:var(--red);border-color:rgba(240,87,90,.45);} .pc-sim-btns .l:hover{background:rgba(240,87,90,.14);}
+.pc-sim-btns .b{color:var(--accent);}
+.pc-sim-btns button:disabled{opacity:.4;cursor:default;}
+.pc-sim-custom{display:flex;gap:6px;margin-top:6px;}
+.pc-sim-custom .pc-in{flex:1;}
+.pc-sim-custom .pc-in input{font-size:13px;padding:8px 0;text-align:left;}
+.pc-sim-log{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
+.pc-sim-log span{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;padding:3px 4px 3px 8px;border-radius:6px;}
+.pc-sim-log .w{color:var(--green);background:rgba(45,184,125,.12);} .pc-sim-log .l{color:var(--red);background:rgba(240,87,90,.12);} .pc-sim-log .b{color:var(--accent);background:rgba(108,93,211,.12);}
+.pc-sim-log button{border:none;background:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 3px;opacity:.7;}
 .pc-riskline{margin-bottom:10px;padding:2px 2px 8px;border-bottom:1px dashed var(--border2);display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-d);}
 .pc-riskline>span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pc-riskline .pc-in input{font-size:14px;padding:7px 0;}
@@ -2540,10 +2556,11 @@ function djOverviewHTML(key){
 }
 // Live state of the day from its actual trades: P&L so far, loss budget left, target left, trades left
 function dayLive(key,r){
-  const dt=(tradesByDay(filteredTrades())[key]||[]),pnl=dt.reduce((a,t)=>a+t.pnl,0);
+  const sim=(noteCharts[key]?.sim||[]).map(Number);
+  const dt=[...(tradesByDay(filteredTrades())[key]||[]),...sim.map(v=>({pnl:v}))],pnl=dt.reduce((a,t)=>a+t.pnl,0);
   const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,tradesLeft=Math.max(0,r.n-dt.length);
   const stop=r.target&&pnl>=r.target-.005?'target':r.maxLoss&&lossLeft<=.005?'loss':r.n&&!tradesLeft?'trades':'';
-  return{taken:dt.length,pnl,lossLeft,targetLeft,tradesLeft,stop};
+  return{taken:dt.length,sims:sim.length,pnl,lossLeft,targetLeft,tradesLeft,stop};
 }
 // Size for a trade: plan risk per trade capped by the loss left, in whole contracts that never round past it
 // Risk per trade compounds with the day's P&L: (account + P&L so far) × max-loss % ÷ max trades
@@ -2557,7 +2574,7 @@ function djSize(r,each,lossLeft,perTrade){let ct=Math.round(Math.min(perTrade??r
 function djScenHTML(p,r,key){
   if(!r.maxLoss||!r.stop)return'';
   const sym=p.riskSym||'ES',each=r.stop*r.pv,lv=dayLive(key,r);
-  const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
+  const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken${lv.sims?` (${lv.sims} what-if)`:''} · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
     <span>${r.target?`${fmoney(lv.targetLeft)} to target`:'no target set'} · ${fmoney(lv.lossLeft)} loss left · ${lv.tradesLeft} trade${lv.tradesLeft===1?'':'s'} left</span></div>`;
   if(lv.stop){const msg={target:'🎯 Daily target hit · stop trading for the day',loss:'⛔ Max loss reached · stop trading for the day',trades:'Max trades taken · done for the day'}[lv.stop];
     return`<div class="dj-sub">Trade size scenarios</div>${live}<div class="sc-stop ${lv.stop}">${msg}</div>`;}
@@ -2697,8 +2714,27 @@ function djPosHTML(key){
         <label class="pc-stop"><input type="number" inputmode="decimal" min="0" step="any" value="${st.stop?+st.stop.toFixed(2):''}" placeholder="—" oninput="djPos.stop=this.value;djPosOut();djChipSync()"><small>pts</small></label>
         <button onclick="djStep(1)" aria-label="Bigger stop">+</button></div></div>
     <div class="pc-chips">${chips.map(c=>`<button class="${c===st.stop?'on':''}" onclick="djPos.stop='${c}';djRender('djPos',djPosHTML)">${c}</button>`).join('')}</div>
-    <div id="djPosOut">${djPosOutHTML(key)}</div>`;
+    <div id="djPosOut">${djPosOutHTML(key)}</div>
+    <div id="djSim">${djSimHTML(key)}</div>`;
 }
+// What-if results: log a trade's outcome here and the next trade re-sizes (also feeds Today's plan). Not saved as trades.
+function djSimHTML(key){
+  const st=djState(key),sim=noteCharts[key]?.sim||[],lv=st.lv;
+  const ct=st.stop&&st.risk?Math.round(st.risk/(st.stop*st.pv)):0,risk=ct*st.stop*st.pv;
+  const pace=st.r.target&&lv.tradesLeft?lv.targetLeft/lv.tradesLeft:0,win=pace||risk*2;
+  return`<div class="pc-sim"><div class="pc-sim-h"><span>Trade #${lv.taken+1} result</span>${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
+    <div class="pc-sim-btns"><button class="w" onclick="djSimAdd(${+win.toFixed(2)})" ${win?'':'disabled'}>✓ Win<small>+${fmoney(win)}</small></button>
+      <button class="b" onclick="djSimAdd(0)">– BE<small>$0.00</small></button>
+      <button class="l" onclick="djSimAdd(${-risk.toFixed(2)})" ${risk?'':'disabled'}>✕ Loss<small>−${fmoney(risk)}</small></button></div>
+    <div class="pc-sim-custom"><div class="pc-in"><em>$</em><input type="number" inputmode="decimal" step="any" placeholder="Exact result, e.g. 412.50 or -175" onkeydown="if(event.key==='Enter'&&this.value)djSimAdd(+this.value)"></div><button class="btn" onclick="const i=this.previousElementSibling.querySelector('input');if(i.value)djSimAdd(+i.value)">Add</button></div>
+    ${sim.length?`<div class="pc-sim-log">${sim.map((v,i)=>`<span class="${v>0?'w':v<0?'l':'b'}">#${lv.taken-sim.length+i+1} ${v>0?'+':''}${fmoney(v)}<button onclick="djSimDel(${i})" title="Remove">×</button></span>`).join('')}</div>
+      <div class="pm-meter-note" style="margin-top:6px">Day so far ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)} · next size updated above · what-if only, not saved as trades</div>`:''}
+  </div>`;
+}
+function djSimSet(fn){const d=djGet(selectedDay,true);d.sim=fn(d.sim||[]);if(!d.sim.length)delete d.sim;djSave();djRender('djPos',djPosHTML);djRender('djOverview',djOverviewHTML);}
+function djSimAdd(v){if(!isFinite(v))return;djSimSet(a=>[...a,+(+v).toFixed(2)]);}
+function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i));}
+function djSimClear(){djSimSet(()=>[]);}
 function djChipSync(){const v=+djPos.stop;document.querySelectorAll('#djPos .pc-chips button').forEach(b=>b.classList.toggle('on',+b.textContent===v));}
 function djPosOutHTML(key){
   const{r,lv,sym,pv,stop,risk,tick}=djState(key);
@@ -2716,7 +2752,8 @@ function djPosOutHTML(key){
     ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(pace)} this trade${lv.taken?` · ${fmoney(lv.targetLeft)} left over ${lv.tradesLeft}`:''} · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
 function djRiskPh(){const st=djState(selectedDay),el=document.getElementById('djRiskVal');if(el)el.textContent=st.risk?fmoney(st.risk):'—';}
-function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);}
+function djSimOut(){const el=document.getElementById('djSim');if(el&&selectedDay)el.innerHTML=djSimHTML(selectedDay);}
+function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);djSimOut();}
 
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
 function pmReviewHTML(key){
