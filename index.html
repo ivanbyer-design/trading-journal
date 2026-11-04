@@ -2459,8 +2459,8 @@ function noteViewHTML(key){
     <div class="pm-card dj-notes"><div class="pm-h">Notes</div>
       <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea></div>
     <div class="dj-grid">
-      <div class="pm-card dj-calc" id="djPos">${djPosHTML(key)}</div>
       <div class="pm-card" id="djStrat">${djStratHTML(key)}</div>
+      <div class="pm-card dj-calc" id="djPos">${djPosHTML(key)}</div>
     </div>
     ${pmReviewHTML(key)}
   </div>`;
