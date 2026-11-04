@@ -2453,7 +2453,7 @@ function pmRiskNums(p){
   const acct=+p.acctSize||+settings.startingBalance||50000,lp=+p.lossPct||0,tp=+p.targetPct||0,n=Math.max(1,Math.floor(+p.maxTrades||1));
   const maxLoss=lp?acct*lp/100:(+p.maxLoss||0),target=tp?acct*tp/100:(+p.target||0);
   const perTrade=maxLoss?maxLoss/n:0,pv=PT_VAL[p.riskSym||'ES']||50,stop=+p.stopPts||0;
-  const contracts=perTrade&&stop?Math.floor(perTrade/(stop*pv)):null;
+  const contracts=perTrade&&stop?Math.round(perTrade/(stop*pv)):null; // nearest whole contract (.5 rounds up)
   return{acct,maxLoss,target,perTrade,n,stop,pv,contracts,perTradeTarget:target?target/n:0};
 }
 function pmRiskOutHTML(p){
@@ -2468,8 +2468,11 @@ function pmRiskOutHTML(p){
 }
 function pmCtrSub(p,r){
   if(!r.stop)return'enter a stop size';if(!r.perTrade)return'pick a max loss %';
-  const exact=r.perTrade/(r.stop*r.pv),ex=+exact.toFixed(2);
-  return ex===r.contracts?`${ex} · exact`:`${ex} → rounded down to ${r.contracts}${r.contracts===0?' · stop too wide':''}`;
+  const each=r.stop*r.pv,exact=r.perTrade/each,ex=+exact.toFixed(2),c=r.contracts;
+  if(ex===c)return`${ex} · exact`;
+  if(c===0)return`${ex} → rounded down to 0 · stop too wide`;
+  if(c>exact){const over=c*each-r.perTrade;return`${ex} → rounded up to ${c} · risks ${fmoney(c*each)} (<b style="color:#f5a524">${fmoney(over)} over</b>)`;}
+  return`${ex} → rounded down to ${c} · risks ${fmoney(c*each)}`;
 }
 // Trade size meter: one segment per max trade, each worth 2 × stop size in points.
 // Also shows the points per trade needed to hit the daily target at the calculated contract size.
