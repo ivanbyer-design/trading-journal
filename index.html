@@ -2410,15 +2410,15 @@ function pmCopyLast(){
 }
 /* ── Risk calculator (premarket card 6) ── */
 const PT_VAL={ES:50,NQ:20,MES:5,MNQ:2,YM:5,MYM:.5,RTY:50,M2K:5,CL:1000,MCL:100,GC:100,MGC:10};
-const RISK_PCTS=['0.25','0.5','1','1.5','2','2.5','3','4','5'];
+const RISK_PCTS=['1',...Array.from({length:20},(_,i)=>String((i+1)*5))]; // 1%, 5%, 10% … 100%
 function pmRiskHTML(p){
   const sel=(f,def,ph)=>`<select onchange="pmSet('${f}',this.value);pmRiskRender()" data-r="${f}"><option value="">${ph}</option>${RISK_PCTS.map(v=>`<option value="${v}"${String(p[f]??def)===v?' selected':''}>${v}%</option>`).join('')}</select>`;
   const num=(f,ph)=>`<input type="number" step="any" min="0" data-r="${f}" value="${esc(p[f]??'')}" placeholder="${ph}" oninput="pmSet('${f}',this.value);pmRiskRender()">`;
   const syms=Object.keys(PT_VAL),sym=p.riskSym||'ES';
   return`<div class="pm-risk">
       <div class="fg"><label>Account size ($)</label>${num('acctSize',String(settings.startingBalance||50000))}</div>
-      <div class="fg"><label>Max daily loss</label>${sel('lossPct','',' % of account')}</div>
-      <div class="fg"><label>Daily target</label>${sel('targetPct','',' % of account')}</div>
+      <div class="fg"><label>Max daily loss</label>${sel('lossPct','','Select %')}</div>
+      <div class="fg"><label>Daily target</label>${sel('targetPct','','Select %')}</div>
       <div class="fg"><label>Max trades</label>${num('maxTrades','e.g. 3')}</div>
       <div class="fg"><label>Instrument</label><select data-r="riskSym" onchange="pmSet('riskSym',this.value);pmRiskRender()">${syms.map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
       <div class="fg"><label>Stop size (pts)</label>${num('stopPts','e.g. 6')}</div>
