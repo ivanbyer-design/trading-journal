@@ -2332,7 +2332,7 @@ function tradesViewHTML(dt,st){
       </div>
     </div>
     <div class="dm-table"><table>
-      <thead><tr><th>Open time</th><th>Ticker</th><th>Side</th><th>Instrument</th><th>Net P&amp;L</th><th>Net ROI</th><th class="dm-wrap">Realized R-Multiple</th><th>Quick Notes</th><th style="text-align:center">Replay</th></tr></thead>
+      <thead><tr><th>Open time</th><th>Ticker</th><th>Side</th><th>Instrument</th><th>Net P&amp;L</th><th>Net ROI</th><th class="dm-wrap">Realized R-Multiple</th><th>Grade</th><th>Quick Notes</th><th style="text-align:center">Replay</th></tr></thead>
       <tbody>${dt.map(t=>{
         const roi=t.pnl/bal*100;
         return`<tr style="cursor:pointer" onclick="openTradeDetail('${t.id}')">
@@ -2343,6 +2343,7 @@ function tradesViewHTML(dt,st){
           <td style="color:${pc(t.pnl)};font-weight:600">${fmoney(t.pnl)}</td>
           <td>${roi<0?'(':''}${Math.abs(roi).toFixed(2)}%${roi<0?')':''}</td>
           <td>${fRm(tradeR(t))}</td>
+          <td data-grade="${t.id}">${gradeCellHTML(t)}</td>
           <td class="dm-qn"><textarea class="dm-qn-in" rows="1" placeholder="Describe the trade…" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();this.blur()}" oninput="this.style.height='auto';this.style.height=this.scrollHeight+'px'" onchange="setQuickNote('${t.id}',this.value)">${esc(t.quickNote||'')}</textarea></td>
           <td style="text-align:center"><button class="replay-btn" title="Open trade" onclick="event.stopPropagation();openTradeDetail('${t.id}')">${play}</button></td>
         </tr>`;}).join('')}</tbody>
@@ -3618,7 +3619,9 @@ function tradeCk(t){
   const on=new Set(t.checks||[]),n=items.filter(x=>on.has(x.id)).length,pct=n/items.length;
   return{n,total:items.length,pct,grade:ckGrade(pct,n),col:pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)'};
 }
+function gradeCellHTML(t){const c=tradeCk(t);return c?`<span class="tp-grade-badge" style="color:${c.col};border-color:${c.col}" title="Checklist: ${c.n} of ${c.total} ticked">${c.grade.replace('✓ ','')}</span>`:'<span style="color:var(--text3)">—</span>';}
 function tpGradeRender(t){
+  if(t)document.querySelectorAll(`[data-grade="${t.id}"]`).forEach(td=>td.innerHTML=gradeCellHTML(t));
   const el=document.getElementById('tpGrade');if(!el)return;const c=t&&tradeCk(t);
   el.innerHTML=c?`<span class="tp-grade-badge" style="color:${c.col};border-color:${c.col}" title="Checklist: ${c.n} of ${c.total} ticked">Grade: ${c.grade.replace('✓ ','')}</span>`:'';
 }
