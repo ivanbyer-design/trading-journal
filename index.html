@@ -687,7 +687,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-meter{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font-d);}
 .pm-meter-top{margin-bottom:10px;}
 .pm-meter-top label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
-.pm-meter-track{position:relative;display:flex;gap:3px;margin-top:22px;}
+.pm-meter-track{position:relative;display:flex;gap:3px;margin-top:38px;}
 .pm-seg-m{flex:1;min-width:0;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;color:#fff;font-size:11px;}
 .pm-seg-m b{font-weight:800;opacity:.9;}
 .pm-seg-m span{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -697,6 +697,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-meter-mark[style*="left:100%"] span{transform:translateX(-100%);}
 .pm-meter-mark[style*="left:0"] span{transform:none;}
 .pm-meter-mark.over span{color:var(--red);}
+.pm-meter-mark span small{display:block;font-size:11px;font-weight:800;color:var(--green);text-align:inherit;}
+.pm-meter-mark span{text-align:center;}
+.pm-meter-mark[style*="left:100%"] span{text-align:right;}
 .pm-meter-need{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
 .pm-meter-need div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
 .pm-meter-need div span{font-size:12px;color:var(--text2);font-weight:600;}
@@ -2482,7 +2485,7 @@ function pmMeterHTML(p){
   let need='',mark='';
   if(r.target){
     const tot=r.target/perPt,per=tot/maxT,x=Math.min(100,tot/total*100),hit=per<=slot;
-    mark=`<div class="pm-meter-mark${tot>total?' over':''}" style="left:${x}%" title="Target: ${+tot.toFixed(2)} pts"><span>🎯 ${+tot.toFixed(2)} pts</span></div>`;
+    mark=`<div class="pm-meter-mark${tot>total?' over':''}" style="left:${x}%" title="Target: ${+tot.toFixed(2)} pts"><span><small>${fmoney(r.target)}</small>🎯 ${+tot.toFixed(2)} pts</span></div>`;
     need=`<div class="pm-meter-need"><div><span>Points per trade to hit target</span><b style="color:${hit?'var(--green)':'#f5a524'}">${+per.toFixed(2)} pts</b></div>
       <i>${fmoney(r.target)} ÷ (${ctr} ${p.riskSym||'ES'} contract${ctr>1?'s':''} × $${r.pv}/pt) = ${+tot.toFixed(2)} pts ÷ ${maxT} trade${maxT>1?'s':''}${r.contracts>0?'':' · using 1 contract'} · ${hit?`within your ${slot}-pt trade size`:`${+(per/slot).toFixed(2)}× your ${slot}-pt trade size`}</i></div>`;
   }else need='<div class="pm-meter-note">Pick a daily target % to see the points you need per trade.</div>';
