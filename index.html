@@ -218,6 +218,7 @@ tr:hover td{background:rgba(108,93,211,.04);}
 .tp-ck.all{border-color:rgba(45,184,125,.45);}
 .tp-ck-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text3);}
 .tp-ck-head b{font-size:12px;letter-spacing:0;}
+.tp-grade-badge{font-family:var(--font-d);font-size:11px;font-weight:800;border:1px solid;border-radius:7px;padding:3px 8px;white-space:nowrap;}
 .tp-ck-score{display:flex;align-items:center;gap:8px;}
 .tp-ck-grade{font-size:11px!important;border:1px solid;border-radius:6px;padding:2px 7px;min-width:28px;text-align:center;}
 .tp-ck-bar{height:4px;border-radius:4px;background:var(--border);margin:8px 0 10px;overflow:hidden;}
@@ -1307,7 +1308,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 <div class="trade-panel" id="tradePanel">
   <div class="tp-hdr">
     <div>
-      <div class="tp-sym" id="tpSym">—</div>
+      <div style="display:flex;align-items:center;gap:10px"><div class="tp-sym" id="tpSym">—</div><span id="tpGrade"></span></div>
       <div class="tp-meta" id="tpMeta"></div>
     </div>
     <div class="tp-hdr-btns">
@@ -3606,17 +3607,26 @@ function tpChecklistHTML(t){
   const grade=ckGrade(pct,n);
   const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   return`<div class="tp-ck${pct===1?' all':''}">
-    <div class="tp-ck-head"><span>Entry checklist</span><span class="tp-ck-score"><b class="tp-ck-grade" style="color:${col};border-color:${col}">${grade}</b><b style="color:${col}">${n}/${items.length}</b></span></div>
+    <div class="tp-ck-head"><span>Entry checklist</span><span class="tp-ck-score"><b class="tp-ck-grade" style="color:${col};border-color:${col}">Grade ${grade}</b><b style="color:${col}">${n}/${items.length}</b></span></div>
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="tpCheck('${t.id}','${x.id}',${!on.has(x.id)})">
       <span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
 }
 // Checklist grade from share of items ticked
+function tradeCk(t){
+  const s=stByName(t.setup),items=(s?.checklist||[]).filter(x=>(x.text||'').trim());if(!items.length)return null;
+  const on=new Set(t.checks||[]),n=items.filter(x=>on.has(x.id)).length,pct=n/items.length;
+  return{n,total:items.length,pct,grade:ckGrade(pct,n),col:pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)'};
+}
+function tpGradeRender(t){
+  const el=document.getElementById('tpGrade');if(!el)return;const c=t&&tradeCk(t);
+  el.innerHTML=c?`<span class="tp-grade-badge" style="color:${c.col};border-color:${c.col}" title="Checklist: ${c.n} of ${c.total} ticked">Grade ${c.grade.replace('✓ ','')}</span>`:'';
+}
 function ckGrade(pct,n){if(!n)return'—';return pct>=1?'✓ A+':pct>=.8?'A':pct>=.6?'B':pct>=.4?'C':'D';}
 function tpCheck(tid,iid,v){
   const t=trades.find(x=>x.id===tid);if(!t)return;
   const set=new Set(t.checks||[]);v?set.add(iid):set.delete(iid);t.checks=[...set];if(!t.checks.length)delete t.checks;
-  saveTrades();const el=document.getElementById('tpChecklist');if(el)el.innerHTML=tpChecklistHTML(t);
+  saveTrades();const el=document.getElementById('tpChecklist');if(el)el.innerHTML=tpChecklistHTML(t);tpGradeRender(t);
 }
 let tpStratPicking=null;
 function tpRerender(id){const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;}
@@ -3765,7 +3775,7 @@ function openTradeDetail(id){
   const pts=Math.abs(t.exit-t.entry).toFixed(2);
   const ticks=(Math.abs(t.exit-t.entry)/0.25).toFixed(0);
   const sym=document.getElementById('tpSym');
-  sym.textContent=t.symbol;
+  sym.textContent=t.symbol;tpGradeRender(t);
   sym.style.color=color;
 
   document.getElementById('tpMeta').innerHTML=`
