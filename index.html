@@ -757,19 +757,19 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-mode button{height:44px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;}
 .pc-mode button small{font-size:10px;font-weight:600;color:var(--text3);}
 .pc-mode .on{border-color:var(--accent);background:rgba(108,93,211,.18);color:var(--text);box-shadow:0 0 0 1px var(--accent) inset;}
-.pc-acct{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
-.pc-acct>.pc-in:first-child{grid-column:1/-1;}
-.pc-acct .pc-pct em{margin:0 0 0 4px;}
-.pc-acct>.pc-f,.pc-acct>.pc-hint{grid-column:1/-1;}
-.pc-hint{font-size:11.5px;color:var(--text3);margin:-2px 0 4px;}.pc-hint b{color:var(--text);}
-.pc-acct .pc-pair{display:grid;grid-template-columns:1fr 1fr;gap:6px;}
-.pc-rr{display:grid;grid-template-columns:repeat(6,1fr) 1.3fr;gap:5px;}
-.pc-rr button{height:36px;border-radius:8px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:700;font-size:12px;cursor:pointer;padding:0;}
-.pc-rr button.on{border-color:var(--accent);background:rgba(108,93,211,.18);color:var(--text);}
-.pc-rr .pc-in{padding:0 6px;}.pc-rr .pc-in em{margin-right:2px;}
-.pc-rr .pc-in input{font-size:13px;padding:7px 0;min-width:0;width:100%;}
+.pc-acct{margin-bottom:8px;}
 .pc-acct .pc-in input{font-size:15px;padding:8px 0;}
-.pc-acct select{height:100%;font-family:var(--font-d);font-weight:700;font-size:13px;}
+.pc-hint{font-size:11.5px;color:var(--text3);margin:3px 0 8px;}.pc-hint b{color:var(--text);}
+.pc-trio{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
+.pc-trio .pc-f>span{margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pc-trio .pc-in{padding:0 8px;}.pc-trio .pc-in em{margin:0 0 0 3px;}
+.pc-trio .pc-in input{font-size:16px;padding:7px 0;min-width:0;width:100%;}
+.pc-trio select{width:100%;margin-top:4px;height:30px;font-family:var(--font-d);font-weight:700;font-size:12px;padding:0 6px;}
+.pc-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px;}
+.pc-sum div{background:var(--surface2);border:1px solid var(--border2);border-radius:9px;padding:6px 8px;text-align:center;}
+.pc-sum span{display:block;font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);}
+.pc-sum b{font-family:var(--font-d);font-size:15px;font-variant-numeric:tabular-nums;}
+.pc-sum .r{color:var(--red);}.pc-sum .g{color:var(--green);}.pc-sum .a{color:var(--accent);}
 .dj-next{width:100%;margin-top:10px;height:40px;border-radius:9px;border:1px dashed var(--border2);background:transparent;color:var(--text2);font-family:var(--font-d);font-weight:700;font-size:13px;cursor:pointer;}
 .dj-next:disabled{opacity:.4;cursor:default;}
 .dj-next.go{border:none;background:var(--green);color:#fff;}
@@ -2711,31 +2711,29 @@ function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djR
 function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay)el.innerHTML=fn(selectedDay);}
 // Position size calculator: entry + stop price → contracts from the plan's risk per trade
 // Position size calculator: driven by the day's risk plan (risk per trade + stop size). Adjust the stop with chips / ± — no typing prices.
-let djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'1',tgt:''};
+let djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'',trades:'',tgt:''};
 const DJ_PCTS=['1',...Array.from({length:20},(_,i)=>String((i+1)*5))]; // 1%, 5%, 10% … 100%
 const DJ_MAIN=['ES','NQ','MES','MNQ'];
 const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
 function djState(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
-  const lv=dayLive(key,r),start=+djPos.acct||r.acct,acct=start+lv.pnl,acctRisk=Math.max(0,acct)*(+djPos.pct||0)/100/r.n; // balance moves with each logged result
+  const lv=dayLive(key,r),start=+djPos.acct||r.acct,acct=start+lv.pnl; // balance moves with each logged result
+  // Account mode: max loss % ÷ max trades = risk per trade; target % per trade; R:R = target ÷ risk (auto)
+  const a=djAcctNums(p,r,acct),acctRisk=a.risk;
   const planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),djCapAt(p,lv.lossLeft,lv.pnl)):0;
-  return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,start,risk:(djPos.mode==='acct'?acctRisk:planRisk)||0,tick:TICK_SZ[sym]||.25};
+  return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,start,a,risk:(djPos.mode==='acct'?acctRisk:planRisk)||0,tick:TICK_SZ[sym]||.25};
 }
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
   const st=djState(key),chips=[1,2,3,4,5,6,7,8,9,10];
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'1',tgt:''};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'',trades:'',tgt:''};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
     <div class="pc-f"><span>Base risk on</span>
       <div class="pc-mode"><button class="${djPos.mode!=='acct'?'on':''}" onclick="djPos.mode='plan';djRender('djPos',djPosHTML)">Risk plan<small>${st.r.perTrade?fmoney(st.r.perTrade)+' / trade':'not set'}</small></button>
         <button class="${djPos.mode==='acct'?'on':''}" onclick="djPos.mode='acct';djRender('djPos',djPosHTML)">Account size<small>max loss ÷ trades</small></button></div></div>
     ${djPos.mode==='acct'?`<div class="pc-acct"><div class="pc-in"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.acct||+st.r.acct.toFixed(2))}" title="Starting balance — from the premarket plan, editable" oninput="djPos.acct=this.value;djAcctSync();djPosOut();djRiskPh()"></div>
       <div class="pc-hint" id="djBalHint">${djBalHint(st)}</div>
-      ${djPctField('pct','Max loss · % of account','% max loss')}
-      <div class="pc-hint" id="djPctHint">${djAcctHint('pct',st)}</div>
-      ${djPctField('tgt','Target · % of account','% target')}
-      <div class="pc-hint" id="djTgtHint">${djAcctHint('tgt',st)}</div>
-      <div class="pc-f"><span>Risk : reward · sets the target</span><div class="pc-rr">${DJ_RRS.map(x=>`<button class="${djRr()===+x?'on':''}" onclick="djRrSet('${x}')">1:${x}</button>`).join('')}
-        <div class="pc-in"><em>1:</em><input type="number" inputmode="decimal" min="0" step="any" value="${djRr()||''}" placeholder="R" oninput="djRrSet(this.value,1)"></div></div></div></div>`:''}
+      <div class="pc-trio">${djField('pct','Max loss',DJ_PCTS,'%',st.a.pct)}${djField('trades','Max trades',DJ_TRADES,'',st.a.n)}${djField('tgt','Target / trade',DJ_PCTS,'%',st.a.tgt)}</div>
+      <div class="pc-sum" id="djSum">${djSumHTML(st)}</div></div>`:''}
     <div class="pc-riskline"><span>Risk per trade</span><b class="pc-risk" id="djRiskVal">${st.risk?fmoney(st.risk):'—'}</b></div>
     <div class="pc-f"><span>Instrument</span><select class="pc-sym" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)">${Object.keys(PT_VAL).map(x=>`<option value="${x}"${x===st.sym?' selected':''}>${x} · $${PT_VAL[x]}/pt</option>`).join('')}</select></div>
     <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
@@ -2778,7 +2776,7 @@ function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i));}
 function djSimClear(){djSimSet(()=>[]);}
 function djChipSync(){const v=+djPos.stop;document.querySelectorAll('#djPos .pc-chips button').forEach(b=>b.classList.toggle('on',+b.textContent===v));}
 function djPosOutHTML(key){
-  const{r,lv,sym,pv,stop,risk,tick,acct}=djState(key);
+  const st=djState(key),{r,lv,sym,pv,stop,risk,tick}=st;
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
   if(!risk)return screen('—',djPos.mode==='acct'?'Enter an account size above':'Set a max loss % in the premarket plan');
   if(!stop)return screen('—','Pick a stop size above');
@@ -2790,40 +2788,33 @@ function djPosOutHTML(key){
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
       ${row('Total risk',ct?fmoney(real)+(real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk))}</div>
     <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
-    ${djPos.mode==='acct'&&+djPos.tgt?(()=>{const rr=djRr(),tg=acct*djPos.tgt/100;return`<div class="pc-plan"><span>🎯 Target</span><b>${rr?+(stop*rr).toFixed(2)+' pts':'—'}</b><i>${fmoney(tg/r.n)} this trade · ${fmoney(tg)} day (${+djPos.tgt}%)${rr?` · 1:${+rr.toFixed(2)}`:''}</i></div>`;})():need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(pace)} this trade${lv.taken?` · ${fmoney(lv.targetLeft)} left over ${lv.tradesLeft}`:''} · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
+    ${djPos.mode==='acct'&&st.a.rr?`<div class="pc-plan"><span>🎯 Target</span><b>${+(stop*st.a.rr).toFixed(2)} pts</b><i>${fmoney(st.a.target)} this trade · 1:${+st.a.rr.toFixed(2)}${ct?` → +${fmoney(ct*each*st.a.rr)} at ${ct} ${sym}`:''}</i></div>`:need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(pace)} this trade${lv.taken?` · ${fmoney(lv.targetLeft)} left over ${lv.tradesLeft}`:''} · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
-const DJ_RRS=['1','1.5','2','3','4','5'];
-// % field = typeable box + 1%, 5%…100% dropdown, kept in sync. f: 'pct' (risk) or 'tgt' (target)
-function djPctOpts(f,unit){const v=String(+djPos[f]||'');return(DJ_PCTS.includes(v)?'':`<option value="" selected>${v?v+'% (custom)':'Pick %'}</option>`)+DJ_PCTS.map(x=>`<option value="${x}"${x===v?' selected':''}>${x}${unit}</option>`).join('');}
-function djPctField(f,label,unit){return`<div class="pc-f" data-f="${f}"><span>${label}</span><div class="pc-pair"><div class="pc-in pc-pct"><input type="number" inputmode="decimal" min="0" max="100" step="any" value="${esc(djPos[f]||'')}" placeholder="%" oninput="djPctSet('${f}',this.value,'in')"><em>%</em></div>
-  <select data-unit="${unit}" onchange="djPctSet('${f}',this.value,'sel')">${djPctOpts(f,unit)}</select></div></div>`;}
-function djPctSync(f,src){
-  const box=document.querySelector(`#djPos .pc-f[data-f="${f}"]`);if(!box)return;
-  const sel=box.querySelector('select'),inp=box.querySelector('input');
-  sel.innerHTML=djPctOpts(f,sel.dataset.unit);if(src!=='in'&&inp.value!==djPos[f])inp.value=djPos[f];
+const DJ_TRADES=['1','2','3','4','5','6','7','8','9','10'];
+// Account mode numbers. Max loss % and max trades default to the premarket plan; target % is per trade.
+function djAcctNums(p,r,acct){
+  const pct=+djPos.pct||+p.lossPct||1,n=Math.max(1,Math.floor(+djPos.trades||+p.maxTrades||1)),tgt=+djPos.tgt||0,bal=Math.max(0,acct);
+  const maxLoss=bal*pct/100,risk=maxLoss/n,target=bal*tgt/100;
+  return{pct,n,tgt,maxLoss,risk,target,rr:risk&&target?target/risk:0};
 }
-// Account mode: max loss % and target % of the account, each ÷ max trades from the premarket plan. R:R = target ÷ max loss.
-function djRr(){const l=+djPos.pct,t=+djPos.tgt;return l>0&&t>0?t/l:0;}
-function djAcctHint(f,st){
-  const n=st.r.n,base=st.acct*(+djPos[f]||0)/100,tr=`${n} trade${n>1?'s':''}`+(+st.p.maxTrades?'':' · set max trades in the premarket plan');
-  if(!base)return f==='tgt'?'Pick a target % — or an R:R below':'Pick how much of the account you can lose today';
-  return`${fmoney(base)} ÷ ${tr} = <b>${fmoney(base/n)}</b> ${f==='tgt'?'target':'risk'} per trade`;
+// Compact field: typeable box + preset dropdown, kept in sync
+function djField(f,label,opts,unit,cur){
+  const v=String(+djPos[f]||+cur||''),sel=(opts.includes(v)?'':`<option value="" selected>${v?'Custom':'Pick'}</option>`)+opts.map(x=>`<option value="${x}"${x===v?' selected':''}>${x}${unit}</option>`).join('');
+  return`<div class="pc-f" data-f="${f}"><span>${label}</span><div class="pc-in"><input type="number" inputmode="decimal" min="0" step="any" value="${esc(djPos[f]||(+cur?v:''))}" placeholder="—" oninput="djFieldSet('${f}',this.value,1)">${unit?`<em>${unit}</em>`:''}</div>
+    <select onchange="djFieldSet('${f}',this.value)">${sel}</select></div>`;
 }
-function djBalHint(st){const pnl=st.lv.pnl;return`${djPos.acct?'Starting balance':'Starting balance from premarket plan'}${st.lv.taken?` · ${st.lv.taken} trade${st.lv.taken>1?'s':''} ${pnl>=0?'+':'−'}${fmoney(Math.abs(pnl))} → <b>${fmoney(st.acct)}</b> now`:''}`;}
-function djAcctSync(){
-  const st=djState(selectedDay),rr=djRr(),bh=document.getElementById('djBalHint');if(bh)bh.innerHTML=djBalHint(st);
-  [['pct','djPctHint'],['tgt','djTgtHint']].forEach(([f,id])=>{const el=document.getElementById(id);if(el)el.innerHTML=djAcctHint(f,st);});
-  document.querySelectorAll('#djPos .pc-rr button').forEach(b=>b.classList.toggle('on',rr>0&&b.textContent==='1:'+(+rr.toFixed(2))));
-  const i=document.querySelector('#djPos .pc-rr input');if(i&&document.activeElement!==i)i.value=rr?+rr.toFixed(2):'';
-}
-function djPctSet(f,v,src){
-  if(v!==''&&+v>100)v='100';if(+v<0)v='0';djPos[f]=v;djPctSync(f,src);
+function djFieldSet(f,v,typed){
+  if(v!==''&&+v<0)v='0';if(f!=='trades'&&+v>100)v='100';djPos[f]=v;
+  const box=document.querySelector(`#djPos .pc-f[data-f="${f}"]`);
+  if(box){const s=box.querySelector('select'),i=box.querySelector('input');
+    if(!typed)i.value=v;else{const o=[...s.options].find(o=>o.value===String(+v));if(o)s.value=o.value;else{if(s.options[0].value!=='')s.insertAdjacentHTML('afterbegin','<option value="">Custom</option>');s.value='';}}}
   djAcctSync();djPosOut();djRiskPh();
 }
-// Picking an R:R sets the target % = max loss % × R
-function djRrSet(v){
-  const l=+djPos.pct;if(!(+v>0)||!(l>0))return;
-  djPos.tgt=String(+Math.min(100,l*v).toFixed(2));djPctSync('tgt');djAcctSync();djPosOut();
+function djSumHTML(st){const a=st.a;return`<div><span>Risk / trade</span><b class="r">${a.risk?fmoney(a.risk):'—'}</b></div><div><span>Target / trade</span><b class="g">${a.target?fmoney(a.target):'—'}</b></div><div><span>R:R</span><b class="a">${a.rr?'1:'+(+a.rr.toFixed(2)):'—'}</b></div>`;}
+function djBalHint(st){const pnl=st.lv.pnl;return`${djPos.acct?'Starting balance':'Starting balance from premarket plan'}${st.lv.taken?` · ${st.lv.taken} trade${st.lv.taken>1?'s':''} ${pnl>=0?'+':'−'}${fmoney(Math.abs(pnl))} → <b>${fmoney(st.acct)}</b> now`:''} · max loss ${fmoney(st.a.maxLoss)}`;}
+function djAcctSync(){
+  const st=djState(selectedDay),bh=document.getElementById('djBalHint'),sm=document.getElementById('djSum');
+  if(bh)bh.innerHTML=djBalHint(st);if(sm)sm.innerHTML=djSumHTML(st);
 }
 function djRiskPh(){const st=djState(selectedDay),el=document.getElementById('djRiskVal');if(el)el.textContent=st.risk?fmoney(st.risk):'—';}
 function djSimOut(){const el=document.getElementById('djSim');if(el&&selectedDay)el.innerHTML=djSimHTML(selectedDay);}
