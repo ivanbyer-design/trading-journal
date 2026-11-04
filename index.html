@@ -736,6 +736,20 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-grid{align-items:start;}
 /* trading-calculator look */
 .dj-calc{background:linear-gradient(180deg,var(--surface),var(--surface2));}
+.dj-col{display:flex;flex-direction:column;gap:16px;min-width:0;}
+.tilt{position:relative;max-width:300px;margin:0 auto 4px;text-align:center;font-family:var(--font-d);}
+.tilt svg{width:100%;display:block;overflow:visible;}
+.tilt .tz{fill:none;stroke-width:14;opacity:.22;}.tilt .tz.r{stroke:var(--red);}.tilt .tz.g{stroke:var(--green);}
+.tilt .tf{fill:none;stroke-width:14;}
+.tilt .tk{stroke:var(--text3);stroke-width:1.5;}
+.tilt .tn{transition:transform .6s cubic-bezier(.3,1.4,.5,1);}
+.tilt .th{fill:var(--surface);stroke-width:3;}
+.tilt .tl0{font-size:9px;font-weight:700;fill:var(--text3);text-anchor:middle;dominant-baseline:middle;}
+.tilt-ends{display:flex;justify-content:space-between;margin-top:-20px;padding:0 2px;font-size:12px;font-weight:800;font-variant-numeric:tabular-nums;}
+.tilt-ends small{display:block;font-size:9px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.tilt-ends .r{color:var(--red);text-align:left;}.tilt-ends .g{color:var(--green);text-align:right;}
+.tilt-val{font-size:26px;font-weight:900;margin-top:4px;font-variant-numeric:tabular-nums;}
+.tilt-msg{font-size:12px;font-weight:600;color:var(--text2);margin-top:2px;}
 .pc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
 .pc-top .pm-h{flex-direction:column;align-items:flex-start;gap:1px;}.pc-top .pm-h small{font-size:11px;font-weight:600;color:var(--text3);}
 .pc-sym{width:100%;height:44px;margin-bottom:10px;font-family:var(--font-d);font-size:14px;font-weight:700;border-radius:9px;}
@@ -807,11 +821,6 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .tl-sum span{display:block;font-size:9.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);}
 .tl-sum b{font-size:14px;font-variant-numeric:tabular-nums;}.tl-sum i{font-style:normal;}
 .tl-big b{font-size:19px;}.tl-big.g{border-color:rgba(45,184,125,.4);background:rgba(45,184,125,.08);}.tl-big.r{border-color:rgba(240,87,90,.4);background:rgba(240,87,90,.08);}
-.tl-spark{width:100%;height:34px;display:block;background:var(--surface2);border:1px solid var(--border2);border-radius:9px;}
-.tl-spark .z{stroke:var(--text3);stroke-width:.4;stroke-dasharray:1.5 1.5;vector-effect:non-scaling-stroke;}
-.tl-spark polyline{fill:none;stroke-width:2;stroke-linejoin:round;vector-effect:non-scaling-stroke;}
-.tl-spark polyline.g{stroke:var(--green);}.tl-spark polyline.r{stroke:var(--red);}
-.tl-spark circle.g{fill:var(--green);}.tl-spark circle.r{fill:var(--red);}.tl-spark circle.b{fill:var(--accent);}
 .tl-row{border:1px solid var(--border2);border-left:4px solid;border-radius:9px;padding:7px 8px 7px 10px;background:var(--surface2);}
 .tl-row.w{border-left-color:var(--green);}.tl-row.l{border-left-color:var(--red);}.tl-row.b{border-left-color:var(--accent);}
 .tl-top{display:flex;align-items:center;gap:7px;}
@@ -2574,7 +2583,8 @@ function noteViewHTML(key){
     <div class="pm-card dj-wide" id="djOverview">${djOverviewHTML(key)}</div>
     <div class="pm-card dj-notes"><div class="pm-h">Notes</div><div class="bn-list" id="djNotes">${djNotesHTML(key)}</div></div>
     <div class="dj-grid">
-      <div class="pm-card" id="djRules">${djRulesHTML(key)}</div>
+      <div class="dj-col"><div class="pm-card" id="djRules">${djRulesHTML(key)}</div>
+        <div class="pm-card dj-prog" id="djProg">${djProgHTML(key)}</div></div>
       <div class="pm-card dj-calc" id="djPos">${djPosHTML(key)}</div>
     </div>
     ${pmReviewHTML(key)}
@@ -2785,12 +2795,11 @@ function djSimHTML(key){
   const st=djState(key),sim=noteCharts[key]?.sim||[],lv=st.lv;
   const ct=st.stop&&st.risk?Math.round(st.risk/(st.stop*st.pv)):0,risk=ct*st.stop*st.pv;
   const win=risk*2,pts=st.stop; // Win = +2R, Loss = −1R on the current size; anything else gets typed
-  return`${djGoalHTML(st.r,lv)}<div class="pc-sim"><div class="pc-sim-h"><span>Trade #${lv.taken+1} result</span>${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
+  return`${djGoalHTML(st.r,lv)}<div class="pc-sim"><div class="pc-sim-h"><span>Trade #${lv.taken+1} result</span></div>
     <div class="pc-sim-btns"><button class="w" onclick="djSimAdd(${+win.toFixed(2)})" ${win?'':'disabled'}>✓ Win 2R<small>+${fmoney(win)}${win?` · +${+(pts*2).toFixed(2)} pts`:''}</small></button>
       <button class="b" onclick="djSimAdd(0)">– BE<small>$0.00</small></button>
       <button class="l" onclick="djSimAdd(${-risk.toFixed(2)})" ${risk?'':'disabled'}>✕ Loss 1R<small>−${fmoney(risk)}${risk?` · −${+pts.toFixed(2)} pts`:''}</small></button></div>
     <div class="pc-sim-custom"><div class="pc-in"><em>$</em><input type="number" inputmode="decimal" step="any" placeholder="Exact result, e.g. 412.50 or -175" onkeydown="if(event.key==='Enter'&&this.value)djSimAdd(+this.value)"></div><button class="btn" onclick="const i=this.previousElementSibling.querySelector('input');if(i.value)djSimAdd(+i.value)">Add</button></div>
-    ${sim.length?djLogHTML(key,st,sim):''}
   </div>`;
 }
 // Trade log: every entry gets an R multiple (saved size, or rebuilt from the risk at that point in the day)
@@ -2801,27 +2810,43 @@ function djLogRows(key,st,sim){
     else{const s0=djState(key,run);ct=s0.stop&&s0.risk?Math.round(s0.risk/(s0.stop*s0.pv)):0;const oneR=ct*s0.stop*s0.pv;r=oneR?v/oneR:NaN;pts=ct?v/(ct*s0.pv):NaN;sym=s0.sym;}
     run+=v;return{i,v,r,pts,ct,sym,n:st.lv.taken-sim.length+i+1};});
 }
-function djLogHTML(key,st,sim){
-  const rows=djLogRows(key,st,sim),fx=n=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2).replace(/\.?0+$/,'');
+// Daily Progress card: tilt meter (needle leans toward max loss or target), day stats, and a card per logged trade
+function djTiltHTML(st,tot){
+  const L=st.r.maxLoss||0,T=st.r.target||0,pnl=st.lv.pnl,byR=!(L||T);
+  const lo=byR?-3:-L,hi=byR?3:(T||L),v=byR?tot:pnl,f=Math.max(0,Math.min(1,(v-lo)/(hi-lo||1))),fz=(0-lo)/(hi-lo||1);
+  const cx=100,cy=100,R=80,P=k=>[cx+R*Math.cos(Math.PI*(1-k)),cy-R*Math.sin(Math.PI*(1-k))].map(n=>n.toFixed(2)).join(' ');
+  const arc=(a,b)=>`M ${P(a)} A ${R} ${R} 0 0 1 ${P(b)}`,ang=-90+f*180;
+  const col=v>0?'var(--green)':v<0?'var(--red)':'var(--accent)',fm=n=>byR?(n>0?'+':'')+n+'R':(n<0?'−':'')+fmoney(Math.abs(n)).replace('.00','');
+  const msg=byR?'Set max loss & target in the premarket plan for a $ scale':T&&pnl>=T?'🎯 Target hit — protect the day':L&&pnl<=-L?'⛔ Max loss hit — done for today':pnl>0?`${Math.round(pnl/(T||1)*100)}% of target · ${fmoney(Math.max(0,T-pnl))} to go`:pnl<0?`${Math.round(-pnl/(L||1)*100)}% of max loss used · ${fmoney(L+pnl)} left`:'Flat — no P&L yet';
+  return`<div class="tilt"><svg viewBox="0 0 200 118" aria-label="Day tilt meter">
+      <path d="${arc(0,fz)}" class="tz r"/><path d="${arc(fz,1)}" class="tz g"/>
+      ${f!==fz?`<path d="${arc(Math.min(f,fz),Math.max(f,fz))}" class="tf" style="stroke:${col}"/>`:''}
+      ${[0,fz,1].map(k=>{const a=Math.PI*(1-k),x1=cx+(R-13)*Math.cos(a),y1=cy-(R-13)*Math.sin(a),x2=cx+(R+6)*Math.cos(a),y2=cy-(R+6)*Math.sin(a);return`<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" class="tk"/>`;}).join('')}
+      <g style="transform:rotate(${ang.toFixed(1)}deg);transform-origin:${cx}px ${cy}px" class="tn"><path d="M ${cx-4} ${cy} L ${cx} ${cy-R+6} L ${cx+4} ${cy} Z" style="fill:${col}"/></g>
+      <circle cx="${cx}" cy="${cy}" r="7" class="th" style="stroke:${col}"/>
+      <text x="${(cx+(R+14)*Math.cos(Math.PI*(1-fz))).toFixed(1)}" y="${(cy-(R+14)*Math.sin(Math.PI*(1-fz))).toFixed(1)}" class="tl0">$0</text>
+    </svg>
+    <div class="tilt-ends"><span class="r">${byR?'−3R':'−'+fmoney(L).replace('.00','')}<small>max loss</small></span><span class="g">${byR?'+3R':fmoney(T).replace('.00','')}<small>target</small></span></div>
+    <div class="tilt-val" style="color:${col}">${pnl>=0?'+':'−'}${fmoney(Math.abs(pnl))}</div><div class="tilt-msg">${msg}</div></div>`;
+}
+function djProgHTML(key){
+  const st=djState(key),sim=noteCharts[key]?.sim||[],rows=djLogRows(key,st,sim),fx=n=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2).replace(/\.?0+$/,'');
   const rs=rows.map(o=>isFinite(o.r)?o.r:0),tot=rs.reduce((a,b)=>a+b,0),net=rows.reduce((a,o)=>a+o.v,0);
   const w=rows.filter(o=>o.v>0).length,l=rows.filter(o=>o.v<0).length,b=rows.length-w-l;
   const lo=Math.min(-1,...rs),hi=Math.max(2,...rs),pos=x=>(x-lo)/(hi-lo)*100,z=pos(0);
-  // cumulative R sparkline
-  let c=0;const cum=[0,...rs.map(x=>c+=x)],cmin=Math.min(0,...cum),cmax=Math.max(0,...cum),span=cmax-cmin||1;
-  const X=k=>cum.length>1?k/(cum.length-1)*100:50,Y=v=>30-(v-cmin)/span*26;
-  const pts=cum.map((v,k)=>`${X(k).toFixed(1)},${Y(v).toFixed(1)}`).join(' ');
-  return`<div class="tl">
-    <div class="tl-sum"><div class="tl-big ${tot>0?'g':tot<0?'r':''}"><span>Day R</span><b>${fx(tot)}R</b></div>
+  return`<div class="pm-h" style="justify-content:space-between">Daily Progress${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
+    ${djTiltHTML(st,tot)}
+    <div class="tl"><div class="tl-sum"><div class="tl-big ${tot>0?'g':tot<0?'r':''}"><span>Day R</span><b>${fx(tot)}R</b></div>
       <div class="tl-stat"><span>W / L / BE</span><b><i class="g">${w}</i> / <i class="r">${l}</i> / ${b}</b></div>
       <div class="tl-stat"><span>Net</span><b class="${net>0?'g':net<0?'r':''}">${net>=0?'+':'−'}${fmoney(Math.abs(net))}</b></div></div>
-    <svg class="tl-spark" viewBox="0 0 100 32" preserveAspectRatio="none" aria-label="Cumulative R"><line x1="0" x2="100" y1="${Y(0).toFixed(1)}" y2="${Y(0).toFixed(1)}" class="z"/><polyline points="${pts}" class="${tot>=0?'g':'r'}"/>${cum.map((v,k)=>k?`<circle cx="${X(k).toFixed(1)}" cy="${Y(v).toFixed(1)}" r="1.6" class="${rs[k-1]>0?'g':rs[k-1]<0?'r':'b'}"/>`:'').join('')}</svg>
-    ${rows.map(o=>{const k=o.v>0?'w':o.v<0?'l':'b',ok=isFinite(o.r),a=Math.min(z,pos(ok?o.r:0)),wd=Math.abs(pos(ok?o.r:0)-z);
+    ${rows.length?rows.map(o=>{const k=o.v>0?'w':o.v<0?'l':'b',ok=isFinite(o.r),a=Math.min(z,pos(ok?o.r:0)),wd=Math.abs(pos(ok?o.r:0)-z);
       return`<div class="tl-row ${k}"><div class="tl-top"><b>Trade #${o.n}</b><em>${o.v>0?'Win':o.v<0?'Loss':'BE'}</em><strong>${ok?fx(o.r)+'R':'—'}</strong><button onclick="djSimDel(${o.i})" title="Remove">×</button></div>
         <div class="tl-bar"><i style="left:${a}%;width:${Math.max(wd,o.v?0:1.5)}%"></i><u style="left:${z}%"></u></div>
-        <div class="tl-sub">${isFinite(o.pts)?fx(o.pts)+' pts · ':''}${o.v>=0?'+':'−'}${fmoney(Math.abs(o.v))}${o.ct?` · ${o.ct} ${o.sym||''}`:''}</div></div>`;}).join('')}
-    <div class="pm-meter-note" style="margin-top:6px">Next size updated above · what-if only, not saved as trades</div></div>`;
+        <div class="tl-sub">${isFinite(o.pts)?fx(o.pts)+' pts · ':''}${o.v>=0?'+':'−'}${fmoney(Math.abs(o.v))}${o.ct?` · ${o.ct} ${o.sym||''}`:''}</div></div>`;}).join('')
+      :'<div class="pm-meter-note">No trades logged yet — log each result with Win / BE / Loss in the Risk Plan.</div>'}
+    ${rows.length?'<div class="pm-meter-note" style="margin-top:2px">What-if results · not saved as trades</div>':''}</div>`;
 }
-function djSimSet(fn){const d=djGet(selectedDay,true);d.sim=fn(d.sim||[]);if(!d.sim.length)delete d.sim;djSave();djRender('djPos',djPosHTML);djRender('djOverview',djOverviewHTML);}
+function djSimSet(fn){const d=djGet(selectedDay,true);d.sim=fn(d.sim||[]);if(!d.sim.length)delete d.sim;djSave();djRender('djPos',djPosHTML);djRender('djProg',djProgHTML);djRender('djOverview',djOverviewHTML);}
 function djSimAdd(v){if(!isFinite(v))return;
   // record the result in points and R using the size shown when it was logged
   const st=djState(selectedDay),ct=st.stop&&st.risk?Math.round(st.risk/(st.stop*st.pv)):0,oneR=ct*st.stop*st.pv,p=+(+v).toFixed(2);
@@ -2847,7 +2872,7 @@ function djPosOutHTML(key){
     ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(pace)} this trade${lv.taken?` · ${fmoney(lv.targetLeft)} left over ${lv.tradesLeft}`:''} · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
 function djRiskPh(){const st=djState(selectedDay),el=document.getElementById('djRiskVal');if(el)el.textContent=st.risk?fmoney(st.risk):'—';}
-function djSimOut(){const el=document.getElementById('djSim');if(el&&selectedDay)el.innerHTML=djSimHTML(selectedDay);}
+function djSimOut(){const el=document.getElementById('djSim');if(el&&selectedDay)el.innerHTML=djSimHTML(selectedDay);djRender('djProg',djProgHTML);}
 function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);djSimOut();}
 
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
