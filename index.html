@@ -685,17 +685,24 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-calc-c span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pm-calc-c b{font-size:17px;font-weight:800;color:var(--text);}
 .pm-meter{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font-d);}
-.pm-meter-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.pm-meter-top{margin-bottom:10px;}
 .pm-meter-top label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
-.pm-meter-in{display:flex;align-items:center;gap:6px;}
-.pm-meter-in input{width:90px;}
-.pm-meter-in span{font-size:12px;color:var(--text3);}
-.pm-meter-bar{position:relative;height:10px;border-radius:6px;background:var(--border);overflow:hidden;}
-.pm-meter-bar i{display:block;height:100%;border-radius:6px;transition:width .25s,background .25s;}
-.pm-meter-bar em{position:absolute;top:0;bottom:0;width:2px;background:var(--surface2);}
-.pm-meter-read{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-top:8px;}
-.pm-meter-read b{font-size:16px;font-weight:800;}
-.pm-meter-read span,.pm-meter-note{font-size:11px;color:var(--text3);}
+.pm-meter-track{position:relative;display:flex;gap:3px;margin-top:22px;}
+.pm-seg-m{flex:1;min-width:0;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:space-between;padding:0 8px;color:#fff;font-size:11px;}
+.pm-seg-m b{font-weight:800;opacity:.9;}
+.pm-seg-m span{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.pm-meter-mark{position:absolute;top:-6px;bottom:-4px;width:2px;background:var(--text);border-radius:2px;transform:translateX(-1px);}
+.pm-meter-mark.over{background:var(--red);}
+.pm-meter-mark span{position:absolute;bottom:100%;transform:translateX(-50%);white-space:nowrap;font-size:10.5px;font-weight:700;color:var(--text);margin-bottom:2px;}
+.pm-meter-mark[style*="left:100%"] span{transform:translateX(-100%);}
+.pm-meter-mark[style*="left:0"] span{transform:none;}
+.pm-meter-mark.over span{color:var(--red);}
+.pm-meter-need{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+.pm-meter-need div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;}
+.pm-meter-need div span{font-size:12px;color:var(--text2);font-weight:600;}
+.pm-meter-need b{font-size:18px;font-weight:800;}
+.pm-meter-need i{display:block;font-style:normal;font-size:10.5px;color:var(--text3);margin-top:2px;}
+.pm-meter-note{font-size:11px;color:var(--text3);}
 .pm-calc-x{font-size:12px;font-weight:600;color:var(--text3);}
 .pm-calc-c i{font-style:normal;font-size:10.5px;color:var(--text3);overflow-wrap:anywhere;}
 .pm-check{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text);cursor:pointer;}
@@ -2437,11 +2444,7 @@ function pmRiskHTML(p){
       <div class="fg"><label>Stop size (pts)</label>${num('stopPts','e.g. 6')}</div>
     </div>
     <div class="pm-calc" id="pmRiskOut">${pmRiskOutHTML(p)}</div>
-    <div class="pm-meter">
-      <div class="pm-meter-top"><label>Trade size meter</label>
-        <div class="pm-meter-in"><input type="number" step="any" min="0" value="${esc(p.meterPts??'')}" placeholder="e.g. 20" oninput="pmSet('meterPts',this.value);pmMeterRender()"><span>pts</span></div></div>
-      <div id="pmMeterOut">${pmMeterHTML(p)}</div>
-    </div>`;
+    <div class="pm-meter" id="pmMeterOut">${pmMeterHTML(p)}</div>`;
 }
 function pmRiskNums(p){
   const acct=+p.acctSize||+settings.startingBalance||50000,lp=+p.lossPct||0,tp=+p.targetPct||0,n=Math.max(1,Math.floor(+p.maxTrades||1));
@@ -2466,16 +2469,25 @@ function pmCtrSub(p,r){
   const fit=Math.floor(r.perTrade/(next*r.pv)*4)/4; // widest stop (0.25 steps) that fits one more contract
   return`${sym} · ${r.stop} pts × $${r.pv}/pt = ${fmoney(each)} each<br>${next} would risk ${fmoney(next*each)}${r.contracts===0?' · stop too wide':''}${fit>0?` · fits with a ≤${fit}-pt stop`:''}`;
 }
-// Each trade slot = 2 × stop size in points; shows how many of today's max trades a move of N points uses
+// Trade size meter: one segment per max trade, each worth 2 × stop size in points.
+// Also shows the points per trade needed to hit the daily target at the calculated contract size.
+const METER_COLS=['#6c5dd3','#3898ec','#14b8a6','#2db87d','#a3c93a','#f5a524','#f07a3c','#d65caa'];
 function pmMeterHTML(p){
-  const stop=+p.stopPts||0,pts=+p.meterPts||0,maxT=Math.max(1,Math.floor(+p.maxTrades||1)),slot=stop*2;
-  if(!stop)return'<div class="pm-meter-note">Enter a stop size above to use the meter</div>';
-  const used=pts/slot,pct=Math.min(100,used/maxT*100),over=used>maxT;
-  const col=over?'var(--red)':used>=maxT*.67?'#f5a524':'var(--green)';
-  const ticks=Array.from({length:maxT-1},(_,i)=>`<em style="left:${(i+1)/maxT*100}%"></em>`).join('');
-  return`<div class="pm-meter-bar"><i style="width:${pct}%;background:${col}"></i>${ticks}</div>
-    <div class="pm-meter-read"><b style="color:${pts?col:'var(--text3)'}">${pts?`${+used.toFixed(2)} trade${used===1?'':'s'}`:'—'}</b>
-      <span>${pts?`${pts} pts ÷ ${slot} pts per trade (2 × ${stop}-pt stop) · ${over?`${+(used-maxT).toFixed(2)} over`:`${+(maxT-used).toFixed(2)} left`} of ${maxT}`:`1 trade = ${slot} pts (2 × ${stop}-pt stop) · ${maxT} trades = ${slot*maxT} pts`}</span></div>`;
+  const head='<div class="pm-meter-top"><label>Trade size meter</label></div>';
+  const stop=+p.stopPts||0;
+  if(!stop)return head+'<div class="pm-meter-note">Enter a stop size above. Each trade counts as 2 × the stop in points.</div>';
+  const r=pmRiskNums(p),maxT=r.n,slot=stop*2,total=slot*maxT;
+  const segs=Array.from({length:maxT},(_,i)=>`<div class="pm-seg-m" style="background:${METER_COLS[i%METER_COLS.length]}"><b>${i+1}</b><span>${+(slot*(i+1)).toFixed(2)} pts</span></div>`).join('');
+  const ctr=r.contracts>0?r.contracts:1,perPt=ctr*r.pv;
+  let need='',mark='';
+  if(r.target){
+    const tot=r.target/perPt,per=tot/maxT,x=Math.min(100,tot/total*100),hit=per<=slot;
+    mark=`<div class="pm-meter-mark${tot>total?' over':''}" style="left:${x}%" title="Target: ${+tot.toFixed(2)} pts"><span>🎯 ${+tot.toFixed(2)} pts</span></div>`;
+    need=`<div class="pm-meter-need"><div><span>Points per trade to hit target</span><b style="color:${hit?'var(--green)':'#f5a524'}">${+per.toFixed(2)} pts</b></div>
+      <i>${fmoney(r.target)} ÷ (${ctr} ${p.riskSym||'ES'} contract${ctr>1?'s':''} × $${r.pv}/pt) = ${+tot.toFixed(2)} pts ÷ ${maxT} trade${maxT>1?'s':''}${r.contracts>0?'':' · using 1 contract'} · ${hit?`within your ${slot}-pt trade size`:`${+(per/slot).toFixed(2)}× your ${slot}-pt trade size`}</i></div>`;
+  }else need='<div class="pm-meter-note">Pick a daily target % to see the points you need per trade.</div>';
+  return`${head}<div class="pm-meter-track">${segs}${mark}</div>
+    <div class="pm-meter-note" style="margin-top:6px">1 trade = ${slot} pts (2 × ${stop}-pt stop) · ${maxT} trade${maxT>1?'s':''} = ${total} pts</div>${need}`;
 }
 function pmMeterRender(){const el=document.getElementById('pmMeterOut');if(el)el.innerHTML=pmMeterHTML(pmGet());}
 function pmRiskRender(){
