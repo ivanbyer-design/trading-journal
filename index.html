@@ -706,7 +706,11 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-wide{margin-top:16px;}
 .dj-wide .dj-kvs{grid-template-columns:repeat(6,1fr);}
 .dj-notes{margin-top:16px;}
-.dj-notes .note-area{min-height:140px;}
+.bn-list{display:flex;flex-direction:column;gap:2px;min-height:120px;}
+.bn-row{display:flex;align-items:flex-start;gap:10px;}
+.bn-row i{width:8px;height:8px;background:var(--accent);flex-shrink:0;margin-top:13px;border-radius:1px;}
+.bn-row textarea{flex:1;border:none;background:transparent;padding:6px 0;font-family:var(--font-d);font-size:14px;line-height:1.55;resize:none;field-sizing:content;min-height:0;overflow:hidden;}
+.bn-row textarea:focus{background:var(--surface2);border-radius:6px;padding:6px 8px;margin-left:-8px;}
 .dj-grid{align-items:start;}
 /* trading-calculator look */
 .dj-calc{background:linear-gradient(180deg,var(--surface),var(--surface2));}
@@ -2467,10 +2471,9 @@ function noteViewHTML(key){
     <div class="pm-title">Daily journal</div>
     <div class="pm-sub">How did the session go? What did you do well, and what will you change tomorrow?</div>
     <div class="pm-card dj-wide" id="djOverview">${djOverviewHTML(key)}</div>
-    <div class="pm-card dj-notes"><div class="pm-h">Notes</div>
-      <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea></div>
+    <div class="pm-card dj-notes"><div class="pm-h">Notes</div><div class="bn-list" id="djNotes">${djNotesHTML(key)}</div></div>
     <div class="dj-grid">
-      <div class="pm-card" id="djStrat">${djStratHTML(key)}</div>
+      <div class="pm-card" id="djRules">${djRulesHTML(key)}</div>
       <div class="pm-card dj-calc" id="djPos">${djPosHTML(key)}</div>
     </div>
     ${pmReviewHTML(key)}
@@ -2516,6 +2519,58 @@ function djStratHTML(key){
       <button class="dj-reset" onclick="djReset()" ${canReset?'':'disabled'} title="Untick every item for the next trade">↻ Reset</button></div>${sel}${body}`;
 }
 function djSave(){saveDayData();}
+/* Notes as square-bullet lines (stored as newline-separated text in dayNotes) */
+function djNoteLines(key){const t=dayNotes[key]||'';return t?t.split('\n'):[''];}
+function djNotesHTML(key){
+  return djNoteLines(key).map((l,i)=>`<div class="bn-row"><i></i><textarea rows="1" data-i="${i}" placeholder="${i?'':'Write about today\'s session…'}" oninput="djNoteEdit(this)" onkeydown="djNoteKey(event,this)">${esc(l)}</textarea></div>`).join('');
+}
+function djNoteSave(lines){queueDaySave(()=>{const t=lines.join('\n');if(t.trim())dayNotes[selectedDay]=t;else delete dayNotes[selectedDay];});}
+function djNoteEdit(el){const lines=djNoteLines(selectedDay);lines[+el.dataset.i]=el.value.replace(/\n/g,' ');djNoteSave(lines);}
+function djNoteFocus(i,atEnd){const ta=document.querySelectorAll('#djNotes textarea')[i];if(ta){ta.focus();const n=atEnd?ta.value.length:0;ta.setSelectionRange(n,n);}}
+function djNoteKey(e,el){
+  const i=+el.dataset.i,lines=djNoteLines(selectedDay);
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const a=el.value.slice(0,el.selectionStart),b=el.value.slice(el.selectionEnd);lines[i]=a;lines.splice(i+1,0,b);djNoteSave(lines);djRender('djNotes',djNotesHTML);djNoteFocus(i+1,false);}
+  else if(e.key==='Backspace'&&el.selectionStart===0&&el.selectionEnd===0&&i>0){e.preventDefault();const prev=lines[i-1].length;lines[i-1]+=lines[i];lines.splice(i,1);djNoteSave(lines);djRender('djNotes',djNotesHTML);const ta=document.querySelectorAll('#djNotes textarea')[i-1];if(ta){ta.focus();ta.setSelectionRange(prev,prev);}}
+  else if(e.key==='ArrowUp'&&el.selectionStart===0&&i>0){e.preventDefault();djNoteFocus(i-1,true);}
+  else if(e.key==='ArrowDown'&&el.selectionEnd===el.value.length&&i<lines.length-1){e.preventDefault();djNoteFocus(i+1,false);}
+}
+/* My Trading Rules: one list for every day (settings.tradingRules); ticks saved per day */
+let djRulesEdit=false;
+function rulesGet(){
+  if(!Array.isArray(settings.tradingRules)){
+    const used=Object.values(noteCharts).map(d=>d?.jStrat).filter(Boolean);
+    const src=strategies.find(x=>/trapped delta/i.test(x.name||''))||strategies.find(x=>used.includes(x.id))||strategies.find(x=>(x.checklist||[]).length);
+    settings.tradingRules=(src?.checklist||[]).filter((x,i)=>i!==1&&i!==2&&(x.text||'').trim()).map(x=>({id:stUid(),text:x.text}));
+    rulesSave();
+  }
+  return settings.tradingRules;
+}
+function rulesSave(){try{localStorage.setItem('ef_settings',JSON.stringify(settings));}catch(e){}}
+function djRulesHTML(key){
+  const rules=rulesGet(),d=djGet(key),on=new Set(d.rChecks||[]);
+  const head=`<div class="pm-h" style="justify-content:space-between">My Trading Rules<span style="display:flex;gap:6px">
+      ${djRulesEdit?'':`<button class="dj-reset" onclick="djRulesReset()" ${(d.rChecks||[]).length?'':'disabled'} title="Untick every rule">↻ Reset</button>`}
+      <button class="dj-reset" onclick="djRulesEdit=!djRulesEdit;djRender('djRules',djRulesHTML)">${djRulesEdit?'✓ Done':'✎ Edit'}</button></span></div>`;
+  if(djRulesEdit)return head+`<div class="st-ck-list">${rules.map((x,i)=>`<div class="st-ck-row"><span class="st-ck-n">${i+1}</span>
+      <input value="${esc(x.text||'')}" placeholder="e.g. Only trade at a marked level" oninput="rulesEdit('${x.id}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();rulesAdd()}">
+      <button title="Move up" onclick="rulesMove('${x.id}',-1)"${i?'':' disabled'}>▲</button><button title="Move down" onclick="rulesMove('${x.id}',1)"${i<rules.length-1?'':' disabled'}>▼</button><button title="Remove" onclick="rulesDel('${x.id}')">✕</button></div>`).join('')}</div>
+    <button class="btn" style="margin-top:8px" onclick="rulesAdd()">+ Add rule</button>`;
+  const items=rules.filter(x=>(x.text||'').trim());
+  if(!items.length)return head+'<div class="pm-meter-note">No rules yet. Tap ✎ Edit to write your trading rules.</div>';
+  const n=items.filter(x=>on.has(x.id)).length,pct=n/items.length,col=pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)';
+  const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  return head+`<div class="tp-ck${pct===1?' all':''}">
+    <div class="tp-ck-head"><span>Followed today</span><b style="color:${col}">${n}/${items.length}</b></div>
+    <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
+    <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
+}
+function djRuleCheck(id){const d=djGet(selectedDay,true),set=new Set(d.rChecks||[]);set.has(id)?set.delete(id):set.add(id);d.rChecks=[...set];djSave();djRender('djRules',djRulesHTML);}
+function djRulesReset(){const d=djGet(selectedDay,true);delete d.rChecks;djSave();djRender('djRules',djRulesHTML);}
+function rulesRender(focusLast){djRender('djRules',djRulesHTML);if(focusLast){const ins=document.querySelectorAll('#djRules .st-ck-row input');ins[ins.length-1]?.focus();}}
+function rulesAdd(){rulesGet().push({id:stUid(),text:''});rulesSave();rulesRender(true);}
+function rulesEdit(id,v){const x=rulesGet().find(x=>x.id===id);if(x){x.text=v;rulesSave();}}
+function rulesDel(id){settings.tradingRules=rulesGet().filter(x=>x.id!==id);rulesSave();rulesRender();}
+function rulesMove(id,dd){const a=rulesGet(),i=a.findIndex(x=>x.id===id),j=i+dd;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];rulesSave();rulesRender();}
 function djPickStrat(id){const d=djGet(selectedDay,true);if(id)d.jStrat=id;else delete d.jStrat;delete d.jChecks;djSave();djRender('djStrat',djStratHTML);}
 function djCheck(iid){const d=djGet(selectedDay,true),set=new Set(d.jChecks||[]);set.has(iid)?set.delete(iid):set.add(iid);d.jChecks=[...set];djSave();djRender('djStrat',djStratHTML);}
 function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djRender('djStrat',djStratHTML);toast('Checklist reset for the next trade','success');}
