@@ -772,6 +772,14 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-sum .r{color:var(--red);}.pc-sum .g{color:var(--green);}.pc-sum .a{color:var(--accent);}
 .dj-next{width:100%;margin-top:10px;height:40px;border-radius:9px;border:1px dashed var(--border2);background:transparent;color:var(--text2);font-family:var(--font-d);font-weight:700;font-size:13px;cursor:pointer;}
 .dj-next:disabled{opacity:.4;cursor:default;}
+.dj-grade{display:flex;align-items:center;gap:12px;margin-top:10px;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,var(--gc) 45%,transparent);background:color-mix(in srgb,var(--gc) 9%,transparent);font-family:var(--font-d);}
+.dj-grade-l{flex:none;width:46px;height:46px;border-radius:50%;display:grid;place-items:center;font-size:20px;font-weight:900;color:#fff;background:var(--gc);box-shadow:0 0 0 4px color-mix(in srgb,var(--gc) 22%,transparent);}
+.dj-grade-t{flex:1;min-width:0;}
+.dj-grade-t span{display:block;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
+.dj-grade-t b{display:block;font-size:13px;color:var(--text);margin:1px 0 5px;}
+.dj-grade-steps{display:flex;gap:4px;}.dj-grade-steps i{flex:1;height:5px;border-radius:3px;background:var(--border2);}.dj-grade-steps i.on{background:var(--gc);}
+.dj-grade-n{flex:none;text-align:right;font-size:18px;font-weight:800;color:var(--gc);font-variant-numeric:tabular-nums;line-height:1.1;}
+.dj-grade-n small{display:block;font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
 .dj-next.go{border:none;background:var(--green);color:#fff;}
 .dj-runs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
 .dj-runs span{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 4px 3px 8px;border-radius:6px;}
@@ -2715,8 +2723,17 @@ function djRulesHTML(key){
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div>
     <button class="dj-next${pct===1?' go':''}" onclick="djRulesNext()" ${n?'':'disabled'}>${pct===1?'✓ Took the trade · next trade':'Log trade & reset'} →</button></div>
-    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules">#${i+1} ${r.n}/${r.t}<button onclick="djRunDel(${i})" title="Remove">×</button></span>`).join('')}</div>`:''}`;
+    ${djGradeHTML(n,items.length)}
+    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules · grade ${djGrade(r.n,r.t).g}">Trade #${i+1} · ${djGrade(r.n,r.t).g} · ${r.n}/${r.t}<button onclick="djRunDel(${i})" title="Remove">×</button></span>`).join('')}</div>`:''}`;
 }
+// Trade grade from how many rules are ticked: all = A+, then A/B/C/D by share, none = F
+function djGrade(n,t){const p=t?n/t:0,g=!n?'F':ckGrade(p,n).replace('✓ ','');
+  const col=p===1?'var(--green)':p>=.6?'#3fa7e0':p>=.4?'#f5a524':'var(--red)';
+  const msg=p===1?'Every rule followed':!n?'No rules checked yet':p>=.6?'Most rules met':p>=.4?'Half the rules met':'Few rules met';
+  return{g,col,msg,p};}
+function djGradeHTML(n,t){const G=djGrade(n,t);
+  return`<div class="dj-grade" style="--gc:${G.col}"><div class="dj-grade-l">${G.g}</div><div class="dj-grade-t"><span>Trade grade</span><b>${G.msg}</b>
+    <div class="dj-grade-steps">${Array.from({length:t},(_,i)=>`<i class="${i<n?'on':''}"></i>`).join('')}</div></div><div class="dj-grade-n">${n}/${t}<small>rules</small></div></div>`;}
 // Finish one trade's run-through: record how many rules were followed, then untick for the next trade
 function djRulesNext(){
   const d=djGet(selectedDay,true),items=rulesGet().filter(x=>(x.text||'').trim()),on=new Set(d.rChecks||[]);
