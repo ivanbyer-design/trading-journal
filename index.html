@@ -2787,7 +2787,8 @@ function pmMeterHTML(p){
 function pmMeterRender(){const el=document.getElementById('pmMeterOut');if(el)el.innerHTML=pmMeterHTML(pmGet());}
 function pmRiskRender(){
   const p=pmGet(),r=pmRiskNums(p);
-  if(p.lossPct)p.maxLoss=String(+r.maxLoss.toFixed(2));if(p.targetPct)p.target=String(+r.target.toFixed(2));
+  // Old $ fields only count for days planned before the % dropdowns; once a % is picked or cleared they go away
+  if(p.lossPct!==undefined)delete p.maxLoss;if(p.targetPct!==undefined)delete p.target;
   const el=document.getElementById('pmRiskOut');if(el)el.innerHTML=pmRiskOutHTML(p);pmMeterRender();
 }
 function planViewHTML(key){
