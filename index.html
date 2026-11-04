@@ -764,7 +764,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-next:disabled{opacity:.4;cursor:default;}
 .dj-next.go{border:none;background:var(--green);color:#fff;}
 .dj-runs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
-.dj-runs span{font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.dj-runs span{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 4px 3px 8px;border-radius:6px;}
+.dj-runs button{border:none;background:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 3px;opacity:.7;}
+.dj-runs button:hover{opacity:1;}
 .dj-runs .ok{color:var(--green);background:rgba(45,184,125,.12);}
 .dj-runs .miss{color:#f5a524;background:rgba(245,165,36,.12);}
 .gm{margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
@@ -2677,7 +2679,7 @@ function djRulesHTML(key){
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div>
     <button class="dj-next${pct===1?' go':''}" onclick="djRulesNext()" ${n?'':'disabled'}>${pct===1?'✓ Took the trade · next trade':'Log trade & reset'} →</button></div>
-    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules">#${i+1} ${r.n}/${r.t}</span>`).join('')}</div>`:''}`;
+    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules">#${i+1} ${r.n}/${r.t}<button onclick="djRunDel(${i})" title="Remove">×</button></span>`).join('')}</div>`:''}`;
 }
 // Finish one trade's run-through: record how many rules were followed, then untick for the next trade
 function djRulesNext(){
@@ -2685,6 +2687,7 @@ function djRulesNext(){
   d.rRuns=[...(d.rRuns||[]),{n:items.filter(x=>on.has(x.id)).length,t:items.length,time:new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}];
   delete d.rChecks;djSave();djRender('djRules',djRulesHTML);toast(`Trade #${d.rRuns.length} logged · rules reset for the next one`,'success');
 }
+function djRunDel(i){const d=djGet(selectedDay,true);d.rRuns=(d.rRuns||[]).filter((_,j)=>j!==i);if(!d.rRuns.length)delete d.rRuns;djSave();djRender('djRules',djRulesHTML);}
 function djRuleCheck(id){const d=djGet(selectedDay,true),set=new Set(d.rChecks||[]);set.has(id)?set.delete(id):set.add(id);d.rChecks=[...set];djSave();djRender('djRules',djRulesHTML);}
 function djRulesReset(){const d=djGet(selectedDay,true);delete d.rChecks;djSave();djRender('djRules',djRulesHTML);}
 function rulesRender(focusLast){djRender('djRules',djRulesHTML);if(focusLast){const ins=document.querySelectorAll('#djRules .st-ck-row input');ins[ins.length-1]?.focus();}}
