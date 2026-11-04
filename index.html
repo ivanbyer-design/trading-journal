@@ -660,6 +660,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-rate span{font-size:13px;color:var(--text2);width:92px;}
 .pm-rate .pm-seg{flex:1;}
 .pm-rate .pm-seg button{min-width:0;height:32px;}
+.pm-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;}
+.pm-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px;}
+.pm-3col .pm-rate span{width:auto;min-width:42px;}
 .pm-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-bottom:10px;}
 .pm-levels label,.pm-risk label,.pm .fg>label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--text2);}
 .pm-risk{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
@@ -680,6 +683,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .dm-top{grid-template-columns:1fr;}
   .dm-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
   .pm-grid{grid-template-columns:1fr;}
+  .pm-2col,.pm-3col{grid-template-columns:1fr;}
   .pm-risk{grid-template-columns:1fr 1fr 1fr;}
   .dm-hbtn{height:34px;font-size:13px;padding:0 11px;}
 }
@@ -2349,6 +2353,16 @@ function noteViewHTML(key){
     <div class="pm-sub">How did the session go? What did you do well, and what will you change tomorrow?</div>
     ${mkBlockHTML('note')}
     <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea>
+    ${pmReviewHTML(key)}
+  </div>`;
+}
+// "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
+function pmReviewHTML(key){
+  const p=premarket[key]||{};
+  return`<div class="pm-card" style="margin-top:16px">
+    <div class="pm-h">After the session: did I follow my plan?</div>
+    <div class="pm-seg">${[['yes','Yes','bull'],['partly','Partly','neu'],['no','No','bear']].map(([v,l,c])=>`<button type="button" data-v="${v}" class="${c}${p.review===v?' on':''}" onclick="pmPick('review','${v}',this)">${l}</button>`).join('')}</div>
+    <div style="margin-top:10px"><textarea rows="2" placeholder="What pulled me off the plan, or what helped me stick to it?" oninput="pmSet('reviewWhy',this.value)">${esc(p.reviewWhy||'')}</textarea></div>
   </div>`;
 }
 
@@ -2388,23 +2402,24 @@ function planViewHTML(key){
     ${mkBlockHTML('pm')}
     <div class="pm-grid">
       <div class="pm-card full">
-        <div class="pm-h"><span class="n">1</span>Market condition</div>
-        ${seg('condition',[['balance','Balanced','neu'],['imbUp','Imbalanced up','bull'],['imbDown','Imbalanced down','bear']])}
-        <div style="margin-top:10px">${ta('conditionWhy','Why? e.g. Opened inside yesterday\'s value, rotating between VAH and VAL',2)}</div>
+        <div class="pm-h"><span class="n">1</span>Mindset check</div>
+        <div class="pm-3col">
+          <div class="pm-rate" style="margin-top:0"><span>Sleep</span>${seg('sleep',rate)}</div>
+          <div class="pm-rate" style="margin-top:0"><span>Focus</span>${seg('focus',rate)}</div>
+          <div class="pm-rate" style="margin-top:0"><span>Mood</span>${seg('mood',rate)}</div>
+        </div>
+      </div>
+      <div class="pm-card full">
+        <div class="pm-h"><span class="n">2</span>Market condition &amp; bias</div>
+        <div class="pm-2col">
+          <div class="fg"><label>Condition</label>${seg('condition',[['balance','Balanced','neu'],['imbUp','Imbalanced up','bull'],['imbDown','Imbalanced down','bear']])}
+            <div style="margin-top:10px">${ta('conditionWhy','Why? e.g. Opened inside yesterday\'s value, rotating between VAH and VAL',2)}</div></div>
+          <div class="fg"><label>Bias</label>${seg('bias',[['bull','Bullish','bull'],['neutral','Neutral','neu'],['bear','Bearish','bear']])}
+            <div style="margin-top:10px">${ta('biasWhy','Why? e.g. Gapped up above yesterday\'s value area, holding overnight high',2)}</div></div>
+        </div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">2</span>Market bias</div>
-        ${seg('bias',[['bull','Bullish','bull'],['neutral','Neutral','neu'],['bear','Bearish','bear']])}
-        <div style="margin-top:10px">${ta('biasWhy','Why? e.g. Gapped up above yesterday\'s value area, holding overnight high',2)}</div>
-      </div>
-      <div class="pm-card">
-        <div class="pm-h"><span class="n">3</span>Mindset check</div>
-        <div class="pm-rate" style="margin-top:0"><span>Sleep</span>${seg('sleep',rate)}</div>
-        <div class="pm-rate"><span>Focus</span>${seg('focus',rate)}</div>
-        <div class="pm-rate"><span>Mood</span>${seg('mood',rate)}</div>
-      </div>
-      <div class="pm-card">
-        <div class="pm-h"><span class="n">4</span>Key levels</div>
+        <div class="pm-h"><span class="n">3</span>Key levels</div>
         <div class="pm-levels" style="grid-template-columns:repeat(3,1fr)">
           <div class="fg"><label>Prev. day VAH</label>${inp('vah','e.g. 21440.00')}</div>
           <div class="fg"><label>Prev. day POC</label>${inp('poc','e.g. 21385.50')}</div>
@@ -2413,20 +2428,20 @@ function planViewHTML(key){
         ${ta('levels','Other levels: VWAP, prev. day high/low, overnight high/low, gaps…',2)}
       </div>
       <div class="pm-card nw-wrap">
-        <div class="pm-h"><span class="n">5</span>News &amp; events</div>
+        <div class="pm-h"><span class="n">4</span>News &amp; events</div>
         <div class="pm-hint">Times to stay flat or size down</div>
         <div class="nw-list" data-day="${key}"></div>
         ${ta('news','e.g. 8:30 CPI, 10:00 ISM, 2:00 FOMC minutes',4)}
       </div>
       <div class="pm-card full">
-        <div class="pm-h"><span class="n">6</span>Game plan</div>
+        <div class="pm-h"><span class="n">5</span>Game plan</div>
         <div class="pm-levels" style="grid-template-columns:1fr 1fr;gap:12px">
           <div class="fg"><label>A+ setup I'm waiting for</label>${ta('setup','e.g. Opening range break and retest of ONH, with volume',3)}</div>
           <div class="fg"><label>If / then scenarios</label>${ta('scenarios','If we accept back inside value → target the POC, then VAL.\nIf we hold above VAH → look for longs on pullbacks to it.',3)}</div>
         </div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">7</span>Risk rules for today</div>
+        <div class="pm-h"><span class="n">6</span>Risk rules for today</div>
         <div class="pm-risk">
           <div class="fg"><label>Max loss ($)</label>${inp('maxLoss',String(settings.dailyLossLimit||''),'number')}</div>
           <div class="fg"><label>Max trades</label>${inp('maxTrades','e.g. 3','number')}</div>
@@ -2435,15 +2450,10 @@ function planViewHTML(key){
         <div style="margin-top:10px">${ta('stopRule','When do I stop for the day? e.g. 2 losses in a row',2)}</div>
       </div>
       <div class="pm-card">
-        <div class="pm-h"><span class="n">8</span>Pre-session checklist</div>
+        <div class="pm-h"><span class="n">7</span>Pre-session checklist</div>
         <div class="pm-prog"><i id="pmProg" style="width:${done/PM_CHECKLIST.length*100}%"></i></div>
         <div class="pm-hint" id="pmProgTxt" style="margin:0 0 4px">${done} of ${PM_CHECKLIST.length} done</div>
         ${PM_CHECKLIST.map((c,i)=>`<label class="pm-check"><input type="checkbox"${(p.checklist||[]).includes(i)?' checked':''} onchange="pmCheck(${i},this.checked)">${c}</label>`).join('')}
-      </div>
-      <div class="pm-card full">
-        <div class="pm-h"><span class="n">9</span>After the session: did I follow my plan?</div>
-        ${seg('review',[['yes','Yes','bull'],['partly','Partly','neu'],['no','No','bear']])}
-        <div style="margin-top:10px">${ta('reviewWhy','What pulled me off the plan, or what helped me stick to it?',2)}</div>
       </div>
     </div>
   </div>`;
