@@ -3705,9 +3705,19 @@ function drawTradeDiagram(t){
   const levels=(hasStop?hl(stopY,'#f0575a',`STOP ${tradeStopPx(t).toFixed(2)}`,'2,3'):'')+(hasTg?hl(tgY,'#2db87d',`TARGET ${tradeTargetPx(t).toFixed(2)}`,'2,3'):'')
     +`<line x1="${x0}" y1="${entryY}" x2="${x1}" y2="${entryY}" stroke="${textColor}" stroke-width="1" stroke-dasharray="3,3"/>`;
   const gid='tdg'+String(t.id).replace(/\W/g,'');
+  // Zig-zag path entry → exit (illustrative; seeded by trade id so it's stable). Swings stay inside stop/target.
+  let seed=[...String(t.id)].reduce((a,c)=>(a*31+c.charCodeAt(0))>>>0,7);const rnd=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;
+  const N=9,amp=Math.max(Math.abs(exitY-entryY)*.45,10);
+  const pad2=hasStop&&hasTg?0:amp;
+  const bandA=Math.max(10,Math.min(hasStop?stopY:Infinity,hasTg?tgY:Infinity,entryY,exitY)-pad2),bandB=Math.min(H-16,Math.max(hasStop?stopY:-Infinity,hasTg?tgY:-Infinity,entryY,exitY)+pad2);
+  const zz=[[x1,entryY]];
+  for(let i=1;i<N;i++){const f=i/N,base=entryY+(exitY-entryY)*f,sw=(i%2?1:-1)*amp*(.45+rnd()*.65)*(1-f*.35);
+    zz.push([x1+(x2-x1)*f,Math.min(bandB-2,Math.max(bandA+2,base+sw))]);}
+  zz.push([x2,exitY]);
+  const zzD=zz.map(([x,y],i)=>`${i?'L':'M'}${x.toFixed(1)},${y.toFixed(1)}`).join(' ');
   const area=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${strokeColor}" stop-opacity=".35"/><stop offset="1" stop-color="${strokeColor}" stop-opacity="0"/></linearGradient></defs>
-    <path d="M${x1},${entryY} L${x2},${exitY} L${x2},${H-14} L${x1},${H-14} Z" fill="url(#${gid})" opacity=".55"/>`;
-  const line=`<line x1="${x1}" y1="${entryY}" x2="${x2}" y2="${exitY}" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="${zzD} L${x2},${H-14} L${x1},${H-14} Z" fill="url(#${gid})" opacity=".55"/>`;
+  const line=`<path d="${zzD}" fill="none" stroke="${strokeColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
     <line x1="${x2}" y1="${exitY}" x2="${W}" y2="${exitY}" stroke="${strokeColor}" stroke-width="1" stroke-dasharray="3,3" opacity=".6"/>`;
   const dot=(x,y,fill)=>`<circle cx="${x}" cy="${y}" r="4.5" style="fill:${fill}" stroke="${strokeColor}" stroke-width="2"/>`;
   const tag=(x,y,lbl,anchor)=>`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="9" fill="${strokeColor}" font-family="Inter,sans-serif" font-weight="700">${lbl}</text>`;
