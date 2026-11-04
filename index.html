@@ -2834,7 +2834,7 @@ function djProgHTML(key){
   const rs=rows.map(o=>isFinite(o.r)?o.r:0),tot=rs.reduce((a,b)=>a+b,0),net=rows.reduce((a,o)=>a+o.v,0);
   const w=rows.filter(o=>o.v>0).length,l=rows.filter(o=>o.v<0).length,b=rows.length-w-l;
   const lo=Math.min(-1,...rs),hi=Math.max(2,...rs),pos=x=>(x-lo)/(hi-lo)*100,z=pos(0);
-  return`<div class="pm-h" style="justify-content:space-between">Daily Progress${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
+  return`<div class="pm-h" style="justify-content:space-between">Tilt Meter${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
     ${djTiltHTML(st,tot)}
     <div class="tl"><div class="tl-sum"><div class="tl-big ${tot>0?'g':tot<0?'r':''}"><span>Day R</span><b>${fx(tot)}R</b></div>
       <div class="tl-stat"><span>W / L / BE</span><b><i class="g">${w}</i> / <i class="r">${l}</i> / ${b}</b></div>
