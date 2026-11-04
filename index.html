@@ -767,6 +767,16 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-runs span{font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
 .dj-runs .ok{color:var(--green);background:rgba(45,184,125,.12);}
 .dj-runs .miss{color:#f5a524;background:rgba(245,165,36,.12);}
+.gm{margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
+.gm-top{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
+.gm-top b{font-size:16px;letter-spacing:0;color:var(--text);} .gm-top b.g{color:var(--green);} .gm-top b.r{color:var(--red);}
+.gm-bar{position:relative;height:12px;border-radius:7px;margin:8px 0 4px;background:linear-gradient(90deg,rgba(240,87,90,.18),rgba(240,87,90,.06) var(--z,40%),rgba(45,184,125,.06),rgba(45,184,125,.18));overflow:visible;}
+.gm-bar i{position:absolute;top:0;bottom:0;border-radius:7px;transition:all .3s;}
+.gm-bar i.g{background:var(--green);} .gm-bar i.r{background:var(--red);}
+.gm-bar em{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--text3);transform:translateX(-1px);}
+.gm-bar u{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:#fff;border:2px solid var(--accent);transform:translate(-50%,-50%);box-shadow:0 1px 4px rgba(0,0,0,.4);}
+.gm-ends{position:relative;display:flex;justify-content:space-between;font-size:10.5px;color:var(--text3);font-weight:600;}
+.gm-msg{font-size:12px;font-weight:700;color:var(--text2);margin-top:4px;}
 .pc-sim{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border2);font-family:var(--font-d);}
 .pc-sim-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pc-sim-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;}
@@ -2577,7 +2587,7 @@ function djScenHTML(p,r,key){
   const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken${lv.sims?` (${lv.sims} what-if)`:''} · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
     <span>${r.target?`${fmoney(lv.targetLeft)} to target`:'no target set'} · ${fmoney(lv.lossLeft)} loss left · ${lv.tradesLeft} trade${lv.tradesLeft===1?'':'s'} left</span></div>`;
   if(lv.stop){const msg={target:'🎯 Daily target hit · stop trading for the day',loss:'⛔ Max loss reached · stop trading for the day',trades:'Max trades taken · done for the day'}[lv.stop];
-    return`<div class="dj-sub">Trade size scenarios</div>${live}<div class="sc-stop ${lv.stop}">${msg}</div>`;}
+    return`<div class="dj-sub">Trade size scenarios</div>${djGoalHTML(r,lv)}<div class="sc-stop ${lv.stop}">${msg}</div>`;}
   const run=kind=>{
     let left=lv.lossLeft,pnl=lv.pnl;const rows=[];let end='';
     for(let i=lv.taken;i<r.n;i++){
@@ -2595,7 +2605,7 @@ function djScenHTML(p,r,key){
   const col=(kind,title,cls)=>{const x=run(kind);return`<div class="sc-col ${cls}"><div class="sc-h">${title}</div>
     ${x.rows.map(o=>`<div class="sc-row"><span class="sc-n">#${o.i}</span><span class="sc-ct">${o.ct} ${sym}<i title="Allowed risk this trade: ${fmoney(o.rpt)}">${kind==='win'?`aim ${+o.pts.toFixed(2)} pts · `:''}allow ${fmoney(o.rpt)}</i></span><span class="sc-res">${o.res>0?'+':''}${fmoney(o.res)}<i>${fmoney(o.pnl)}</i></span></div>`).join('')}
     <div class="sc-end">${x.end}</div></div>`;};
-  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· risk = (account + day P&L) × ${p.lossPct||'—'}% ÷ ${r.n} trades + ${djProfitPct(p)}% of today's profit, capped by loss left · wins aim for target left ÷ trades left</span></div>${live}
+  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· risk = (account + day P&L) × ${p.lossPct||'—'}% ÷ ${r.n} trades + ${djProfitPct(p)}% of today's profit, capped by loss left · wins aim for target left ÷ trades left</span></div>${djGoalHTML(r,lv)}${live}
     <div class="sc-grid">${col('loss','✕ Every trade loses','l')}${col('be','– Every trade breakeven','b')}${col('win','✓ Every trade wins','w')}</div>`;
 }
 function djStratHTML(key){
@@ -2717,12 +2727,24 @@ function djPosHTML(key){
     <div id="djPosOut">${djPosOutHTML(key)}</div>
     <div id="djSim">${djSimHTML(key)}</div>`;
 }
+// Day progress meter: max loss on the left, daily target on the right, today's P&L as the fill from $0
+function djGoalHTML(r,lv){
+  if(!r.target&&!r.maxLoss)return'';
+  const T=r.target||0,L=r.maxLoss||0,span=T+L||1,zero=L/span*100,pnl=lv.pnl;
+  const pos=Math.max(0,Math.min(100,(pnl+L)/span*100)),pct=T?Math.max(0,pnl)/T*100:0;
+  const fill=pnl>=0?`left:${zero}%;width:${pos-zero}%`:`left:${pos}%;width:${zero-pos}%`;
+  const msg=pnl>=T&&T?'🎯 Target hit':pnl<=-L&&L?'⛔ Max loss hit':pnl>=0?`${Math.round(pct)}% of target · ${fmoney(Math.max(0,T-pnl))} to go`:`${Math.round(-pnl/L*100)}% of max loss used · ${fmoney(L+pnl)} left`;
+  return`<div class="gm"><div class="gm-top"><span>Day progress</span><b class="${pnl>0?'g':pnl<0?'r':''}">${pnl>=0?'+':''}${fmoney(pnl)}</b></div>
+    <div class="gm-bar"><i class="${pnl>=0?'g':'r'}" style="${fill}"></i><em style="left:${zero}%"></em><u style="left:${pos}%"></u></div>
+    <div class="gm-ends"><span>−${fmoney(L)}</span><span style="position:absolute;left:${zero}%;transform:translateX(-50%)">$0</span><span>${T?'🎯 '+fmoney(T):''}</span></div>
+    <div class="gm-msg">${msg}</div></div>`;
+}
 // What-if results: log a trade's outcome here and the next trade re-sizes (also feeds Today's plan). Not saved as trades.
 function djSimHTML(key){
   const st=djState(key),sim=noteCharts[key]?.sim||[],lv=st.lv;
   const ct=st.stop&&st.risk?Math.round(st.risk/(st.stop*st.pv)):0,risk=ct*st.stop*st.pv;
   const pace=st.r.target&&lv.tradesLeft?lv.targetLeft/lv.tradesLeft:0,win=pace||risk*2;
-  return`<div class="pc-sim"><div class="pc-sim-h"><span>Trade #${lv.taken+1} result</span>${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
+  return`${djGoalHTML(st.r,lv)}<div class="pc-sim"><div class="pc-sim-h"><span>Trade #${lv.taken+1} result</span>${sim.length?`<button class="dj-reset" onclick="djSimClear()">↻ Clear</button>`:''}</div>
     <div class="pc-sim-btns"><button class="w" onclick="djSimAdd(${+win.toFixed(2)})" ${win?'':'disabled'}>✓ Win<small>+${fmoney(win)}</small></button>
       <button class="b" onclick="djSimAdd(0)">– BE<small>$0.00</small></button>
       <button class="l" onclick="djSimAdd(${-risk.toFixed(2)})" ${risk?'':'disabled'}>✕ Loss<small>−${fmoney(risk)}</small></button></div>
