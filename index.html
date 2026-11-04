@@ -791,7 +791,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-grade-steps{display:flex;gap:4px;}.dj-grade-steps i{flex:1;height:5px;border-radius:3px;background:var(--border2);}.dj-grade-steps i.on{background:var(--gc);}
 .dj-grade-n{flex:none;text-align:right;font-size:18px;font-weight:800;color:var(--gc);font-variant-numeric:tabular-nums;line-height:1.1;}
 .dj-grade-n small{display:block;font-size:9.5px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
-.dj-next.go{border:none;background:var(--green);color:#fff;}
+.dj-next.go{border:2px solid var(--gc);background:var(--surface);color:var(--gc);font-weight:800;box-shadow:0 0 0 4px color-mix(in srgb,var(--gc) 16%,transparent),0 4px 14px color-mix(in srgb,var(--gc) 30%,transparent);transition:box-shadow .2s,transform .1s;}
+.dj-next.go:hover{box-shadow:0 0 0 5px color-mix(in srgb,var(--gc) 24%,transparent),0 6px 18px color-mix(in srgb,var(--gc) 38%,transparent);}
+.dj-next.go:active{transform:translateY(1px);}
 .dj-runs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
 .dj-runs span{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 4px 3px 8px;border-radius:6px;}
 .dj-runs button{border:none;background:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 3px;opacity:.7;}
@@ -2734,7 +2736,7 @@ function djRulesHTML(key){
     <div class="tp-ck-head"><span>Trade #${runs.length+1} · ${pct===1?'ready to enter':'before entry'}</span><b style="color:${col}">${pct===1?'✓ ':''}${n}/${items.length}</b></div>
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div>
-    <button class="dj-next${pct===1?' go':''}" onclick="djRulesNext()" ${n?'':'disabled'}>${pct===1?'✓ Took the trade · next trade':'Log trade & reset'} →</button></div>
+    <button class="dj-next${n?' go':''}" style="--gc:${djGrade(n,items.length).col}" onclick="djRulesNext()" ${n?'':'disabled'}>${pct===1?'✓ Took the trade · next trade':'Log trade & reset'} →</button></div>
     ${djGradeHTML(n,items.length)}
     ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules · grade ${djGrade(r.n,r.t).g}">Trade #${i+1} · ${djGrade(r.n,r.t).g} · ${r.n}/${r.t}<button onclick="djRunDel(${i})" title="Remove">×</button></span>`).join('')}</div>`:''}`;
 }
