@@ -677,6 +677,14 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-2col{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px;}
 .pm-3col{display:grid;grid-template-columns:repeat(3,1fr);gap:10px 18px;}
 .pm-3col .pm-rate span{width:auto;min-width:42px;}
+.lv-list{display:flex;flex-direction:column;gap:6px;}
+.lv-row{display:grid;grid-template-columns:22px 1fr 120px 30px;gap:6px;align-items:center;}
+.lv-n{width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:var(--accent);background:rgba(108,93,211,.12);}
+.lv-row input{min-width:0;}.lv-px{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;}
+.lv-del{height:32px;border:1px solid var(--border2);background:transparent;border-radius:8px;color:var(--text3);cursor:pointer;}
+.lv-del:hover{color:var(--red);border-color:var(--red);}
+.lv-add{margin-top:8px;}
+@media(max-width:520px){.lv-row{grid-template-columns:22px 1fr 92px 30px;}}
 .pm-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px;margin-bottom:10px;}
 .pm-levels label,.pm-risk label,.pm .fg>label{text-transform:none;letter-spacing:0;font-size:12px;font-weight:500;color:var(--text2);}
 .pm-risk{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
@@ -2886,6 +2894,19 @@ function pmReviewHTML(key){
   </div>`;
 }
 
+/* ── Premarket key levels: a named list, each with its own price ── */
+// Rendering never writes: an empty plan shows one blank row (id '_new') that is only saved once typed into
+function pmLvls(p){return Array.isArray(p.lvls)&&p.lvls.length?p.lvls:[{id:'_new',name:'',price:''}];}
+function pmLvlsOwn(p){if(!Array.isArray(p.lvls)||!p.lvls.length)p.lvls=[{id:'_new',name:'',price:''}];return p.lvls;}
+function pmLvlsHTML(p){return pmLvls(p).map((x,i)=>`<div class="lv-row" data-id="${x.id}"><span class="lv-n">${i+1}</span>
+  <input class="lv-name" value="${esc(x.name||'')}" placeholder="${i?'e.g. Overnight high':'e.g. Prev. day high'}" oninput="pmLvlSet('${x.id}','name',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();this.nextElementSibling.focus()}">
+  <input class="lv-px" type="number" inputmode="decimal" step="any" value="${esc(x.price??'')}" placeholder="Price" oninput="pmLvlSet('${x.id}','price',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();pmLvlAdd()}">
+  <button type="button" class="lv-del" title="Remove level" onclick="pmLvlDel('${x.id}')">✕</button></div>`).join('');}
+function pmLvlRender(focusLast){const el=document.getElementById('pmLvls');if(!el)return;el.innerHTML=pmLvlsHTML(pmGet());if(focusLast){const n=el.querySelectorAll('.lv-name');n[n.length-1]?.focus();}}
+function pmLvlSet(id,k,v){queueDaySave(()=>{const p=pmGet(),x=pmLvlsOwn(p).find(x=>x.id===id);if(x){x[k]=v;p.updated=new Date().toISOString();}});}
+function pmLvlAdd(){const p=pmGet();pmLvlsOwn(p).push({id:stUid(),name:'',price:''});p.updated=new Date().toISOString();saveDayData();pmLvlRender(true);}
+function pmLvlDel(id){const p=pmGet();p.lvls=pmLvlsOwn(p).filter(x=>x.id!==id);if(!p.lvls.length)delete p.lvls;p.updated=new Date().toISOString();saveDayData();pmLvlRender();}
+
 /* ── Premarket plan view ── */
 function pmGet(){const k=selectedDay;if(!premarket[k])premarket[k]={};return premarket[k];}
 function pmSet(field,val){queueDaySave(()=>{const p=pmGet();p[field]=val;p.updated=new Date().toISOString();});}
@@ -3016,7 +3037,9 @@ function planViewHTML(key){
           <div class="fg"><label>Prev. day POC</label>${inp('poc','e.g. 21385.50')}</div>
           <div class="fg"><label>Prev. day VAL</label>${inp('val','e.g. 21320.25')}</div>
         </div>
-        ${ta('levels','Other levels: VWAP, prev. day high/low, overnight high/low, gaps…',2)}
+        <div class="fg"><label>My levels · one per line, with its price</label><div class="lv-list" id="pmLvls">${pmLvlsHTML(p)}</div>
+          <button type="button" class="btn lv-add" onclick="pmLvlAdd()">+ Add level</button></div>
+        ${(p.levels||'').trim()?`<div class="fg" style="margin-top:10px"><label>Level notes</label>${ta('levels','Anything else about today\'s levels…',2)}</div>`:''}
       </div>
       <div class="pm-card nw-wrap">
         <div class="pm-h"><span class="n">4</span>News &amp; events</div>
