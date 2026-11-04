@@ -2771,7 +2771,7 @@ function djState(key,atPnl){
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
   const st=djState(key),chips=[1,2,3,4,5,6,7,8,9,10];
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'',trades:'',tgt:''};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position Size Calculator</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'',trades:'',tgt:''};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
     <div class="pc-f"><span>Base risk on</span>
       <div class="pc-mode"><button class="${djPos.mode!=='acct'?'on':''}" onclick="djPos.mode='plan';djRender('djPos',djPosHTML)">Risk plan<small>${st.r.perTrade?fmoney(st.r.perTrade)+' / trade':'not set'}</small></button>
         <button class="${djPos.mode==='acct'?'on':''}" onclick="djPos.mode='acct';djRender('djPos',djPosHTML)">Account size<small>max loss ÷ trades</small></button></div></div>
