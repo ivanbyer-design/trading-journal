@@ -729,6 +729,20 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-chips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 10px;}
 .pc-chips button{flex:1;min-width:40px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:700;font-size:12px;cursor:pointer;}
 .pc-chips button.on{border-color:var(--accent);color:var(--text);background:rgba(108,93,211,.18);}
+.pc-mode{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.pc-mode button{height:44px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:12.5px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.15;}
+.pc-mode button small{font-size:10px;font-weight:600;color:var(--text3);}
+.pc-mode .on{border-color:var(--accent);background:rgba(108,93,211,.18);color:var(--text);box-shadow:0 0 0 1px var(--accent) inset;}
+.pc-acct{display:grid;grid-template-columns:1.3fr 1fr;gap:6px;margin-bottom:8px;}
+.pc-acct .pc-in input{font-size:15px;padding:8px 0;}
+.pc-acct select{height:100%;font-family:var(--font-d);font-weight:700;font-size:13px;}
+.dj-next{width:100%;margin-top:10px;height:40px;border-radius:9px;border:1px dashed var(--border2);background:transparent;color:var(--text2);font-family:var(--font-d);font-weight:700;font-size:13px;cursor:pointer;}
+.dj-next:disabled{opacity:.4;cursor:default;}
+.dj-next.go{border:none;background:var(--green);color:#fff;}
+.dj-runs{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px;}
+.dj-runs span{font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;}
+.dj-runs .ok{color:var(--green);background:rgba(45,184,125,.12);}
+.dj-runs .miss{color:#f5a524;background:rgba(245,165,36,.12);}
 .pc-riskline{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-d);}
 .pc-riskline>span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pc-riskline .pc-in input{font-size:14px;padding:7px 0;}
@@ -2549,9 +2563,10 @@ function rulesGet(){
 function rulesSave(){try{localStorage.setItem('ef_settings',JSON.stringify(settings));}catch(e){}}
 function djRulesHTML(key){
   const rules=rulesGet(),d=djGet(key),on=new Set(d.rChecks||[]);
-  const head=`<div class="pm-h" style="justify-content:space-between">My Trading Rules<span style="display:flex;gap:6px">
+  const head=`<div class="pm-h" style="justify-content:space-between;margin-bottom:2px">My Trading Rules<span style="display:flex;gap:6px">
       ${djRulesEdit?'':`<button class="dj-reset" onclick="djRulesReset()" ${(d.rChecks||[]).length?'':'disabled'} title="Untick every rule">↻ Reset</button>`}
-      <button class="dj-reset" onclick="djRulesEdit=!djRulesEdit;djRender('djRules',djRulesHTML)">${djRulesEdit?'✓ Done':'✎ Edit'}</button></span></div>`;
+      <button class="dj-reset" onclick="djRulesEdit=!djRulesEdit;djRender('djRules',djRulesHTML)">${djRulesEdit?'✓ Done':'✎ Edit'}</button></span></div>
+    <div class="pm-hint" style="margin:0 0 10px">Run through every rule before each trade${(d.rRuns||[]).length?` · <b style="color:var(--text)">${d.rRuns.length} trade${d.rRuns.length>1?'s':''} checked today</b>`:''}</div>`;
   if(djRulesEdit)return head+`<div class="st-ck-list">${rules.map((x,i)=>`<div class="st-ck-row"><span class="st-ck-n">${i+1}</span>
       <input value="${esc(x.text||'')}" placeholder="e.g. Only trade at a marked level" oninput="rulesEdit('${x.id}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();rulesAdd()}">
       <button title="Move up" onclick="rulesMove('${x.id}',-1)"${i?'':' disabled'}>▲</button><button title="Move down" onclick="rulesMove('${x.id}',1)"${i<rules.length-1?'':' disabled'}>▼</button><button title="Remove" onclick="rulesDel('${x.id}')">✕</button></div>`).join('')}</div>
@@ -2560,10 +2575,19 @@ function djRulesHTML(key){
   if(!items.length)return head+'<div class="pm-meter-note">No rules yet. Tap ✎ Edit to write your trading rules.</div>';
   const n=items.filter(x=>on.has(x.id)).length,pct=n/items.length,col=pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)';
   const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const runs=d.rRuns||[];
   return head+`<div class="tp-ck${pct===1?' all':''}">
-    <div class="tp-ck-head"><span>Followed today</span><b style="color:${col}">${n}/${items.length}</b></div>
+    <div class="tp-ck-head"><span>Trade #${runs.length+1} · ${pct===1?'ready to enter':'before entry'}</span><b style="color:${col}">${pct===1?'✓ ':''}${n}/${items.length}</b></div>
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
-    <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
+    <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div>
+    <button class="dj-next${pct===1?' go':''}" onclick="djRulesNext()" ${n?'':'disabled'}>${pct===1?'✓ Took the trade · next trade':'Log trade & reset'} →</button></div>
+    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules">#${i+1} ${r.n}/${r.t}</span>`).join('')}</div>`:''}`;
+}
+// Finish one trade's run-through: record how many rules were followed, then untick for the next trade
+function djRulesNext(){
+  const d=djGet(selectedDay,true),items=rulesGet().filter(x=>(x.text||'').trim()),on=new Set(d.rChecks||[]);
+  d.rRuns=[...(d.rRuns||[]),{n:items.filter(x=>on.has(x.id)).length,t:items.length,time:new Date().toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}];
+  delete d.rChecks;djSave();djRender('djRules',djRulesHTML);toast(`Trade #${d.rRuns.length} logged · rules reset for the next one`,'success');
 }
 function djRuleCheck(id){const d=djGet(selectedDay,true),set=new Set(d.rChecks||[]);set.has(id)?set.delete(id):set.add(id);d.rChecks=[...set];djSave();djRender('djRules',djRulesHTML);}
 function djRulesReset(){const d=djGet(selectedDay,true);delete d.rChecks;djSave();djRender('djRules',djRulesHTML);}
@@ -2578,18 +2602,20 @@ function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djR
 function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay)el.innerHTML=fn(selectedDay);}
 // Position size calculator: entry + stop price → contracts from the plan's risk per trade
 // Position size calculator: driven by the day's risk plan (risk per trade + stop size). Adjust the stop with chips / ± — no typing prices.
-let djPos={stop:'',risk:'',sym:''};
+let djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'1'};
+const DJ_PCTS=['0.25','0.5','0.75','1','1.5','2','2.5','3','4','5'];
 const DJ_MAIN=['ES','NQ','MES','MNQ'];
 const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
 function djState(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
-  return{p,r,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:+djPos.risk||r.perTrade||0,tick:TICK_SZ[sym]||.25};
+  const acct=+djPos.acct||r.acct,acctRisk=acct*(+djPos.pct||0)/100;
+  return{p,r,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,risk:+djPos.risk||(djPos.mode==='acct'?acctRisk:r.perTrade)||0,tick:TICK_SZ[sym]||.25};
 }
-function djStep(d){const st=djState(selectedDay),step=st.tick>=1?1:st.tick<.1?.05:.25;djPos.stop=String(Math.max(step,+(st.stop+d*step).toFixed(2)));djRender('djPos',djPosHTML);}
+function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
   const st=djState(key),more=Object.keys(PT_VAL).filter(x=>!DJ_MAIN.includes(x));
-  const base=st.r.stop||5,chips=[...new Set([base,...[.5,.75,1,1.5,2,3].map(m=>+(base*m).toFixed(2))])].sort((a,b)=>a-b);
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
+  const chips=[2,3,4,5,6,8,10,12,15,20];if(st.r.stop&&!chips.includes(st.r.stop)){chips.push(st.r.stop);chips.sort((a,b)=>a-b);}
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',mode:'plan',acct:'',pct:'1'};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
     <div class="pc-syms">${DJ_MAIN.map(x=>`<button class="${x===st.sym?'on':''}" onclick="djPos.sym='${x}';djRender('djPos',djPosHTML)">${x}<small>$${PT_VAL[x]}/pt</small></button>`).join('')}
       <select class="${more.includes(st.sym)?'on':''}" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)"><option value="">More</option>${more.map(x=>`<option${x===st.sym?' selected':''}>${x}</option>`).join('')}</select></div>
     <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
@@ -2597,8 +2623,13 @@ function djPosHTML(key){
         <div class="pc-stop"><b>${st.stop?+st.stop.toFixed(2):'—'}</b><small>pts</small></div>
         <button onclick="djStep(1)" aria-label="Bigger stop">+</button></div></div>
     <div class="pc-chips">${chips.map(c=>`<button class="${c===st.stop?'on':''}" onclick="djPos.stop='${c}';djRender('djPos',djPosHTML)">${c}</button>`).join('')}</div>
-    <div class="pc-riskline"><span>Risk per trade${st.r.perTrade&&st.risk===st.r.perTrade?' · from plan':''}</span>
-      <div class="pc-in" style="width:130px"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.risk)}" placeholder="${st.r.perTrade?+st.r.perTrade.toFixed(2):'0'}" oninput="djPos.risk=this.value;djPosOut()"></div></div>
+    <div class="pc-f"><span>Base risk on</span>
+      <div class="pc-mode"><button class="${djPos.mode!=='acct'?'on':''}" onclick="djPos.mode='plan';djPos.risk='';djRender('djPos',djPosHTML)">Risk plan<small>${st.r.perTrade?fmoney(st.r.perTrade)+' / trade':'not set'}</small></button>
+        <button class="${djPos.mode==='acct'?'on':''}" onclick="djPos.mode='acct';djPos.risk='';djRender('djPos',djPosHTML)">Account size<small>% per trade</small></button></div></div>
+    ${djPos.mode==='acct'?`<div class="pc-acct"><div class="pc-in"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.acct)}" placeholder="${+st.r.acct.toFixed(2)}" oninput="djPos.acct=this.value;djPosOut();djRiskPh()"></div>
+      <select onchange="djPos.pct=this.value;djPosOut();djRiskPh()">${DJ_PCTS.map(v=>`<option value="${v}"${v===djPos.pct?' selected':''}>${v}% / trade</option>`).join('')}</select></div>`:''}
+    <div class="pc-riskline"><span>Risk per trade</span>
+      <div class="pc-in" style="width:130px"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.risk)}" placeholder="${st.risk?+st.risk.toFixed(2):'0'}" oninput="djPos.risk=this.value;djPosOut()" title="Type to override"></div></div>
     <div id="djPosOut">${djPosOutHTML(key)}</div>`;
 }
 function djPosOutHTML(key){
@@ -2616,6 +2647,7 @@ function djPosOutHTML(key){
     <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
     ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(r.target/r.n)} this trade · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
+function djRiskPh(){const st=djState(selectedDay),el=document.querySelector('#djPos .pc-riskline input');if(el)el.placeholder=st.risk?+st.risk.toFixed(2):'0';}
 function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);}
 
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
