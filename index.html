@@ -684,6 +684,18 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-calc-c{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;font-family:var(--font-d);min-width:0;}
 .pm-calc-c span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pm-calc-c b{font-size:17px;font-weight:800;color:var(--text);}
+.pm-meter{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font-d);}
+.pm-meter-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px;}
+.pm-meter-top label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
+.pm-meter-in{display:flex;align-items:center;gap:6px;}
+.pm-meter-in input{width:90px;}
+.pm-meter-in span{font-size:12px;color:var(--text3);}
+.pm-meter-bar{position:relative;height:10px;border-radius:6px;background:var(--border);overflow:hidden;}
+.pm-meter-bar i{display:block;height:100%;border-radius:6px;transition:width .25s,background .25s;}
+.pm-meter-bar em{position:absolute;top:0;bottom:0;width:2px;background:var(--surface2);}
+.pm-meter-read{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-top:8px;}
+.pm-meter-read b{font-size:16px;font-weight:800;}
+.pm-meter-read span,.pm-meter-note{font-size:11px;color:var(--text3);}
 .pm-calc-x{font-size:12px;font-weight:600;color:var(--text3);}
 .pm-calc-c i{font-style:normal;font-size:10.5px;color:var(--text3);overflow-wrap:anywhere;}
 .pm-check{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--text);cursor:pointer;}
@@ -2424,7 +2436,12 @@ function pmRiskHTML(p){
       <div class="fg"><label>Instrument</label><select data-r="riskSym" onchange="pmSet('riskSym',this.value);pmRiskRender()">${syms.map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
       <div class="fg"><label>Stop size (pts)</label>${num('stopPts','e.g. 6')}</div>
     </div>
-    <div class="pm-calc" id="pmRiskOut">${pmRiskOutHTML(p)}</div>`;
+    <div class="pm-calc" id="pmRiskOut">${pmRiskOutHTML(p)}</div>
+    <div class="pm-meter">
+      <div class="pm-meter-top"><label>Trade size meter</label>
+        <div class="pm-meter-in"><input type="number" step="any" min="0" value="${esc(p.meterPts??'')}" placeholder="e.g. 20" oninput="pmSet('meterPts',this.value);pmMeterRender()"><span>pts</span></div></div>
+      <div id="pmMeterOut">${pmMeterHTML(p)}</div>
+    </div>`;
 }
 function pmRiskNums(p){
   const acct=+p.acctSize||+settings.startingBalance||50000,lp=+p.lossPct||0,tp=+p.targetPct||0,n=Math.max(1,Math.floor(+p.maxTrades||1));
@@ -2449,10 +2466,22 @@ function pmCtrSub(p,r){
   const fit=Math.floor(r.perTrade/(next*r.pv)*4)/4; // widest stop (0.25 steps) that fits one more contract
   return`${sym} · ${r.stop} pts × $${r.pv}/pt = ${fmoney(each)} each<br>${next} would risk ${fmoney(next*each)}${r.contracts===0?' · stop too wide':''}${fit>0?` · fits with a ≤${fit}-pt stop`:''}`;
 }
+// Each trade slot = 2 × stop size in points; shows how many of today's max trades a move of N points uses
+function pmMeterHTML(p){
+  const stop=+p.stopPts||0,pts=+p.meterPts||0,maxT=Math.max(1,Math.floor(+p.maxTrades||1)),slot=stop*2;
+  if(!stop)return'<div class="pm-meter-note">Enter a stop size above to use the meter</div>';
+  const used=pts/slot,pct=Math.min(100,used/maxT*100),over=used>maxT;
+  const col=over?'var(--red)':used>=maxT*.67?'#f5a524':'var(--green)';
+  const ticks=Array.from({length:maxT-1},(_,i)=>`<em style="left:${(i+1)/maxT*100}%"></em>`).join('');
+  return`<div class="pm-meter-bar"><i style="width:${pct}%;background:${col}"></i>${ticks}</div>
+    <div class="pm-meter-read"><b style="color:${pts?col:'var(--text3)'}">${pts?`${+used.toFixed(2)} trade${used===1?'':'s'}`:'—'}</b>
+      <span>${pts?`${pts} pts ÷ ${slot} pts per trade (2 × ${stop}-pt stop) · ${over?`${+(used-maxT).toFixed(2)} over`:`${+(maxT-used).toFixed(2)} left`} of ${maxT}`:`1 trade = ${slot} pts (2 × ${stop}-pt stop) · ${maxT} trades = ${slot*maxT} pts`}</span></div>`;
+}
+function pmMeterRender(){const el=document.getElementById('pmMeterOut');if(el)el.innerHTML=pmMeterHTML(pmGet());}
 function pmRiskRender(){
   const p=pmGet(),r=pmRiskNums(p);
   if(p.lossPct)p.maxLoss=String(+r.maxLoss.toFixed(2));if(p.targetPct)p.target=String(+r.target.toFixed(2));
-  const el=document.getElementById('pmRiskOut');if(el)el.innerHTML=pmRiskOutHTML(p);
+  const el=document.getElementById('pmRiskOut');if(el)el.innerHTML=pmRiskOutHTML(p);pmMeterRender();
 }
 function planViewHTML(key){
   const p=premarket[key]||{};
