@@ -715,7 +715,18 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-syms button,.pc-syms select{flex:1;min-width:58px;height:42px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 4px;width:auto;}
 .pc-syms button small{font-size:9.5px;font-weight:600;color:var(--text3);}
 .pc-syms .on{border-color:var(--accent);background:rgba(108,93,211,.18);color:var(--text);box-shadow:0 0 0 1px var(--accent) inset;}
-.pc-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.pc-stepper{display:flex;align-items:stretch;gap:6px;}
+.pc-stepper button{width:52px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:24px;font-weight:700;cursor:pointer;}
+.pc-stepper button:hover{border-color:var(--accent);color:var(--accent);}
+.pc-stop{flex:1;display:flex;align-items:baseline;justify-content:center;gap:6px;background:var(--bg,#0f0b1e);border:1px solid var(--border2);border-radius:10px;padding:6px 0;font-family:var(--font-d);}
+.pc-stop b{font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;}
+.pc-stop small{font-size:12px;color:var(--text3);font-weight:700;}
+.pc-chips{display:flex;gap:5px;flex-wrap:wrap;margin:8px 0 10px;}
+.pc-chips button{flex:1;min-width:40px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:700;font-size:12px;cursor:pointer;}
+.pc-chips button.on{border-color:var(--accent);color:var(--text);background:rgba(108,93,211,.18);}
+.pc-riskline{display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-d);}
+.pc-riskline>span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
+.pc-riskline .pc-in input{font-size:14px;padding:7px 0;}
 .pc-f{display:block;}
 .pc-f>span{display:block;font-family:var(--font-d);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
 .pc-in{display:flex;align-items:center;background:var(--bg,#0f0b1e);border:1px solid var(--border2);border-radius:9px;padding:0 10px;}
@@ -2510,45 +2521,53 @@ function djCheck(iid){const d=djGet(selectedDay,true),set=new Set(d.jChecks||[])
 function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djRender('djStrat',djStratHTML);toast('Checklist reset for the next trade','success');}
 function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay)el.innerHTML=fn(selectedDay);}
 // Position size calculator: entry + stop price → contracts from the plan's risk per trade
-let djPos={entry:'',stop:'',risk:'',sym:''};
+// Position size calculator: driven by the day's risk plan (risk per trade + stop size). Adjust the stop with chips / ± — no typing prices.
+let djPos={stop:'',risk:'',sym:''};
 const DJ_MAIN=['ES','NQ','MES','MNQ'];
-function djPosHTML(key){
+const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
+function djState(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
-  const fld=(f,lbl,ph,pre)=>`<label class="pc-f"><span>${lbl}</span><div class="pc-in">${pre?`<em>${pre}</em>`:''}<input type="number" inputmode="decimal" step="any" value="${esc(djPos[f])}" placeholder="${ph}" oninput="djPos.${f}=this.value;djPosOut()"></div></label>`;
-  const more=Object.keys(PT_VAL).filter(x=>!DJ_MAIN.includes(x));
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={entry:'',stop:'',risk:'',sym:djPos.sym};djRender('djPos',djPosHTML)">↻ Clear</button></div>
-    <div class="pc-syms">${DJ_MAIN.map(x=>`<button class="${x===sym?'on':''}" onclick="djPos.sym='${x}';djRender('djPos',djPosHTML)">${x}<small>$${PT_VAL[x]}/pt</small></button>`).join('')}
-      <select class="${more.includes(sym)?'on':''}" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)"><option value="">More</option>${more.map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
-    <div class="pc-fields">${fld('entry','Entry','0.00')}${fld('stop','Stop','0.00')}</div>
-    ${fld('risk','Risk per trade',r.perTrade?(+r.perTrade.toFixed(2))+' (plan)':'0.00','$')}
+  return{p,r,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:+djPos.risk||r.perTrade||0,tick:TICK_SZ[sym]||.25};
+}
+function djStep(d){const st=djState(selectedDay),step=st.tick>=1?1:st.tick<.1?.05:.25;djPos.stop=String(Math.max(step,+(st.stop+d*step).toFixed(2)));djRender('djPos',djPosHTML);}
+function djPosHTML(key){
+  const st=djState(key),more=Object.keys(PT_VAL).filter(x=>!DJ_MAIN.includes(x));
+  const base=st.r.stop||5,chips=[...new Set([base,...[.5,.75,1,1.5,2,3].map(m=>+(base*m).toFixed(2))])].sort((a,b)=>a-b);
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)" title="Back to the risk plan">↻ Plan</button></div>
+    <div class="pc-syms">${DJ_MAIN.map(x=>`<button class="${x===st.sym?'on':''}" onclick="djPos.sym='${x}';djRender('djPos',djPosHTML)">${x}<small>$${PT_VAL[x]}/pt</small></button>`).join('')}
+      <select class="${more.includes(st.sym)?'on':''}" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)"><option value="">More</option>${more.map(x=>`<option${x===st.sym?' selected':''}>${x}</option>`).join('')}</select></div>
+    <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
+      <div class="pc-stepper"><button onclick="djStep(-1)" aria-label="Smaller stop">−</button>
+        <div class="pc-stop"><b>${st.stop?+st.stop.toFixed(2):'—'}</b><small>pts</small></div>
+        <button onclick="djStep(1)" aria-label="Bigger stop">+</button></div></div>
+    <div class="pc-chips">${chips.map(c=>`<button class="${c===st.stop?'on':''}" onclick="djPos.stop='${c}';djRender('djPos',djPosHTML)">${c}</button>`).join('')}</div>
+    <div class="pc-riskline"><span>Risk per trade${st.r.perTrade&&st.risk===st.r.perTrade?' · from plan':''}</span>
+      <div class="pc-in" style="width:130px"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.risk)}" placeholder="${st.r.perTrade?+st.r.perTrade.toFixed(2):'0'}" oninput="djPos.risk=this.value;djPosOut()"></div></div>
     <div id="djPosOut">${djPosOutHTML(key)}</div>`;
 }
 function djPosOutHTML(key){
-  const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES',pv=PT_VAL[sym]||50;
-  const risk=+djPos.risk||r.perTrade||0,e=+djPos.entry,st=+djPos.stop;
+  const{r,sym,pv,stop,risk,tick}=djState(key);
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
   if(!risk)return screen('—','Set a max loss % in the premarket plan, or type a risk amount');
-  if(!e||!st||e===st)return screen('—',`Enter entry and stop · risking ${fmoney(risk)}`);
-  const pts=Math.abs(e-st),long=e>st,each=pts*pv,exact=risk/each,ct=Math.round(exact),real=ct*each,dir=long?1:-1;
+  if(!stop)return screen('—','Set a stop size in the premarket plan or tap one above');
+  const each=stop*pv,exact=risk/each,ct=Math.round(exact),real=ct*each;
   const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
-  const tag=`<b class="pc-dir ${long?'l':'s'}">${long?'▲ LONG':'▼ SHORT'}</b>`;
-  const tp=x=>(e+dir*pts*x).toFixed(2);
-  const need=r.target&&ct?r.target/r.n/(ct*pv):0;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
-  return screen(`${ct}<small>${sym}</small>`,sub,tag,ct?'':'bad')
-    +`<div class="pc-rows">${row('Stop distance',`${+pts.toFixed(2)} pts · ${(pts/((TICK_SZ[sym])||.25)).toFixed(0)} ticks`)}${row('Risk per contract',fmoney(each))}
-      ${row('Total risk',ct?fmoney(real):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk)+(ct&&real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''))}</div>
-    <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${tp(x)}</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
-    ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${(e+dir*need).toFixed(2)}</b><i>${+need.toFixed(2)} pts → ${fmoney(r.target/r.n)}</i></div>`:''}`;
+  const need=r.target&&ct?r.target/r.n/(ct*pv):0;
+  return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')
+    +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
+      ${row('Total risk',ct?fmoney(real)+(real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk))}</div>
+    <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
+    ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(r.target/r.n)} this trade · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
-const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
 function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);}
 
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
 function pmReviewHTML(key){
   const p=premarket[key]||{};
   return`<div class="pm-card" style="margin-top:16px">
-    <div class="pm-h">After the session: did I follow my plan?</div>
+    <div class="pm-h">Daily Review</div>
+    <div class="pm-hint" style="margin:-6px 0 10px">Did I follow my plan?</div>
     <div class="pm-seg">${[['yes','Yes','bull'],['partly','Partly','neu'],['no','No','bear']].map(([v,l,c])=>`<button type="button" data-v="${v}" class="${c}${p.review===v?' on':''}" onclick="pmPick('review','${v}',this)">${l}</button>`).join('')}</div>
     <div style="margin-top:10px"><textarea rows="2" placeholder="What pulled me off the plan, or what helped me stick to it?" oninput="pmSet('reviewWhy',this.value)">${esc(p.reviewWhy||'')}</textarea></div>
   </div>`;
