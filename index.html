@@ -210,6 +210,25 @@ tr:hover td{background:rgba(108,93,211,.04);}
 .tp-body::-webkit-scrollbar{width:4px;}
 .tp-body::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
 .tp-section{padding:14px 18px;border-bottom:1px solid var(--border);}
+.tp-addpic{font-family:var(--font-d);font-size:11px;font-weight:700;letter-spacing:0;text-transform:none;color:var(--accent);border:1px solid var(--border2);border-radius:7px;padding:4px 9px;background:var(--surface2);}
+.tp-addpic:hover{background:var(--accent);color:#fff;}
+#tpShots.drag{outline:2px dashed var(--accent);outline-offset:-6px;}
+.tp-shot-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border2);border-radius:var(--r-sm);padding:14px;text-align:center;font-family:var(--font-d);}
+.tp-ck{margin-top:12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);padding:8px 10px;}
+.tp-ck-head{display:flex;justify-content:space-between;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+.tp-ck-head b{font-size:12px;letter-spacing:0;}
+.tp-ck-item{display:flex;gap:8px;align-items:flex-start;padding:5px 2px;font-size:13px;color:var(--text2);cursor:pointer;font-family:var(--font-d);}
+.tp-ck-item input{margin-top:2px;accent-color:var(--accent);flex-shrink:0;}
+.tp-ck-item.on span{color:var(--text);}
+.tp-ck-empty{margin-top:10px;font-size:12px;color:var(--text3);}
+.tp-ck-empty a{color:var(--accent);}
+.st-ck-list{display:flex;flex-direction:column;gap:6px;}
+.st-ck-row{display:flex;align-items:center;gap:6px;}
+.st-ck-n{width:20px;text-align:right;font-size:12px;color:var(--text3);flex-shrink:0;}
+.st-ck-row input{flex:1;min-width:0;background:var(--surface2);font-family:var(--font-d);font-size:13px;}
+.st-ck-row button{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-size:10px;flex-shrink:0;}
+.st-ck-row button:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.st-ck-row button:disabled{opacity:.3;cursor:default;}
 .tp-section-title{font-family:var(--font-d);font-size:9px;font-weight:800;color:var(--text3);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;}
 .tp-acct{width:auto;font-size:10px;font-family:var(--font-d);font-weight:700;background:transparent;border:1px solid transparent;border-radius:6px;padding:2px 18px 2px 6px;cursor:pointer;-webkit-appearance:none;appearance:none;background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),linear-gradient(135deg,currentColor 50%,transparent 50%);background-position:calc(100% - 9px) 50%,calc(100% - 5px) 50%;background-size:4px 4px;background-repeat:no-repeat;}
 .tp-acct:hover,.tp-acct:focus{border-color:var(--border);background-color:var(--surface2);}
@@ -2821,7 +2840,7 @@ function mkViewHTML(scope){
       ${cs.length>1?`<div class="mk-thumbs">${cs.map((x,j)=>`<button class="mk-thumb${j===i?' on':''}" onclick="mkSel['${scope}']=${j};mkRender('${scope}')"><img data-mk="${x.kind==='img'?x.id:''}"${mkSrc(x)?` src="${esc(mkSrc(x))}"`:''} alt="">${x.label?`<i>${esc(x.label)}</i>`:'<i></i>'}</button>`).join('')}</div>`:''}</div>`:''}
   </div>`;
 }
-function mkRender(scope){const el=document.getElementById('mk-'+scope);if(!el)return;el.outerHTML=scope==='tr'?mkViewHTML(scope):mkBlockHTML(scope);mkHydrate();}
+function mkRender(scope){if(scope==='tr'){const sh=document.getElementById('tpShots');if(sh){sh.innerHTML=tpShotsHTML();mkHydrate();return;}}const el=document.getElementById('mk-'+scope);if(!el)return;el.outerHTML=scope==='tr'?mkViewHTML(scope):mkBlockHTML(scope);mkHydrate();}
 // Fill in uploaded images from IndexedDB after they are in the DOM
 function mkHydrate(){
   document.querySelectorAll('img[data-mk]').forEach(async im=>{
@@ -2833,13 +2852,14 @@ function mkHydrate(){
 function mkPasteScope(){
   if(document.getElementById('tradeModal')?.classList.contains('open'))return'mt';
   if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':dayView==='note'?'note':null;
+  if(document.getElementById('tradePanel')?.classList.contains('open')&&activeTradePanelId)return'tr';
   if(document.getElementById('panel-strategies')?.classList.contains('active')&&stUI.id&&stUI.tab==='breakdown')return'st';
   return null;
 }
 document.addEventListener('paste',e=>{
   const scope=mkPasteScope();if(!scope)return;
   const files=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'&&i.type.startsWith('image/')).map(i=>i.getAsFile());
-  if(files.length){e.preventDefault();mkAddFiles(scope,files);return;}
+  if(files.length){e.preventDefault();scope==='tr'?tpAddPics(files):mkAddFiles(scope,files);return;}
   const tag=(e.target.tagName||'').toLowerCase();if(tag==='input'||tag==='textarea')return;
   const t=e.clipboardData?.getData('text')||'';if(/tradingview\.com\/x\/|^https?:\/\/\S+\.(png|jpe?g|webp|gif)(\?\S*)?$/i.test(t.trim())){e.preventDefault();mkAddUrl(scope,t);}
 });
@@ -3141,12 +3161,25 @@ function stDetailHTML(s){
     ${stUI.tab==='breakdown'?stBreakdownHTML(s):stUI.tab==='backtest'?`<div id="stKpis">${stKpisHTML(st)}</div>${stDbBarHTML()}<div id="stDbArea">${stDbHTML(s)}</div>`:stAnalyticsHTML(s,st)}`;
 }
 function stBreakdownHTML(s){
-  return`${mkBlockHTML('st')}<div class="st-doc">${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='examples'?' full':''}">
+  return`${mkBlockHTML('st')}<div class="st-doc"><div class="st-sec full" id="stCk">${stChecklistEdHTML(s)}</div>${ST_SECTIONS.map(([f,ic,t,hint,ph],i)=>`<div class="st-sec${i===0||f==='entry'||f==='examples'?' full':''}">
     <h4><i>${ic}</i>${t}</h4><p>${hint}</p>
     <textarea placeholder="${esc(ph)}" oninput="stSet('${f}',this.value);stAutosize(this)${f==='examples'?';stRenderLinks(this.value)':''}">${esc(s[f]||'')}</textarea>
     ${f==='examples'?`<div class="st-links" id="stLinks">${stLinksHTML(s[f])}</div>`:''}
   </div>`).join('')}</div>`;
 }
+function stChecklistEdHTML(s){
+  const items=s.checklist||[];
+  return`<h4><i>✅</i>Trade checklist</h4><p>Ticked off on every trade tagged with this strategy (open the trade from the calendar or Trades list)</p>
+    <div class="st-ck-list">${items.map((x,i)=>`<div class="st-ck-row"><span class="st-ck-n">${i+1}</span>
+      <input value="${esc(x.text||'')}" placeholder="e.g. Liquidity sweep of a key level" oninput="stCkEdit('${x.id}',this.value)" onkeydown="if(event.key==='Enter'){event.preventDefault();stCkAdd()}">
+      <button title="Move up" onclick="stCkMove('${x.id}',-1)"${i?'':' disabled'}>▲</button><button title="Move down" onclick="stCkMove('${x.id}',1)"${i<items.length-1?'':' disabled'}>▼</button><button title="Remove" onclick="stCkDel('${x.id}')">✕</button></div>`).join('')}</div>
+    <button class="btn" style="margin-top:8px" onclick="stCkAdd()">+ Add item</button>`;
+}
+function stCkRender(focusLast){const el=document.getElementById('stCk'),s=stCur();if(!el||!s)return;el.innerHTML=stChecklistEdHTML(s);if(focusLast){const ins=el.querySelectorAll('.st-ck-row input');ins[ins.length-1]?.focus();}}
+function stCkAdd(){const s=stCur();if(!s)return;s.checklist=[...(s.checklist||[]),{id:stUid(),text:''}];saveStrategies();stCkRender(true);}
+function stCkEdit(id,v){const x=(stCur()?.checklist||[]).find(x=>x.id===id);if(x){x.text=v;stQueueSave();}}
+function stCkDel(id){const s=stCur();if(!s)return;s.checklist=(s.checklist||[]).filter(x=>x.id!==id);saveStrategies();stCkRender();}
+function stCkMove(id,d){const s=stCur(),a=s?.checklist||[],i=a.findIndex(x=>x.id===id),j=i+d;if(i<0||j<0||j>=a.length)return;[a[i],a[j]]=[a[j],a[i]];saveStrategies();stCkRender();}
 function stLinksHTML(v){
   return(v||'').split(/\s+/).filter(u=>/^https?:\/\//i.test(u)).map(u=>/\.(png|jpe?g|gif|webp)(\?|$)/i.test(u)?`<a href="${esc(u)}" target="_blank" rel="noopener" style="padding:0;border:none;max-width:none"><img src="${esc(u)}" alt=""></a>`:`<a href="${esc(u)}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\//,''))}</a>`).join('');
 }
@@ -3517,6 +3550,32 @@ function tpStrategyHTML(t){
   return chips.length?`<div class="tags-wrap">${chips.join('')}</div><div style="margin-top:8px">${go}Manage strategies →</a></div>`
     :`<div style="font-size:12px;color:var(--text3)">No strategies yet. ${go}Create one in the Strategies tab →</a></div>`;
 }
+function tpShotsHTML(){
+  const n=mkObj('tr')?.charts?.length||0;
+  return`<div class="tp-section-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+      <span>Chart Screenshot${n>1?'s':''}</span>${mkFileBtn('+ Add picture','tp-addpic',"tpAddPics(this.files)")}</div>
+    ${n?mkViewHTML('tr'):'<div class="tp-shot-empty">Drop or paste (Ctrl/⌘+V) a screenshot here, or tap + Add picture</div>'}`;
+}
+function tpShotDragAttrs(){return`ondragover="event.preventDefault();this.classList.add('drag')" ondragleave="this.classList.remove('drag')" ondrop="event.preventDefault();this.classList.remove('drag');tpAddPics(event.dataTransfer.files)"`;}
+async function tpAddPics(files){
+  await mkAddFiles('tr',files);
+  const el=document.getElementById('tpShots');if(el){el.innerHTML=tpShotsHTML();mkHydrate();}
+  refreshAll();
+}
+// Pre-trade checklist from the trade's strategy; ticks are stored by item id on the trade
+function tpChecklistHTML(t){
+  const s=stByName(t.setup),items=(s?.checklist||[]).filter(x=>(x.text||'').trim());
+  if(!items.length)return s?`<div class="tp-ck-empty">No checklist for ${esc(s.name)} yet. <a href="#" onclick="event.preventDefault();closeTradePanel();nav('strategies');stOpen('${s.id}')">Add one in its Breakdown →</a></div>`:'';
+  const on=new Set(t.checks||[]),n=items.filter(x=>on.has(x.id)).length,pct=n/items.length;
+  const col=pct===1?'var(--green)':pct>=.5?'var(--orange,#f5a524)':'var(--red)';
+  return`<div class="tp-ck"><div class="tp-ck-head"><span>Checklist</span><b style="color:${col}">${n}/${items.length}</b></div>
+    ${items.map(x=>`<label class="tp-ck-item${on.has(x.id)?' on':''}"><input type="checkbox"${on.has(x.id)?' checked':''} onchange="tpCheck('${t.id}','${x.id}',this.checked)"><span>${esc(x.text)}</span></label>`).join('')}</div>`;
+}
+function tpCheck(tid,iid,v){
+  const t=trades.find(x=>x.id===tid);if(!t)return;
+  const set=new Set(t.checks||[]);v?set.add(iid):set.delete(iid);t.checks=[...set];if(!t.checks.length)delete t.checks;
+  saveTrades();const el=document.getElementById('tpChecklist');if(el)el.innerHTML=tpChecklistHTML(t);
+}
 function setTradeStrategy(id,name){
   const t=trades.find(x=>x.id===id);if(!t)return;
   t.setup=(t.setup||'').trim().toLowerCase()===name.trim().toLowerCase()?'':name;
@@ -3667,16 +3726,14 @@ function openTradeDetail(id){
       ${drawTradeDiagram(t)}
     </div>
 
-    ${mkObj('tr')?.charts?.length?`<!-- Screenshots (view only; add/remove in Edit trade) -->
-    <div class="tp-section">
-      <div class="tp-section-title">Chart Screenshot${t.charts.length>1?'s':''}</div>
-      ${mkViewHTML('tr')}
-    </div>`:''}
+    <!-- Screenshots: add right here (drop, paste or choose); remove in Edit trade -->
+    <div class="tp-section" id="tpShots" ${tpShotDragAttrs()}>${tpShotsHTML()}</div>
 
     <!-- Strategy (picked from the Strategies tab) -->
     <div class="tp-section">
       <div class="tp-section-title">Strategy</div>
       ${tpStrategyHTML(t)}
+      <div id="tpChecklist">${tpChecklistHTML(t)}</div>
     </div>
 
     <!-- Stats -->
