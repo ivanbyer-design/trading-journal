@@ -2907,6 +2907,14 @@ function flushDaySave(){
   saveDayData();setDayStatus();
 }
 function setDayStatus(){const s=document.getElementById('dmStatus');if(s)s.textContent='Saved ✓';}
+// Click (or tap) anywhere outside the trade details panel closes it
+document.addEventListener('pointerdown',e=>{
+  const tp=document.getElementById('tradePanel');if(!tp?.classList.contains('open'))return;
+  const el=e.target;if(!el?.isConnected||tp.contains(el))return;
+  if(el.closest('#tradeModal,#mkLight,.toast,#toast,[onclick*="openTradeDetail"]'))return;
+  if(document.getElementById('tradeModal')?.classList.contains('open')||document.getElementById('mkLight')?.classList.contains('open'))return;
+  closeTradePanel();
+},true);
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('dayPanel').classList.contains('open')&&!document.getElementById('tradePanel').classList.contains('open'))closeDayPanel();});
 
 /* ══════════════════════════════════════════════
