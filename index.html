@@ -214,12 +214,22 @@ tr:hover td{background:rgba(108,93,211,.04);}
 .tp-addpic:hover{background:var(--accent);color:#fff;}
 #tpShots.drag{outline:2px dashed var(--accent);outline-offset:-6px;}
 .tp-shot-empty{font-size:12px;color:var(--text3);border:1px dashed var(--border2);border-radius:var(--r-sm);padding:14px;text-align:center;font-family:var(--font-d);}
-.tp-ck{margin-top:12px;border:1px solid var(--border);border-radius:var(--r-sm);background:var(--surface2);padding:8px 10px;}
-.tp-ck-head{display:flex;justify-content:space-between;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+.tp-ck{margin-top:14px;border:1px solid var(--border);border-radius:12px;background:var(--surface2);padding:12px;transition:border-color .2s;}
+.tp-ck.all{border-color:rgba(45,184,125,.45);}
+.tp-ck-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text3);}
 .tp-ck-head b{font-size:12px;letter-spacing:0;}
-.tp-ck-item{display:flex;gap:8px;align-items:flex-start;padding:5px 2px;font-size:13px;color:var(--text2);cursor:pointer;font-family:var(--font-d);}
-.tp-ck-item input{margin-top:2px;accent-color:var(--accent);flex-shrink:0;}
-.tp-ck-item.on span{color:var(--text);}
+.tp-ck-bar{height:4px;border-radius:4px;background:var(--border);margin:8px 0 10px;overflow:hidden;}
+.tp-ck-bar i{display:block;height:100%;border-radius:4px;transition:width .25s;}
+.tp-ck-list{display:flex;flex-direction:column;gap:6px;}
+.tp-ck-item{display:flex;gap:10px;align-items:center;width:100%;text-align:left;padding:9px 10px;border-radius:9px;border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:var(--font-d);font-size:12.5px;line-height:1.35;transition:all .15s;}
+.tp-ck-item:hover{border-color:var(--border2);color:var(--text);}
+.tp-ck-box{width:22px;height:22px;flex-shrink:0;border-radius:50%;border:1.5px solid var(--border2);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--text3);transition:all .15s;}
+.tp-ck-txt{flex:1;min-width:0;overflow-wrap:anywhere;}
+.tp-ck-item.on{border-color:rgba(45,184,125,.35);background:rgba(45,184,125,.08);color:var(--text);}
+.tp-ck-item.on .tp-ck-box{background:var(--green);border-color:var(--green);color:#fff;}
+.tp-strat-sel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.tp-strat-chg{font-family:var(--font-d);font-size:11px;font-weight:700;color:var(--accent);background:none;border:1px solid var(--border2);border-radius:7px;padding:4px 9px;cursor:pointer;}
+.tp-strat-chg:hover{background:var(--accent);color:#fff;}
 .tp-ck-empty{margin-top:10px;font-size:12px;color:var(--text3);}
 .tp-ck-empty a{color:var(--accent);}
 .st-ck-list{display:flex;flex-direction:column;gap:6px;}
@@ -3554,8 +3564,13 @@ let activeTradePanelId=null;
 function tpStrategyHTML(t){
   const lc=(t.setup||'').trim().toLowerCase(),named=strategies.filter(s=>(s.name||'').trim());
   const chip=(name,color,title)=>`<span class="stag${name.trim().toLowerCase()===lc?' sel':''}" data-n="${esc(name)}"${title?` title="${title}"`:''} onclick="setTradeStrategy('${t.id}',this.dataset.n)">${color?`<i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${color};margin-right:5px;vertical-align:1px"></i>`:''}${esc(name)}</span>`;
-  const chips=named.map(s=>chip(s.name,s.color));
+  let chips=named.map(s=>chip(s.name,s.color));
   if(lc&&!named.some(s=>s.name.trim().toLowerCase()===lc))chips.push(chip(t.setup,'','Not in your Strategies tab. Tap to untag'));
+  if(lc&&tpStratPicking!==t.id){
+    const cur=stByName(t.setup);
+    return`<div class="tp-strat-sel"><span class="stag sel" style="cursor:default">${cur?`<i style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${cur.color};margin-right:5px;vertical-align:1px"></i>`:''}${esc(t.setup)}</span>
+      <button class="tp-strat-chg" onclick="tpStratPicking='${t.id}';tpRerender('${t.id}')">Change</button></div>`;
+  }
   const go=`<a href="#" style="font-size:11px;color:var(--accent);font-family:var(--font-d);font-weight:700" onclick="event.preventDefault();closeTradePanel();nav('strategies')">`;
   return chips.length?`<div class="tags-wrap">${chips.join('')}</div><div style="margin-top:8px">${go}Manage strategies →</a></div>`
     :`<div style="font-size:12px;color:var(--text3)">No strategies yet. ${go}Create one in the Strategies tab →</a></div>`;
@@ -3577,20 +3592,25 @@ function tpChecklistHTML(t){
   const s=stByName(t.setup),items=(s?.checklist||[]).filter(x=>(x.text||'').trim());
   if(!items.length)return s?`<div class="tp-ck-empty">No checklist for ${esc(s.name)} yet. <a href="#" onclick="event.preventDefault();closeTradePanel();nav('strategies');stOpen('${s.id}')">Add one in its Breakdown →</a></div>`:'';
   const on=new Set(t.checks||[]),n=items.filter(x=>on.has(x.id)).length,pct=n/items.length;
-  const col=pct===1?'var(--green)':pct>=.5?'var(--orange,#f5a524)':'var(--red)';
-  return`<div class="tp-ck"><div class="tp-ck-head"><span>Checklist</span><b style="color:${col}">${n}/${items.length}</b></div>
-    ${items.map(x=>`<label class="tp-ck-item${on.has(x.id)?' on':''}"><input type="checkbox"${on.has(x.id)?' checked':''} onchange="tpCheck('${t.id}','${x.id}',this.checked)"><span>${esc(x.text)}</span></label>`).join('')}</div>`;
+  const col=pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)';
+  const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  return`<div class="tp-ck${pct===1?' all':''}">
+    <div class="tp-ck-head"><span>Entry checklist</span><b style="color:${col}">${pct===1?'✓ A+ ':''}${n}/${items.length}</b></div>
+    <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
+    <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="tpCheck('${t.id}','${x.id}',${!on.has(x.id)})">
+      <span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
 }
 function tpCheck(tid,iid,v){
   const t=trades.find(x=>x.id===tid);if(!t)return;
   const set=new Set(t.checks||[]);v?set.add(iid):set.delete(iid);t.checks=[...set];if(!t.checks.length)delete t.checks;
   saveTrades();const el=document.getElementById('tpChecklist');if(el)el.innerHTML=tpChecklistHTML(t);
 }
+let tpStratPicking=null;
+function tpRerender(id){const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;}
 function setTradeStrategy(id,name){
   const t=trades.find(x=>x.id===id);if(!t)return;
   t.setup=(t.setup||'').trim().toLowerCase()===name.trim().toLowerCase()?'':name;
-  saveTrades();refreshAll();
-  const b=document.getElementById('tpBody'),y=b.scrollTop;openTradeDetail(id);b.scrollTop=y;
+  tpStratPicking=null;saveTrades();refreshAll();tpRerender(id);
 }
 function setTradeAccount(id,sel){
   const t=trades.find(x=>x.id===id);if(!t)return;
