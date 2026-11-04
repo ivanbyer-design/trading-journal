@@ -684,6 +684,26 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pm-calc-c{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:9px 11px;display:flex;flex-direction:column;gap:2px;font-family:var(--font-d);min-width:0;}
 .pm-calc-c span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pm-calc-c b{font-size:17px;font-weight:800;color:var(--text);}
+.dj-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:16px 0;}
+.dj-grid .full{grid-column:1/-1;}
+.dj-sub{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin:4px 0 6px;font-family:var(--font-d);}
+.dj-kvs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:12px;}
+.dj-kv{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;display:flex;flex-direction:column;font-family:var(--font-d);min-width:0;}
+.dj-kv span{font-size:10.5px;color:var(--text3);}
+.dj-kv b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dj-bias{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--font-d);}
+.dj-bias div{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);}
+.dj-chip{font-size:12px;font-weight:700;padding:4px 10px;border-radius:7px;border:1px solid var(--border2);color:var(--text3);}
+.dj-chip.bull{color:var(--green);border-color:rgba(45,184,125,.45);background:rgba(45,184,125,.1);}
+.dj-chip.bear{color:var(--red);border-color:rgba(240,87,90,.45);background:rgba(240,87,90,.1);}
+.dj-chip.neu{color:var(--accent);border-color:rgba(108,93,211,.5);background:rgba(108,93,211,.1);}
+.dj-why{font-size:12px;color:var(--text2);margin-top:8px;line-height:1.5;font-family:var(--font-d);}
+.dj-link{color:var(--accent);}
+.dj-sel{width:100%;font-family:var(--font-d);font-size:13px;}
+.dj-reset{font-family:var(--font-d);font-size:11px;font-weight:700;color:var(--accent);background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;cursor:pointer;}
+.dj-reset:hover:not(:disabled){background:var(--accent);color:#fff;}
+.dj-reset:disabled{opacity:.35;cursor:default;}
+.dj-pos-in{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
 .pm-meter{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font-d);}
 .pm-meter-top{margin-bottom:10px;}
 .pm-meter-top label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
@@ -725,7 +745,8 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .dm-top{grid-template-columns:1fr;}
   .dm-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
   .pm-grid{grid-template-columns:1fr;}
-  .pm-2col,.pm-3col{grid-template-columns:1fr;}
+  .pm-2col,.pm-3col,.dj-grid{grid-template-columns:1fr;}
+  .dj-pos-in{grid-template-columns:1fr 1fr;}
   .pm-risk{grid-template-columns:1fr 1fr 1fr;}
   .dm-hbtn{height:34px;font-size:13px;padding:0 11px;}
 }
@@ -1267,7 +1288,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
       <span class="dm-net" id="dmNet"></span>
       <div class="dm-hbtns">
         <button class="dm-hbtn" id="dmPlanBtn" onclick="setDayView('plan')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6a1 1 0 0 1 1 1v1H8V5a1 1 0 0 1 1-1z"/><path d="M16 5h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2"/><path d="M9 12l2 2 4-4"/><path d="M9 17h6"/></svg>Premarket plan</button>
-        <button class="dm-hbtn" id="dmNoteBtn" onclick="setDayView('note')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="3"/><path d="M8 2v4M16 2v4M8 11h8M8 15h5"/></svg>View note</button>
+        <button class="dm-hbtn" id="dmNoteBtn" onclick="setDayView('note')"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="3"/><path d="M8 2v4M16 2v4M8 11h8M8 15h5"/></svg>Daily journal</button>
         <button class="dm-hbtn" id="dmTradesBtn" onclick="setDayView('trades')" style="display:none">← Trades</button>
         <button class="dm-hbtn" id="dmAddBtn" onclick="openTradeModal(null,selectedDay)">+ Add trade</button>
       </div>
@@ -2332,7 +2353,7 @@ function renderDayModal(){
   pb.querySelector('.has')?.remove();nb.querySelector('.has')?.remove();
   if(pmHasContent(premarket[key]))pb.insertAdjacentHTML('beforeend','<span class="has" title="Plan saved"></span>');
   if((dayNotes[key]||'').trim()||noteCharts[key]?.charts?.length)nb.insertAdjacentHTML('beforeend','<span class="has" title="Note saved"></span>');
-  nb.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.trim())n.textContent=dayView==='note'?'Close note':'View note';});
+  nb.childNodes.forEach(n=>{if(n.nodeType===3&&n.textContent.trim())n.textContent=dayView==='note'?'Close journal':'Daily journal';});
   document.getElementById('dmTradesBtn').style.display=dayView==='trades'?'none':'';
   document.getElementById('dmPrimary').textContent=dayView==='trades'?'View Details':'Save';
   document.getElementById('dmStatus').textContent='';
@@ -2394,11 +2415,91 @@ function noteViewHTML(key){
   return`<div class="pm">
     <div class="pm-title">Daily journal</div>
     <div class="pm-sub">How did the session go? What did you do well, and what will you change tomorrow?</div>
-    ${mkBlockHTML('note')}
+    <div class="dj-grid">
+      <div class="pm-card" id="djOverview">${djOverviewHTML(key)}</div>
+      <div class="pm-card" id="djStrat">${djStratHTML(key)}</div>
+      <div class="pm-card full" id="djPos">${djPosHTML(key)}</div>
+    </div>
     <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea>
     ${pmReviewHTML(key)}
   </div>`;
 }
+/* ── Daily journal tools: plan overview, strategy checklist, position size calculator ── */
+function djGet(key,create){if(!noteCharts[key]&&create)noteCharts[key]={};return noteCharts[key]||{};}
+function djOverviewHTML(key){
+  const p=premarket[key]||{},r=pmRiskNums(p),m=v=>v?fmoney(v):'—';
+  const go=`<a href="#" class="dj-link" onclick="event.preventDefault();setDayView('plan')">`;
+  const COND={balance:['Balanced','neu'],imbUp:['Imbalanced up','bull'],imbDown:['Imbalanced down','bear']},BIAS={bull:['Bullish','bull'],neutral:['Neutral','neu'],bear:['Bearish','bear']};
+  const chip=(o,v)=>o[v]?`<span class="dj-chip ${o[v][1]}">${o[v][0]}</span>`:'<span class="dj-chip">Not set</span>';
+  const row=(l,v,c)=>`<div class="dj-kv"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
+  return`<div class="pm-h">Today's plan</div>
+    <div class="dj-sub">Risk plan</div>
+    <div class="dj-kvs">${row('Max loss',m(r.maxLoss),'var(--red)')}${row('Daily target',m(r.target),'var(--green)')}${row('Max trades',p.maxTrades||'—')}
+      ${row('Risk / trade',m(r.perTrade))}${row('Stop',r.stop?`${r.stop} pts`:'—')}${row('Size',r.contracts!=null?`${r.contracts} ${p.riskSym||'ES'}`:'—')}</div>
+    <div class="dj-sub">Bias</div>
+    <div class="dj-bias"><div><span>Condition</span>${chip(COND,p.condition)}</div><div><span>Bias</span>${chip(BIAS,p.bias)}</div></div>
+    ${p.biasWhy||p.conditionWhy?`<div class="dj-why">${esc(p.biasWhy||p.conditionWhy)}</div>`:''}
+    ${pmHasContent(p)?'':`<div class="pm-meter-note" style="margin-top:8px">No premarket plan yet. ${go}Fill it in →</a></div>`}
+    ${p.stopRule?`<div class="dj-why" style="margin-top:6px"><b>Stop rule:</b> ${esc(p.stopRule)}</div>`:''}`;
+}
+function djStratHTML(key){
+  const d=djGet(key),named=strategies.filter(x=>(x.name||'').trim());
+  const s=named.find(x=>x.id===d.jStrat);
+  const sel=`<select class="dj-sel" onchange="djPickStrat(this.value)"><option value="">Select a strategy…</option>${named.map(x=>`<option value="${x.id}"${x.id===d.jStrat?' selected':''}>${esc(x.name)}</option>`).join('')}</select>`;
+  const items=(s?.checklist||[]).filter(x=>(x.text||'').trim());
+  let body='';
+  if(!named.length)body='<div class="pm-meter-note">No strategies yet. Create one in the Strategies tab.</div>';
+  else if(!s)body='<div class="pm-meter-note">Pick a strategy to run its checklist before each entry.</div>';
+  else if(!items.length)body=`<div class="pm-meter-note">${esc(s.name)} has no checklist yet. <a href="#" class="dj-link" onclick="event.preventDefault();closeDayPanel();nav('strategies');stOpen('${s.id}')">Add one →</a></div>`;
+  else{
+    const on=new Set(d.jChecks||[]),n=items.filter(x=>on.has(x.id)).length,pct=n/items.length,col=pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)';
+    const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+    body=`<div class="tp-ck${pct===1?' all':''}" style="margin-top:10px">
+      <div class="tp-ck-head"><span>Entry checklist</span><span class="tp-ck-score"><b class="tp-ck-grade" style="color:${col};border-color:${col}">Grade: ${ckGrade(pct,n)}</b><b style="color:${col}">${n}/${items.length}</b></span></div>
+      <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
+      <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
+  }
+  const canReset=s&&(d.jChecks||[]).length;
+  return`<div class="pm-h" style="justify-content:space-between">Strategy checklist
+      <button class="dj-reset" onclick="djReset()" ${canReset?'':'disabled'} title="Untick every item for the next trade">↻ Reset</button></div>${sel}${body}`;
+}
+function djSave(){saveDayData();}
+function djPickStrat(id){const d=djGet(selectedDay,true);if(id)d.jStrat=id;else delete d.jStrat;delete d.jChecks;djSave();djRender('djStrat',djStratHTML);}
+function djCheck(iid){const d=djGet(selectedDay,true),set=new Set(d.jChecks||[]);set.has(iid)?set.delete(iid):set.add(iid);d.jChecks=[...set];djSave();djRender('djStrat',djStratHTML);}
+function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djRender('djStrat',djStratHTML);toast('Checklist reset for the next trade','success');}
+function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay)el.innerHTML=fn(selectedDay);}
+// Position size calculator: entry + stop price → contracts from the plan's risk per trade
+let djPos={entry:'',stop:'',risk:'',sym:''};
+function djPosHTML(key){
+  const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
+  const num=(f,ph)=>`<input type="number" step="any" value="${esc(djPos[f])}" placeholder="${ph}" oninput="djPos.${f}=this.value;djPosOut()">`;
+  return`<div class="pm-h" style="justify-content:space-between">Position size calculator<button class="dj-reset" onclick="djPos={entry:'',stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)">↻ Clear</button></div>
+    <div class="dj-pos-in">
+      <div class="fg"><label>Instrument</label><select onchange="djPos.sym=this.value;djPosOut()">${Object.keys(PT_VAL).map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
+      <div class="fg"><label>Entry price</label>${num('entry','e.g. 6850.25')}</div>
+      <div class="fg"><label>Stop price</label>${num('stop','e.g. 6845.25')}</div>
+      <div class="fg"><label>Risk ($)</label>${num('risk',r.perTrade?(+r.perTrade.toFixed(2))+' (plan)':'e.g. 250')}</div>
+    </div>
+    <div class="pm-calc" id="djPosOut">${djPosOutHTML(key)}</div>`;
+}
+function djPosOutHTML(key){
+  const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES',pv=PT_VAL[sym]||50;
+  const risk=+djPos.risk||r.perTrade||0,e=+djPos.entry,st=+djPos.stop;
+  const c=(l,v,col,sub)=>`<div class="pm-calc-c"><span>${l}</span><b${col?` style="color:${col}"`:''}>${v}</b>${sub?`<i>${sub}</i>`:''}</div>`;
+  if(!risk)return c('Contracts','—','','Set a max loss % in the premarket plan, or type a risk amount');
+  if(!e||!st||e===st)return c('Contracts','—','',`Enter entry and stop · risking ${fmoney(risk)} per trade`);
+  const pts=Math.abs(e-st),long=e>st,each=pts*pv,exact=risk/each,ct=Math.round(exact),real=ct*each,dir=long?1:-1;
+  const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?`${ct} · exact`:`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'} to ${ct}`;
+  const tp=x=>(e+dir*pts*x).toFixed(2);
+  const need=r.target&&ct?r.target/r.n/(ct*pv):0;
+  return c('Contracts',`${ct} ${sym}`,ct?'':'var(--red)',sub)
+    +c('Direction',long?'Long':'Short',long?'var(--green)':'var(--red)',`${+pts.toFixed(2)} pt stop`)
+    +c('Actual risk',ct?fmoney(real):'—',real>risk?'#f5a524':'',ct?(real>risk?`${fmoney(real-risk)} over ${fmoney(risk)}`:`of ${fmoney(risk)} allowed`):'')
+    +c('Targets',`${tp(2)}`,'var(--green)',`1R ${tp(1)} · 2R ${tp(2)} · 3R ${tp(3)}`)
+    +(need?c('Plan target',(e+dir*need).toFixed(2),'var(--green)',`${+need.toFixed(2)} pts to hit ${fmoney(r.target/r.n)} this trade`):'');
+}
+function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);}
+
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
 function pmReviewHTML(key){
   const p=premarket[key]||{};
@@ -2969,7 +3070,7 @@ function mkHydrate(){
 // Which image block a paste should land in
 function mkPasteScope(){
   if(document.getElementById('tradeModal')?.classList.contains('open'))return'mt';
-  if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':dayView==='note'?'note':null;
+  if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':null;
   if(document.getElementById('tradePanel')?.classList.contains('open')&&activeTradePanelId)return'tr';
   if(document.getElementById('panel-strategies')?.classList.contains('active')&&stUI.id&&stUI.tab==='breakdown')return'st';
   return null;
