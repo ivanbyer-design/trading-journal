@@ -832,6 +832,9 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-tps span{font-size:10px;font-weight:800;color:var(--green);}
 .pc-tps b{font-size:14px;font-variant-numeric:tabular-nums;}
 .pc-tps i{font-style:normal;font-size:10.5px;color:var(--text3);}
+.pc-tps em{font-style:normal;font-size:10px;font-weight:700;color:var(--green);margin-top:3px;}
+.pc-tps u{display:block;height:3px;border-radius:2px;background:rgba(45,184,125,.18);margin-top:3px;overflow:hidden;text-decoration:none;}
+.pc-tps u i{display:block;height:100%;background:var(--green);}
 .pc-plan{margin-top:8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
 .pc-plan span{font-size:12px;color:var(--text2);font-weight:600;}
 .pc-plan b{font-size:15px;color:var(--green);font-variant-numeric:tabular-nums;}
@@ -2784,10 +2787,12 @@ function djPosOutHTML(key){
   const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
   const pace=r.target&&lv.tradesLeft?lv.targetLeft/lv.tradesLeft:0,need=pace&&ct?pace/(ct*pv):0;
+  const bal=djPos.mode==='acct'?st.acct:r.acct+lv.pnl,tgt=djPos.mode==='acct'?st.a.target:pace; // for the R tiles' % indicators
   return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
       ${row('Total risk',ct?fmoney(real)+(real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk))}</div>
-    <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
+    <div class="pc-tps">${[1,2,3].map(x=>{const g=ct*each*x,ap=bal>0?g/bal*100:0,tp=tgt>0?g/tgt*100:0;
+      return`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(g):''}</i>${ct?`<em title="Gain as % of the account balance · % of this trade's target">+${+ap.toFixed(2)}% acct${tgt?` · ${Math.round(tp)}% tgt`:''}</em>${tgt?`<u><i style="width:${Math.min(100,tp)}%"></i></u>`:''}`:''}</div>`;}).join('')}</div>
     ${djPos.mode==='acct'&&st.a.rr?`<div class="pc-plan"><span>🎯 Target</span><b>${+(stop*st.a.rr).toFixed(2)} pts</b><i>${fmoney(st.a.target)} this trade · 1:${+st.a.rr.toFixed(2)}${ct?` → +${fmoney(ct*each*st.a.rr)} at ${ct} ${sym}`:''}</i></div>`:need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(pace)} this trade${lv.taken?` · ${fmoney(lv.targetLeft)} left over ${lv.tradesLeft}`:''} · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
 const DJ_TRADES=['1','2','3','4','5','6','7','8','9','10'];
