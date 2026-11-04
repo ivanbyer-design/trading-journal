@@ -218,6 +218,8 @@ tr:hover td{background:rgba(108,93,211,.04);}
 .tp-ck.all{border-color:rgba(45,184,125,.45);}
 .tp-ck-head{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-d);font-size:10px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:var(--text3);}
 .tp-ck-head b{font-size:12px;letter-spacing:0;}
+.tp-ck-score{display:flex;align-items:center;gap:8px;}
+.tp-ck-grade{font-size:11px!important;border:1px solid;border-radius:6px;padding:2px 7px;min-width:28px;text-align:center;}
 .tp-ck-bar{height:4px;border-radius:4px;background:var(--border);margin:8px 0 10px;overflow:hidden;}
 .tp-ck-bar i{display:block;height:100%;border-radius:4px;transition:width .25s;}
 .tp-ck-list{display:flex;flex-direction:column;gap:6px;}
@@ -3593,13 +3595,16 @@ function tpChecklistHTML(t){
   if(!items.length)return s?`<div class="tp-ck-empty">No checklist for ${esc(s.name)} yet. <a href="#" onclick="event.preventDefault();closeTradePanel();nav('strategies');stOpen('${s.id}')">Add one in its Breakdown →</a></div>`:'';
   const on=new Set(t.checks||[]),n=items.filter(x=>on.has(x.id)).length,pct=n/items.length;
   const col=pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)';
+  const grade=ckGrade(pct,n);
   const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   return`<div class="tp-ck${pct===1?' all':''}">
-    <div class="tp-ck-head"><span>Entry checklist</span><b style="color:${col}">${pct===1?'✓ A+ ':''}${n}/${items.length}</b></div>
+    <div class="tp-ck-head"><span>Entry checklist</span><span class="tp-ck-score"><b class="tp-ck-grade" style="color:${col};border-color:${col}">${grade}</b><b style="color:${col}">${n}/${items.length}</b></span></div>
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="tpCheck('${t.id}','${x.id}',${!on.has(x.id)})">
       <span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div></div>`;
 }
+// Checklist grade from share of items ticked
+function ckGrade(pct,n){if(!n)return'—';return pct>=1?'✓ A+':pct>=.8?'A':pct>=.6?'B':pct>=.4?'C':'D';}
 function tpCheck(tid,iid,v){
   const t=trades.find(x=>x.id===tid);if(!t)return;
   const set=new Set(t.checks||[]);v?set.add(iid):set.delete(iid);t.checks=[...set];if(!t.checks.length)delete t.checks;
@@ -3690,40 +3695,33 @@ function drawTradeDiagram(t){
     ticks+=`<text x="44" y="${y+4}" text-anchor="end" font-size="9" fill="${textColor}" font-family="Inter,sans-serif">${price.toFixed(2)}</text>`;
   }
 
-  // Filled zone between entry and exit
-  const zoneTop=Math.min(entryY,exitY),zoneH=Math.abs(exitY-entryY)||2;
-  const zone=`<rect x="52" y="${zoneTop}" width="${W-60}" height="${zoneH}" fill="${fillColor}" rx="2"/>`;
-
-  // Entry line
-  const entryLine=`
-    <line x1="52" y1="${entryY}" x2="${W}" y2="${entryY}" stroke="${strokeColor}" stroke-width="1.5" stroke-dasharray="4,3" opacity=".7"/>
-    <text x="${W-4}" y="${entryY-4}" text-anchor="end" font-size="9" fill="${strokeColor}" font-family="Inter,sans-serif" font-weight="600">ENTRY ${t.entry.toFixed(2)}</text>`;
-
-  // Exit line
-  const exitLine=`
-    <line x1="52" y1="${exitY}" x2="${W}" y2="${exitY}" stroke="${strokeColor}" stroke-width="2"/>
-    <text x="${W-4}" y="${exitY-4}" text-anchor="end" font-size="9" fill="${strokeColor}" font-family="Inter,sans-serif" font-weight="600">EXIT ${t.exit.toFixed(2)}</text>`;
-
-  // Arrow
-  const arrowX=W/2;const arrowDir=t.direction==='LONG'?(exitY<entryY?'↑':'↓'):(exitY<entryY?'↑':'↓');
-  const midY=(entryY+exitY)/2;
-  const arrow=zoneH>16?`<text x="${arrowX}" y="${midY+5}" text-anchor="middle" font-size="14" fill="${strokeColor}" opacity=".6">${arrowDir}</text>`:'';
-
-  // Move label
+  // Line-based view: position boxes (risk / reward) from entry to exit, then a price line between the fills.
+  // No tick data is stored, so the line is a straight entry → exit path.
+  const x0=58,x1=96,x2=W-78,stopY=hasStop?py(tradeStopPx(t)):0,tgY=hasTg?py(tradeTargetPx(t)):0;
+  const box=(y,col)=>`<rect x="${x1}" y="${Math.min(entryY,y)}" width="${x2-x1}" height="${Math.max(Math.abs(y-entryY),1)}" fill="${col}"/>`;
+  const zones=(hasStop?box(stopY,'rgba(240,87,90,.13)'):'')+(hasTg?box(tgY,'rgba(45,184,125,.13)'):'');
+  const hl=(y,col,lbl,dash)=>`<line x1="${x0}" y1="${y}" x2="${W}" y2="${y}" stroke="${col}" stroke-width="1.2" stroke-dasharray="${dash}" opacity=".85"/>
+    <text x="${x0+2}" y="${y-4}" font-size="9" fill="${col}" font-family="Inter,sans-serif" font-weight="600">${lbl}</text>`;
+  const levels=(hasStop?hl(stopY,'#f0575a',`STOP ${tradeStopPx(t).toFixed(2)}`,'2,3'):'')+(hasTg?hl(tgY,'#2db87d',`TARGET ${tradeTargetPx(t).toFixed(2)}`,'2,3'):'')
+    +`<line x1="${x0}" y1="${entryY}" x2="${x1}" y2="${entryY}" stroke="${textColor}" stroke-width="1" stroke-dasharray="3,3"/>`;
+  const gid='tdg'+String(t.id).replace(/\W/g,'');
+  const area=`<defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${strokeColor}" stop-opacity=".35"/><stop offset="1" stop-color="${strokeColor}" stop-opacity="0"/></linearGradient></defs>
+    <path d="M${x1},${entryY} L${x2},${exitY} L${x2},${H-14} L${x1},${H-14} Z" fill="url(#${gid})" opacity=".55"/>`;
+  const line=`<line x1="${x1}" y1="${entryY}" x2="${x2}" y2="${exitY}" stroke="${strokeColor}" stroke-width="2.5" stroke-linecap="round"/>
+    <line x1="${x2}" y1="${exitY}" x2="${W}" y2="${exitY}" stroke="${strokeColor}" stroke-width="1" stroke-dasharray="3,3" opacity=".6"/>`;
+  const dot=(x,y,fill)=>`<circle cx="${x}" cy="${y}" r="4.5" style="fill:${fill}" stroke="${strokeColor}" stroke-width="2"/>`;
+  const tag=(x,y,lbl,anchor)=>`<text x="${x}" y="${y}" text-anchor="${anchor}" font-size="9" fill="${strokeColor}" font-family="Inter,sans-serif" font-weight="700">${lbl}</text>`;
+  const above=(y)=>y<22?y+14:y-9;
+  const marks=dot(x1,entryY,'var(--surface,#1a1530)')+dot(x2,exitY,strokeColor)
+    +tag(x1+6,above(entryY),`ENTRY ${t.entry.toFixed(2)}`,'start')+tag(x2+8,above(exitY),`EXIT ${t.exit.toFixed(2)}`,'start');
+  const hm=d=>{const x=new Date(d);return isNaN(x)?'':x.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});};
+  const tIn=hm(t.date),tOut=t.exitDate?hm(t.exitDate):'';
+  const times=`<text x="${x1}" y="${H-2}" text-anchor="middle" font-size="9" fill="${textColor}" font-family="Inter,sans-serif">${tIn}</text>`
+    +(tOut&&tOut!==tIn?`<text x="${x2}" y="${H-2}" text-anchor="middle" font-size="9" fill="${textColor}" font-family="Inter,sans-serif">${tOut}</text>`:'');
   const pts=Math.abs(t.exit-t.entry).toFixed(2);
-  const moveLabel=`<text x="${arrowX}" y="${H-2}" text-anchor="middle" font-size="9" fill="${textColor}" font-family="Inter,sans-serif">${pts} pts · ${fpnl(t.pnl)}</text>`;
+  const moveLabel=`<text x="${(x1+x2)/2}" y="${H-2}" text-anchor="middle" font-size="9" fill="${textColor}" font-family="Inter,sans-serif">${pts} pts · ${fpnl(t.pnl)}</text>`;
 
-  const stopY=hasStop?py(tradeStopPx(t)):0;
-  const stopLine=hasStop?`
-    <line x1="52" y1="${stopY}" x2="${W}" y2="${stopY}" stroke="#f0575a" stroke-width="1.5" stroke-dasharray="2,3"/>
-    <text x="56" y="${stopY-4}" font-size="9" fill="#f0575a" font-family="Inter,sans-serif" font-weight="600">STOP ${tradeStopPx(t).toFixed(2)}</text>`:'';
-
-  const tgY=hasTg?py(tradeTargetPx(t)):0;
-  const tgLine=hasTg?`
-    <line x1="52" y1="${tgY}" x2="${W}" y2="${tgY}" stroke="#2db87d" stroke-width="1.5" stroke-dasharray="2,3"/>
-    <text x="56" y="${tgY-4}" font-size="9" fill="#2db87d" font-family="Inter,sans-serif" font-weight="600">TARGET ${tradeTargetPx(t).toFixed(2)}</text>`:'';
-
-  return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible">${ticks}${zone}${stopLine}${tgLine}${entryLine}${exitLine}${arrow}${moveLabel}</svg>`;
+  return`<svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible">${ticks}${zones}${area}${levels}${line}${marks}${times}${moveLabel}</svg>`;
 }
 
 function openTradeDetail(id){
