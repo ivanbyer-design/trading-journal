@@ -2717,9 +2717,9 @@ const DJ_MAIN=['ES','NQ','MES','MNQ'];
 const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
 function djState(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
-  const acct=+djPos.acct||r.acct,acctRisk=acct*(+djPos.pct||0)/100/r.n;
-  const lv=dayLive(key,r),planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),djCapAt(p,lv.lossLeft,lv.pnl)):0;
-  return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,risk:(djPos.mode==='acct'?acctRisk:planRisk)||0,tick:TICK_SZ[sym]||.25};
+  const lv=dayLive(key,r),start=+djPos.acct||r.acct,acct=start+lv.pnl,acctRisk=Math.max(0,acct)*(+djPos.pct||0)/100/r.n; // balance moves with each logged result
+  const planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),djCapAt(p,lv.lossLeft,lv.pnl)):0;
+  return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,start,risk:(djPos.mode==='acct'?acctRisk:planRisk)||0,tick:TICK_SZ[sym]||.25};
 }
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
@@ -2728,7 +2728,8 @@ function djPosHTML(key){
     <div class="pc-f"><span>Base risk on</span>
       <div class="pc-mode"><button class="${djPos.mode!=='acct'?'on':''}" onclick="djPos.mode='plan';djRender('djPos',djPosHTML)">Risk plan<small>${st.r.perTrade?fmoney(st.r.perTrade)+' / trade':'not set'}</small></button>
         <button class="${djPos.mode==='acct'?'on':''}" onclick="djPos.mode='acct';djRender('djPos',djPosHTML)">Account size<small>max loss ÷ trades</small></button></div></div>
-    ${djPos.mode==='acct'?`<div class="pc-acct"><div class="pc-in"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.acct)}" placeholder="${+st.r.acct.toFixed(2)}" oninput="djPos.acct=this.value;djAcctSync();djPosOut();djRiskPh()"></div>
+    ${djPos.mode==='acct'?`<div class="pc-acct"><div class="pc-in"><em>$</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.acct||+st.r.acct.toFixed(2))}" title="Starting balance — from the premarket plan, editable" oninput="djPos.acct=this.value;djAcctSync();djPosOut();djRiskPh()"></div>
+      <div class="pc-hint" id="djBalHint">${djBalHint(st)}</div>
       ${djPctField('pct','Max loss · % of account','% max loss')}
       <div class="pc-hint" id="djPctHint">${djAcctHint('pct',st)}</div>
       ${djPctField('tgt','Target · % of account','% target')}
@@ -2808,8 +2809,9 @@ function djAcctHint(f,st){
   if(!base)return f==='tgt'?'Pick a target % — or an R:R below':'Pick how much of the account you can lose today';
   return`${fmoney(base)} ÷ ${tr} = <b>${fmoney(base/n)}</b> ${f==='tgt'?'target':'risk'} per trade`;
 }
+function djBalHint(st){const pnl=st.lv.pnl;return`${djPos.acct?'Starting balance':'Starting balance from premarket plan'}${st.lv.taken?` · ${st.lv.taken} trade${st.lv.taken>1?'s':''} ${pnl>=0?'+':'−'}${fmoney(Math.abs(pnl))} → <b>${fmoney(st.acct)}</b> now`:''}`;}
 function djAcctSync(){
-  const st=djState(selectedDay),rr=djRr();
+  const st=djState(selectedDay),rr=djRr(),bh=document.getElementById('djBalHint');if(bh)bh.innerHTML=djBalHint(st);
   [['pct','djPctHint'],['tgt','djTgtHint']].forEach(([f,id])=>{const el=document.getElementById(id);if(el)el.innerHTML=djAcctHint(f,st);});
   document.querySelectorAll('#djPos .pc-rr button').forEach(b=>b.classList.toggle('on',rr>0&&b.textContent==='1:'+(+rr.toFixed(2))));
   const i=document.querySelector('#djPos .pc-rr input');if(i&&document.activeElement!==i)i.value=rr?+rr.toFixed(2):'';
