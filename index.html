@@ -692,6 +692,14 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-kv{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 9px;display:flex;flex-direction:column;font-family:var(--font-d);min-width:0;}
 .dj-kv span{font-size:10.5px;color:var(--text3);}
 .dj-kv b{font-size:14px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.sc-live{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;padding:8px 12px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);margin-bottom:8px;font-family:var(--font-d);}
+.sc-live b{font-size:13px;}
+.sc-live.up b{color:var(--green);} .sc-live.dn b{color:var(--red);}
+.sc-live span{font-size:11.5px;color:var(--text3);}
+.sc-stop{padding:12px;border-radius:10px;font-family:var(--font-d);font-weight:800;font-size:13px;margin-bottom:12px;text-align:center;}
+.sc-stop.target{background:rgba(45,184,125,.12);color:var(--green);border:1px solid rgba(45,184,125,.4);}
+.sc-stop.loss{background:rgba(240,87,90,.12);color:var(--red);border:1px solid rgba(240,87,90,.4);}
+.sc-stop.trades{background:var(--surface2);color:var(--text2);border:1px solid var(--border);}
 .sc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
 .sc-col{border:1px solid var(--border);border-radius:10px;padding:8px 10px;background:var(--surface2);font-family:var(--font-d);min-width:0;}
 .sc-col.l{border-top:3px solid var(--red);} .sc-col.b{border-top:3px solid var(--accent);} .sc-col.w{border-top:3px solid var(--green);}
@@ -2519,35 +2527,48 @@ function djOverviewHTML(key){
     <div class="dj-sub">Risk plan</div>
     <div class="dj-kvs">${row('Max loss',m(r.maxLoss),'var(--red)')}${row('Daily target',m(r.target),'var(--green)')}${row('Max trades',p.maxTrades||'—')}
       ${row('Risk / trade',m(r.perTrade))}${row('Stop',r.stop?`${r.stop} pts`:'—')}${row('Size',r.contracts!=null?`${r.contracts} ${p.riskSym||'ES'}`:'—')}</div>
-    ${djScenHTML(p,r)}
+    ${djScenHTML(p,r,key)}
     <div class="dj-sub">Bias</div>
     <div class="dj-bias"><div><span>Condition</span>${chip(COND,p.condition)}</div><div><span>Bias</span>${chip(BIAS,p.bias)}</div></div>
     ${p.biasWhy||p.conditionWhy?`<div class="dj-why">${esc(p.biasWhy||p.conditionWhy)}</div>`:''}
     ${pmHasContent(p)?'':`<div class="pm-meter-note" style="margin-top:8px">No premarket plan yet. ${go}Fill it in →</a></div>`}
     ${p.stopRule?`<div class="dj-why" style="margin-top:6px"><b>Stop rule:</b> ${esc(p.stopRule)}</div>`:''}`;
 }
-// Trade size scenarios: every trade loses / breaks even / wins. Each trade risks the plan's risk per trade, capped by the
-// loss budget left (never rounds past it), sized to whole contracts at the plan's stop; a win pays target per trade ÷ risk (else 2R).
-function djScenHTML(p,r){
+// Live state of the day from its actual trades: P&L so far, loss budget left, target left, trades left
+function dayLive(key,r){
+  const dt=(tradesByDay(filteredTrades())[key]||[]),pnl=dt.reduce((a,t)=>a+t.pnl,0);
+  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,tradesLeft=Math.max(0,r.n-dt.length);
+  const stop=r.target&&pnl>=r.target-.005?'target':r.maxLoss&&lossLeft<=.005?'loss':r.n&&!tradesLeft?'trades':'';
+  return{taken:dt.length,pnl,lossLeft,targetLeft,tradesLeft,stop};
+}
+// Size for a trade: plan risk per trade capped by the loss left, in whole contracts that never round past it
+function djSize(r,each,lossLeft){let ct=Math.round(Math.min(r.perTrade,lossLeft)/each);if(ct*each>lossLeft+.005)ct=Math.floor((lossLeft+.005)/each);return Math.max(0,ct);}
+// Trade size scenarios from where the day stands now. Wins aim for (target left ÷ trades left), so each win re-paces the rest.
+function djScenHTML(p,r,key){
   if(!r.maxLoss||!r.stop)return'';
-  const sym=p.riskSym||'ES',each=r.stop*r.pv,rr=r.perTrade&&r.perTradeTarget?r.perTradeTarget/r.perTrade:2;
+  const sym=p.riskSym||'ES',each=r.stop*r.pv,lv=dayLive(key,r);
+  const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
+    <span>${r.target?`${fmoney(lv.targetLeft)} to target`:'no target set'} · ${fmoney(lv.lossLeft)} loss left · ${lv.tradesLeft} trade${lv.tradesLeft===1?'':'s'} left</span></div>`;
+  if(lv.stop){const msg={target:'🎯 Daily target hit · stop trading for the day',loss:'⛔ Max loss reached · stop trading for the day',trades:'Max trades taken · done for the day'}[lv.stop];
+    return`<div class="dj-sub">Trade size scenarios</div>${live}<div class="sc-stop ${lv.stop}">${msg}</div>`;}
   const run=kind=>{
-    let left=r.maxLoss,pnl=0;const rows=[];let end='';
-    for(let i=0;i<r.n;i++){
-      let ct=Math.round(Math.min(r.perTrade,left)/each);if(ct*each>left+.005)ct=Math.floor((left+.005)/each);
-      if(ct<1){end=i?`Max loss reached · done after ${i} trade${i===1?'':'s'}`:`Stop too wide for 1 ${sym} within the max loss`;break;}
-      const risk=ct*each,res=kind==='loss'?-risk:kind==='win'?risk*rr:0;
+    let left=lv.lossLeft,pnl=lv.pnl;const rows=[];let end='';
+    for(let i=lv.taken;i<r.n;i++){
+      const ct=djSize(r,each,left);
+      if(ct<1){end=i>lv.taken?`Max loss reached · done after trade ${i}`:`Stop too wide for 1 ${sym} within the loss left`;break;}
+      const risk=ct*each,tleft=r.target?Math.max(0,r.target-pnl):risk*2*(r.n-i),need=tleft/(r.n-i);
+      const res=kind==='loss'?-risk:kind==='win'?need:0;
       pnl+=res;if(res<0)left+=res;
-      rows.push({i:i+1,ct,risk,res,pnl});
-      if(kind==='win'&&r.target&&pnl>=r.target-.005){end=`🎯 Target hit after trade ${i+1} · stop for the day`;break;}
+      rows.push({i:i+1,ct,risk,res,pnl,pts:need/(ct*r.pv),rr:need/risk});
+      if(kind==='win'&&r.target&&pnl>=r.target-.005){end=`🎯 Target hit after trade ${i+1}`;break;}
     }
-    if(!end)end=kind==='loss'?`Day ends ${fmoney(pnl)} of ${fmoney(-r.maxLoss)} max loss`:kind==='win'?`Day ends ${fmoney(pnl)}`:'All trades used · flat day';
-    return{rows,end,pnl};
+    if(!end)end=kind==='loss'?(pnl<0?`Day ends ${fmoney(pnl)} of ${fmoney(-r.maxLoss)} max loss`:`Day still ends +${fmoney(pnl)}`):kind==='win'?`Day ends ${fmoney(pnl)}`:`All trades used · day ends ${fmoney(pnl)}`;
+    return{rows,end};
   };
   const col=(kind,title,cls)=>{const x=run(kind);return`<div class="sc-col ${cls}"><div class="sc-h">${title}</div>
-    ${x.rows.map(o=>`<div class="sc-row"><span class="sc-n">#${o.i}</span><span class="sc-ct">${o.ct} ${sym}<i>risk ${fmoney(o.risk)}</i></span><span class="sc-res">${o.res>0?'+':''}${fmoney(o.res)}<i>${fmoney(o.pnl)}</i></span></div>`).join('')}
+    ${x.rows.map(o=>`<div class="sc-row"><span class="sc-n">#${o.i}</span><span class="sc-ct">${o.ct} ${sym}<i>${kind==='win'?`aim ${+o.pts.toFixed(2)} pts · ${+o.rr.toFixed(1)}R`:`risk ${fmoney(o.risk)}`}</i></span><span class="sc-res">${o.res>0?'+':''}${fmoney(o.res)}<i>${fmoney(o.pnl)}</i></span></div>`).join('')}
     <div class="sc-end">${x.end}</div></div>`;};
-  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· ${fmoney(r.perTrade)} risk / trade, capped by loss left · ${r.stop}-pt stop · win = ${+rr.toFixed(1)}R</span></div>
+  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· from today's P&L · wins aim for target left ÷ trades left</span></div>${live}
     <div class="sc-grid">${col('loss','✕ Every trade loses','l')}${col('be','– Every trade breakeven','b')}${col('win','✓ Every trade wins','w')}</div>`;
 }
 function djStratHTML(key){
@@ -2647,7 +2668,8 @@ const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL
 function djState(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
   const acct=+djPos.acct||r.acct,acctRisk=acct*(+djPos.pct||0)/100;
-  return{p,r,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,risk:+djPos.risk||(djPos.mode==='acct'?acctRisk:r.perTrade)||0,tick:TICK_SZ[sym]||.25};
+  const lv=dayLive(key,r),planRisk=r.maxLoss?Math.min(r.perTrade,lv.lossLeft):0;
+  return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,risk:+djPos.risk||(djPos.mode==='acct'?acctRisk:planRisk)||0,tick:TICK_SZ[sym]||.25};
 }
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
@@ -2671,19 +2693,19 @@ function djPosHTML(key){
     <div id="djPosOut">${djPosOutHTML(key)}</div>`;
 }
 function djPosOutHTML(key){
-  const{r,sym,pv,stop,risk,tick}=djState(key);
+  const{r,lv,sym,pv,stop,risk,tick}=djState(key);
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
   if(!risk)return screen('—','Set a max loss % in the premarket plan, or type a risk amount');
   if(!stop)return screen('—','Set a stop size in the premarket plan or tap one above');
   const each=stop*pv,exact=risk/each,ct=Math.round(exact),real=ct*each;
   const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
-  const need=r.target&&ct?r.target/r.n/(ct*pv):0;
+  const pace=r.target&&lv.tradesLeft?lv.targetLeft/lv.tradesLeft:0,need=pace&&ct?pace/(ct*pv):0;
   return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
       ${row('Total risk',ct?fmoney(real)+(real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk))}</div>
     <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
-    ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(r.target/r.n)} this trade · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
+    ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${+need.toFixed(2)} pts</b><i>${fmoney(pace)} this trade${lv.taken?` · ${fmoney(lv.targetLeft)} left over ${lv.tradesLeft}`:''} · ${(need/stop).toFixed(1)}R</i></div>`:''}`;
 }
 function djRiskPh(){const st=djState(selectedDay),el=document.querySelector('#djPos .pc-riskline input');if(el)el.placeholder=st.risk?+st.risk.toFixed(2):'0';}
 function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);}
