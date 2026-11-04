@@ -2543,7 +2543,11 @@ function dayLive(key,r){
 }
 // Size for a trade: plan risk per trade capped by the loss left, in whole contracts that never round past it
 // Risk per trade compounds with the day's P&L: (account + P&L so far) × max-loss % ÷ max trades
-function djRiskAt(r,p,pnl){return +p.lossPct?Math.max(0,(r.acct+pnl)*(+p.lossPct)/100/r.n):r.perTrade;}
+// …plus a share of today's profit (default 25%) once the day is green
+function djProfitPct(p){return p.profitPct===undefined||p.profitPct===''?25:+p.profitPct;}
+function djRiskAt(r,p,pnl){const base=+p.lossPct?Math.max(0,(r.acct+pnl)*(+p.lossPct)/100/r.n):r.perTrade;return base+Math.max(0,pnl)*djProfitPct(p)/100;}
+// Loss left plus the profit share you've chosen to put back at risk
+function djCapAt(p,lossLeft,pnl){return lossLeft+Math.max(0,pnl)*djProfitPct(p)/100;}
 function djSize(r,each,lossLeft,perTrade){let ct=Math.round(Math.min(perTrade??r.perTrade,lossLeft)/each);if(ct*each>lossLeft+.005)ct=Math.floor((lossLeft+.005)/each);return Math.max(0,ct);}
 // Trade size scenarios from where the day stands now. Wins aim for (target left ÷ trades left), so each win re-paces the rest.
 function djScenHTML(p,r,key){
@@ -2556,7 +2560,7 @@ function djScenHTML(p,r,key){
   const run=kind=>{
     let left=lv.lossLeft,pnl=lv.pnl;const rows=[];let end='';
     for(let i=lv.taken;i<r.n;i++){
-      const rpt=djRiskAt(r,p,pnl),ct=djSize(r,each,left,rpt);
+      const rpt=djRiskAt(r,p,pnl),ct=djSize(r,each,djCapAt(p,left,pnl),rpt);
       if(ct<1){end=i>lv.taken?`Max loss reached · done after trade ${i}`:`Stop too wide for 1 ${sym} within the loss left`;break;}
       const risk=ct*each,tleft=r.target?Math.max(0,r.target-pnl):risk*2*(r.n-i),need=tleft/(r.n-i);
       const res=kind==='loss'?-risk:kind==='win'?need:0;
@@ -2570,7 +2574,7 @@ function djScenHTML(p,r,key){
   const col=(kind,title,cls)=>{const x=run(kind);return`<div class="sc-col ${cls}"><div class="sc-h">${title}</div>
     ${x.rows.map(o=>`<div class="sc-row"><span class="sc-n">#${o.i}</span><span class="sc-ct">${o.ct} ${sym}<i title="Allowed risk this trade: ${fmoney(o.rpt)}">${kind==='win'?`aim ${+o.pts.toFixed(2)} pts · `:''}allow ${fmoney(o.rpt)}</i></span><span class="sc-res">${o.res>0?'+':''}${fmoney(o.res)}<i>${fmoney(o.pnl)}</i></span></div>`).join('')}
     <div class="sc-end">${x.end}</div></div>`;};
-  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· risk = (account + day P&L) × ${p.lossPct||'—'}% ÷ ${r.n} trades, capped by loss left · wins aim for target left ÷ trades left</span></div>${live}
+  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· risk = (account + day P&L) × ${p.lossPct||'—'}% ÷ ${r.n} trades + ${djProfitPct(p)}% of today's profit, capped by loss left · wins aim for target left ÷ trades left</span></div>${live}
     <div class="sc-grid">${col('loss','✕ Every trade loses','l')}${col('be','– Every trade breakeven','b')}${col('win','✓ Every trade wins','w')}</div>`;
 }
 function djStratHTML(key){
@@ -2670,7 +2674,7 @@ const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL
 function djState(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
   const acct=+djPos.acct||r.acct,acctRisk=acct*(+djPos.pct||0)/100;
-  const lv=dayLive(key,r),planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),lv.lossLeft):0;
+  const lv=dayLive(key,r),planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),djCapAt(p,lv.lossLeft,lv.pnl)):0;
   return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,acct,risk:+djPos.risk||(djPos.mode==='acct'?acctRisk:planRisk)||0,tick:TICK_SZ[sym]||.25};
 }
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
@@ -2759,6 +2763,7 @@ function pmRiskHTML(p){
       <div class="fg"><label>Max trades</label>${num('maxTrades','e.g. 3')}</div>
       <div class="fg"><label>Instrument</label><select data-r="riskSym" onchange="pmSet('riskSym',this.value);pmRiskRender()">${syms.map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
       <div class="fg"><label>Stop size (pts)</label>${num('stopPts','e.g. 6')}</div>
+      <div class="fg"><label>Add profit to risk</label><select onchange="pmSet('profitPct',this.value);pmRiskRender()">${['0','10','25','50','75','100'].map(v=>`<option value="${v}"${String(djProfitPct(p))===v?' selected':''}>${v}% of today's profit</option>`).join('')}</select></div>
     </div>
     <div class="pm-calc" id="pmRiskOut">${pmRiskOutHTML(p)}</div>
     <div class="pm-meter" id="pmMeterOut">${pmMeterHTML(p)}</div>`;
