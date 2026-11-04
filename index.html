@@ -2463,36 +2463,14 @@ function pmRiskOutHTML(p){
   return c('Max loss today',m(r.maxLoss),'var(--red)',p.lossPct?`${p.lossPct}% of ${fmoney(r.acct)}`:'pick a %')
     +c('Daily target',m(r.target),'var(--green)',p.targetPct?`${p.targetPct}% of ${fmoney(r.acct)}`:'pick a %')
     +c('Risk per trade',m(r.perTrade),'',r.maxLoss?`${fmoney(r.maxLoss)} ÷ ${r.n} trade${r.n>1?'s':''}`:'')
-    +c('Max contracts',r.contracts==null?ctr:`${ctr} <small class="pm-calc-x">(${(r.perTrade/(r.stop*r.pv)).toFixed(2)})</small>`,r.contracts===0?'var(--red)':'',pmCtrSub(p,r))
+    +c('Max contracts',ctr,r.contracts===0?'var(--red)':'',pmCtrSub(p,r))
     +c('Target per trade',m(r.perTradeTarget),'',r.maxLoss&&r.target?`Target is ${(r.target/r.maxLoss).toFixed(1)}× max loss`:'');
 }
 function pmCtrSub(p,r){
   if(!r.stop)return'enter a stop size';if(!r.perTrade)return'pick a max loss %';
-  const sym=p.riskSym||'ES',each=r.stop*r.pv,next=(r.contracts||0)+1;
-  const fit=Math.floor(r.perTrade/(next*r.pv)*4)/4; // widest stop (0.25 steps) that fits one more contract
-  return`${sym} · ${r.stop} pts × $${r.pv}/pt = ${fmoney(each)} each<br>${next} would risk ${fmoney(next*each)}${r.contracts===0?' · stop too wide':''}${fit>0?` · fits with a ≤${fit}-pt stop`:''}`;
+  const exact=r.perTrade/(r.stop*r.pv),ex=+exact.toFixed(2);
+  return ex===r.contracts?`${ex} · exact`:`${ex} → rounded down to ${r.contracts}${r.contracts===0?' · stop too wide':''}`;
 }
-// Trade size meter: one segment per max trade, each worth 2 × stop size in points.
-// Also shows the points per trade needed to hit the daily target at the calculated contract size.
-const METER_COLS=['#6c5dd3','#3898ec','#14b8a6','#2db87d','#a3c93a','#f5a524','#f07a3c','#d65caa'];
-function pmMeterHTML(p){
-  const head='<div class="pm-meter-top"><label>Trade size meter</label></div>';
-  const stop=+p.stopPts||0;
-  if(!stop)return head+'<div class="pm-meter-note">Enter a stop size above. Each trade counts as 2 × the stop in points.</div>';
-  const r=pmRiskNums(p),maxT=r.n,slot=stop*2,total=slot*maxT;
-  const segs=Array.from({length:maxT},(_,i)=>`<div class="pm-seg-m" style="background:${METER_COLS[i%METER_COLS.length]}"><b>${i+1}</b><span>${+(slot*(i+1)).toFixed(2)} pts</span></div>`).join('');
-  const ctr=r.contracts>0?r.contracts:1,perPt=ctr*r.pv;
-  let need='',mark='';
-  if(r.target){
-    const tot=r.target/perPt,per=tot/maxT,x=Math.min(100,tot/total*100),hit=per<=slot;
-    mark=`<div class="pm-meter-mark${tot>total?' over':''}" style="left:${x}%" title="Target: ${+tot.toFixed(2)} pts"><span><small>${fmoney(r.target)}</small>🎯 ${+tot.toFixed(2)} pts</span></div>`;
-    need=`<div class="pm-meter-need"><div><span>Points per trade to hit target</span><b style="color:${hit?'var(--green)':'#f5a524'}">${+per.toFixed(2)} pts</b></div>
-      <i>${fmoney(r.target)} ÷ (${ctr} ${p.riskSym||'ES'} contract${ctr>1?'s':''} × $${r.pv}/pt) = ${+tot.toFixed(2)} pts ÷ ${maxT} trade${maxT>1?'s':''}${r.contracts>0?'':' · using 1 contract'} · ${hit?`within your ${slot}-pt trade size`:`${+(per/slot).toFixed(2)}× your ${slot}-pt trade size`}</i></div>`;
-  }else need='<div class="pm-meter-note">Pick a daily target % to see the points you need per trade.</div>';
-  return`${head}<div class="pm-meter-track">${segs}${mark}</div>
-    <div class="pm-meter-note" style="margin-top:6px">1 trade = ${slot} pts (2 × ${stop}-pt stop) · ${maxT} trade${maxT>1?'s':''} = ${total} pts</div>${need}`;
-}
-function pmMeterRender(){const el=document.getElementById('pmMeterOut');if(el)el.innerHTML=pmMeterHTML(pmGet());}
 function pmRiskRender(){
   const p=pmGet(),r=pmRiskNums(p);
   if(p.lossPct)p.maxLoss=String(+r.maxLoss.toFixed(2));if(p.targetPct)p.target=String(+r.target.toFixed(2));
