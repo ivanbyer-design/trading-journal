@@ -703,7 +703,47 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-reset{font-family:var(--font-d);font-size:11px;font-weight:700;color:var(--accent);background:var(--surface2);border:1px solid var(--border2);border-radius:7px;padding:4px 10px;cursor:pointer;}
 .dj-reset:hover:not(:disabled){background:var(--accent);color:#fff;}
 .dj-reset:disabled{opacity:.35;cursor:default;}
-.dj-pos-in{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.dj-wide{margin-top:16px;}
+.dj-wide .dj-kvs{grid-template-columns:repeat(6,1fr);}
+.dj-notes{margin-top:16px;}
+.dj-notes .note-area{min-height:140px;}
+.dj-grid{align-items:start;}
+/* trading-calculator look */
+.dj-calc{background:linear-gradient(180deg,var(--surface),var(--surface2));}
+.pc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.pc-syms{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+.pc-syms button,.pc-syms select{flex:1;min-width:58px;height:42px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:13px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1;padding:0 4px;width:auto;}
+.pc-syms button small{font-size:9.5px;font-weight:600;color:var(--text3);}
+.pc-syms .on{border-color:var(--accent);background:rgba(108,93,211,.18);color:var(--text);box-shadow:0 0 0 1px var(--accent) inset;}
+.pc-fields{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px;}
+.pc-f{display:block;}
+.pc-f>span{display:block;font-family:var(--font-d);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);margin-bottom:4px;}
+.pc-in{display:flex;align-items:center;background:var(--bg,#0f0b1e);border:1px solid var(--border2);border-radius:9px;padding:0 10px;}
+.pc-in:focus-within{border-color:var(--accent);}
+.pc-in em{font-style:normal;color:var(--text3);font-weight:700;margin-right:4px;}
+.pc-in input{border:none;background:transparent;padding:10px 0;font-size:17px;font-weight:700;font-variant-numeric:tabular-nums;text-align:right;}
+.pc-screen{margin-top:12px;border-radius:12px;padding:12px 14px;background:#0b0817;border:1px solid rgba(108,93,211,.35);box-shadow:inset 0 0 24px rgba(108,93,211,.12);font-family:var(--font-d);}
+.pc-screen.bad{border-color:rgba(240,87,90,.5);}
+.pc-scr-top{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#8e8aa6;}
+.pc-big{font-size:44px;font-weight:900;color:#fff;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums;text-align:right;}
+.pc-screen.bad .pc-big{color:var(--red);}
+.pc-big small{font-size:15px;font-weight:700;color:#8e8aa6;margin-left:6px;}
+.pc-scr-sub{font-size:11px;color:#8e8aa6;text-align:right;}
+.pc-dir{font-size:11px;letter-spacing:.5px;padding:2px 8px;border-radius:6px;}
+.pc-dir.l{color:var(--green);background:rgba(45,184,125,.15);}
+.pc-dir.s{color:var(--red);background:rgba(240,87,90,.15);}
+.pc-rows{margin-top:10px;border-top:1px dashed var(--border2);padding-top:6px;font-family:var(--font-d);}
+.pc-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:12.5px;color:var(--text2);border-bottom:1px dashed var(--border);}
+.pc-row b{font-variant-numeric:tabular-nums;color:var(--text);}
+.pc-tps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
+.pc-tps div{border:1px solid rgba(45,184,125,.3);background:rgba(45,184,125,.07);border-radius:9px;padding:7px 8px;text-align:center;font-family:var(--font-d);display:flex;flex-direction:column;}
+.pc-tps span{font-size:10px;font-weight:800;color:var(--green);}
+.pc-tps b{font-size:14px;font-variant-numeric:tabular-nums;}
+.pc-tps i{font-style:normal;font-size:10.5px;color:var(--text3);}
+.pc-plan{margin-top:8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
+.pc-plan span{font-size:12px;color:var(--text2);font-weight:600;}
+.pc-plan b{font-size:15px;color:var(--green);font-variant-numeric:tabular-nums;}
+.pc-plan i{font-style:normal;font-size:11px;color:var(--text3);margin-left:auto;}
 .pm-meter{margin-top:12px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;font-family:var(--font-d);}
 .pm-meter-top{margin-bottom:10px;}
 .pm-meter-top label{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
@@ -746,7 +786,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
   .dm-stats{grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;}
   .pm-grid{grid-template-columns:1fr;}
   .pm-2col,.pm-3col,.dj-grid{grid-template-columns:1fr;}
-  .dj-pos-in{grid-template-columns:1fr 1fr;}
+  .dj-wide .dj-kvs{grid-template-columns:repeat(3,1fr);}
   .pm-risk{grid-template-columns:1fr 1fr 1fr;}
   .dm-hbtn{height:34px;font-size:13px;padding:0 11px;}
 }
@@ -2415,12 +2455,13 @@ function noteViewHTML(key){
   return`<div class="pm">
     <div class="pm-title">Daily journal</div>
     <div class="pm-sub">How did the session go? What did you do well, and what will you change tomorrow?</div>
+    <div class="pm-card dj-wide" id="djOverview">${djOverviewHTML(key)}</div>
+    <div class="pm-card dj-notes"><div class="pm-h">Notes</div>
+      <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea></div>
     <div class="dj-grid">
-      <div class="pm-card" id="djOverview">${djOverviewHTML(key)}</div>
+      <div class="pm-card dj-calc" id="djPos">${djPosHTML(key)}</div>
       <div class="pm-card" id="djStrat">${djStratHTML(key)}</div>
-      <div class="pm-card full" id="djPos">${djPosHTML(key)}</div>
     </div>
-    <textarea class="note-area" placeholder="Write about today's session…" oninput="queueDaySave(()=>{dayNotes[selectedDay]=this.value;})">${esc(dayNotes[key]||'')}</textarea>
     ${pmReviewHTML(key)}
   </div>`;
 }
@@ -2470,34 +2511,37 @@ function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djR
 function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay)el.innerHTML=fn(selectedDay);}
 // Position size calculator: entry + stop price → contracts from the plan's risk per trade
 let djPos={entry:'',stop:'',risk:'',sym:''};
+const DJ_MAIN=['ES','NQ','MES','MNQ'];
 function djPosHTML(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
-  const num=(f,ph)=>`<input type="number" step="any" value="${esc(djPos[f])}" placeholder="${ph}" oninput="djPos.${f}=this.value;djPosOut()">`;
-  return`<div class="pm-h" style="justify-content:space-between">Position size calculator<button class="dj-reset" onclick="djPos={entry:'',stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)">↻ Clear</button></div>
-    <div class="dj-pos-in">
-      <div class="fg"><label>Instrument</label><select onchange="djPos.sym=this.value;djPosOut()">${Object.keys(PT_VAL).map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
-      <div class="fg"><label>Entry price</label>${num('entry','e.g. 6850.25')}</div>
-      <div class="fg"><label>Stop price</label>${num('stop','e.g. 6845.25')}</div>
-      <div class="fg"><label>Risk ($)</label>${num('risk',r.perTrade?(+r.perTrade.toFixed(2))+' (plan)':'e.g. 250')}</div>
-    </div>
-    <div class="pm-calc" id="djPosOut">${djPosOutHTML(key)}</div>`;
+  const fld=(f,lbl,ph,pre)=>`<label class="pc-f"><span>${lbl}</span><div class="pc-in">${pre?`<em>${pre}</em>`:''}<input type="number" inputmode="decimal" step="any" value="${esc(djPos[f])}" placeholder="${ph}" oninput="djPos.${f}=this.value;djPosOut()"></div></label>`;
+  const more=Object.keys(PT_VAL).filter(x=>!DJ_MAIN.includes(x));
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Position size</div><button class="dj-reset" onclick="djPos={entry:'',stop:'',risk:'',sym:djPos.sym};djRender('djPos',djPosHTML)">↻ Clear</button></div>
+    <div class="pc-syms">${DJ_MAIN.map(x=>`<button class="${x===sym?'on':''}" onclick="djPos.sym='${x}';djRender('djPos',djPosHTML)">${x}<small>$${PT_VAL[x]}/pt</small></button>`).join('')}
+      <select class="${more.includes(sym)?'on':''}" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)"><option value="">More</option>${more.map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
+    <div class="pc-fields">${fld('entry','Entry','0.00')}${fld('stop','Stop','0.00')}</div>
+    ${fld('risk','Risk per trade',r.perTrade?(+r.perTrade.toFixed(2))+' (plan)':'0.00','$')}
+    <div id="djPosOut">${djPosOutHTML(key)}</div>`;
 }
 function djPosOutHTML(key){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES',pv=PT_VAL[sym]||50;
   const risk=+djPos.risk||r.perTrade||0,e=+djPos.entry,st=+djPos.stop;
-  const c=(l,v,col,sub)=>`<div class="pm-calc-c"><span>${l}</span><b${col?` style="color:${col}"`:''}>${v}</b>${sub?`<i>${sub}</i>`:''}</div>`;
-  if(!risk)return c('Contracts','—','','Set a max loss % in the premarket plan, or type a risk amount');
-  if(!e||!st||e===st)return c('Contracts','—','',`Enter entry and stop · risking ${fmoney(risk)} per trade`);
+  const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
+  if(!risk)return screen('—','Set a max loss % in the premarket plan, or type a risk amount');
+  if(!e||!st||e===st)return screen('—',`Enter entry and stop · risking ${fmoney(risk)}`);
   const pts=Math.abs(e-st),long=e>st,each=pts*pv,exact=risk/each,ct=Math.round(exact),real=ct*each,dir=long?1:-1;
-  const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?`${ct} · exact`:`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'} to ${ct}`;
+  const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
+  const tag=`<b class="pc-dir ${long?'l':'s'}">${long?'▲ LONG':'▼ SHORT'}</b>`;
   const tp=x=>(e+dir*pts*x).toFixed(2);
   const need=r.target&&ct?r.target/r.n/(ct*pv):0;
-  return c('Contracts',`${ct} ${sym}`,ct?'':'var(--red)',sub)
-    +c('Direction',long?'Long':'Short',long?'var(--green)':'var(--red)',`${+pts.toFixed(2)} pt stop`)
-    +c('Actual risk',ct?fmoney(real):'—',real>risk?'#f5a524':'',ct?(real>risk?`${fmoney(real-risk)} over ${fmoney(risk)}`:`of ${fmoney(risk)} allowed`):'')
-    +c('Targets',`${tp(2)}`,'var(--green)',`1R ${tp(1)} · 2R ${tp(2)} · 3R ${tp(3)}`)
-    +(need?c('Plan target',(e+dir*need).toFixed(2),'var(--green)',`${+need.toFixed(2)} pts to hit ${fmoney(r.target/r.n)} this trade`):'');
+  const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
+  return screen(`${ct}<small>${sym}</small>`,sub,tag,ct?'':'bad')
+    +`<div class="pc-rows">${row('Stop distance',`${+pts.toFixed(2)} pts · ${(pts/((TICK_SZ[sym])||.25)).toFixed(0)} ticks`)}${row('Risk per contract',fmoney(each))}
+      ${row('Total risk',ct?fmoney(real):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk)+(ct&&real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''))}</div>
+    <div class="pc-tps">${[1,2,3].map(x=>`<div><span>${x}R</span><b>${tp(x)}</b><i>${ct?'+'+fmoney(ct*each*x):''}</i></div>`).join('')}</div>
+    ${need?`<div class="pc-plan"><span>🎯 Plan target</span><b>${(e+dir*need).toFixed(2)}</b><i>${+need.toFixed(2)} pts → ${fmoney(r.target/r.n)}</i></div>`:''}`;
 }
+const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
 function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);}
 
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
