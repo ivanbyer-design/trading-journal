@@ -2646,12 +2646,12 @@ function djOverviewHTML(key){
 // Live state of the day from its actual trades: P&L so far, loss budget left, target left, trades left
 // What-if results: old entries are plain $ numbers; new ones are {p:$, pts, r:R-multiple, ct, sym}
 function simPnl(x){return x&&typeof x==='object'?+x.p||0:+x||0;}
+// Today's plan counts real trades only; what-if results stay inside the Risk Plan + Tilt Meter (see tiltLive)
 function dayLive(key,r){
-  const sim=(noteCharts[key]?.sim||[]).map(simPnl);
-  const dt=[...(tradesByDay(filteredTrades())[key]||[]),...sim.map(v=>({pnl:v}))],pnl=dt.reduce((a,t)=>a+t.pnl,0);
+  const dt=tradesByDay(filteredTrades())[key]||[],pnl=dt.reduce((a,t)=>a+t.pnl,0);
   const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,tradesLeft=Math.max(0,r.n-dt.length);
   const stop=r.target&&pnl>=r.target-.005?'target':r.maxLoss&&lossLeft<=.005?'loss':r.n&&!tradesLeft?'trades':'';
-  return{taken:dt.length,sims:sim.length,pnl,lossLeft,targetLeft,tradesLeft,stop};
+  return{taken:dt.length,pnl,lossLeft,targetLeft,tradesLeft,stop};
 }
 // Size for a trade: plan risk per trade capped by the loss left, in whole contracts that never round past it
 // Risk per trade compounds with the day's P&L: (account + P&L so far) × max-loss % ÷ max trades
@@ -2665,7 +2665,7 @@ function djSize(r,each,lossLeft,perTrade){let ct=Math.round(Math.min(perTrade??r
 function djScenHTML(p,r,key){
   if(!r.maxLoss||!r.stop)return'';
   const sym=p.riskSym||'ES',each=r.stop*r.pv,lv=dayLive(key,r);
-  const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken${lv.sims?` (${lv.sims} what-if)`:''} · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
+  const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
     <span>${r.target?`${fmoney(lv.targetLeft)} to target`:'no target set'} · ${fmoney(lv.lossLeft)} loss left · ${lv.tradesLeft} trade${lv.tradesLeft===1?'':'s'} left</span></div>`;
   if(lv.stop){const msg={target:'🎯 Daily target hit · stop trading for the day',loss:'⛔ Max loss reached · stop trading for the day',trades:'Max trades taken · done for the day'}[lv.stop];
     return`<div class="dj-sub">Trade size scenarios</div>${djGoalHTML(r,lv)}<div class="sc-stop ${lv.stop}">${msg}</div>`;}
