@@ -772,7 +772,13 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-stepper button{width:52px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);color:var(--text);font-size:24px;font-weight:700;cursor:pointer;}
 .pc-stepper button:hover{border-color:var(--accent);color:var(--accent);}
 .pc-stop{flex:1;display:flex;align-items:baseline;justify-content:center;gap:6px;background:var(--bg,#0f0b1e);border:1px solid var(--border2);border-radius:10px;padding:6px 0;font-family:var(--font-d);}
-.pc-stop{cursor:text;}
+.pc-stop{cursor:text;border-color:color-mix(in srgb,var(--red) 55%,transparent);background:color-mix(in srgb,var(--red) 8%,var(--bg,#0f0b1e));}
+.pc-stop input{color:var(--red)!important;}.pc-stop small{color:var(--red)!important;}
+.pc-tip{display:flex;align-items:center;gap:10px;margin-top:8px;padding:9px 11px;border-radius:9px;border:1px solid rgba(245,165,36,.45);background:rgba(245,165,36,.09);font-family:var(--font-d);font-size:12px;}
+.pc-tip>div{flex:1;display:flex;flex-direction:column;gap:2px;}
+.pc-tip>div>b{color:#f5a524;font-size:12.5px;}
+.pc-tip span{color:var(--text2);}.pc-tip span b{color:var(--text);}
+.pc-tip .btn{white-space:nowrap;}
 .pc-stop input{width:90px;border:none;background:transparent;padding:0;text-align:right;font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--text);-moz-appearance:textfield;}
 .pc-stop input::-webkit-outer-spin-button,.pc-stop input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .pc-risk{font-family:var(--font-d);font-size:17px;font-weight:800;color:var(--text);padding:6px 0;}
@@ -2504,7 +2510,7 @@ try{noteCharts=JSON.parse(localStorage.getItem('ef_notecharts')||'{}');}catch(e)
 function saveDayData(){
   try{localStorage.setItem('ef_daynotes',JSON.stringify(dayNotes));localStorage.setItem('ef_premarket',JSON.stringify(premarket));localStorage.setItem('ef_weekly',JSON.stringify(weekly));localStorage.setItem('ef_notecharts',JSON.stringify(noteCharts));}catch(e){}
 }
-const PM_CHECKLIST=['Reviewed the higher-timeframe trend','Marked key levels on my chart','Checked the economic calendar','Set my max loss and max trades','I know exactly what my A+ setup looks like','Calm and focused, no revenge or FOMO mindset'];
+const PM_CHECKLIST=['Reviewed the higher-timeframe trend','Marked key levels on my chart','Checked the economic calendar','Set my max loss and max losses','I know exactly what my A+ setup looks like','Calm and focused, no revenge or FOMO mindset'];
 function pmHasContent(p){return!!p&&Object.entries(p).some(([k,v])=>k!=='updated'&&(Array.isArray(v)?v.length:v!==''&&v!=null));}
 let dayView='trades',dayChart=null,daySaveTimer=null;
 
@@ -2634,7 +2640,7 @@ function djOverviewHTML(key){
   const row=(l,v,c)=>`<div class="dj-kv"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
   return`<div class="pm-h">Today's plan</div>
     <div class="dj-sub">Risk plan</div>
-    <div class="dj-kvs">${row('Max loss',m(r.maxLoss),'var(--red)')}${row('Daily target',m(r.target),'var(--green)')}${row('Max trades',p.maxTrades||'—')}
+    <div class="dj-kvs">${row('Max loss',m(r.maxLoss),'var(--red)')}${row('Daily target',m(r.target),'var(--green)')}${row('Max losses',p.maxTrades||'—')}
       ${row('Risk / trade',m(r.perTrade))}${row('Stop',r.stop?`${r.stop} pts`:'—')}${row('Size',r.contracts!=null?`${r.contracts} ${p.riskSym||'ES'}`:'—')}</div>
     ${djScenHTML(p,r,key)}
     <div class="dj-sub">Bias</div>
@@ -2643,51 +2649,56 @@ function djOverviewHTML(key){
     ${pmHasContent(p)?'':`<div class="pm-meter-note" style="margin-top:8px">No premarket plan yet. ${go}Fill it in →</a></div>`}
     ${p.stopRule?`<div class="dj-why" style="margin-top:6px"><b>Stop rule:</b> ${esc(p.stopRule)}</div>`:''}`;
 }
-// Live state of the day from its actual trades: P&L so far, loss budget left, target left, trades left
+// Live state of the day from its actual trades: P&L so far, loss budget left, target left, losses left
 // What-if results: old entries are plain $ numbers; new ones are {p:$, pts, r:R-multiple, ct, sym}
 function simPnl(x){return x&&typeof x==='object'?+x.p||0:+x||0;}
 // Today's plan counts real trades only; what-if results stay inside the Risk Plan + Tilt Meter (see tiltLive)
 function dayLive(key,r){
   const dt=tradesByDay(filteredTrades())[key]||[],pnl=dt.reduce((a,t)=>a+t.pnl,0);
-  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,tradesLeft=Math.max(0,r.n-dt.length);
-  const stop=r.target&&pnl>=r.target-.005?'target':r.maxLoss&&lossLeft<=.005?'loss':r.n&&!tradesLeft?'trades':'';
-  return{taken:dt.length,pnl,lossLeft,targetLeft,tradesLeft,stop};
+  const losses=dt.filter(t=>t.pnl<0).length;
+  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,lossesLeft=Math.max(0,r.n-losses);
+  const stop=r.target&&pnl>=r.target-.005?'target':r.maxLoss&&lossLeft<=.005?'loss':r.n&&!lossesLeft?'losses':'';
+  return{taken:dt.length,losses,pnl,lossLeft,targetLeft,lossesLeft,stop};
 }
-// Size for a trade: plan risk per trade capped by the loss left, in whole contracts that never round past it
-// Risk per trade compounds with the day's P&L: (account + P&L so far) × max-loss % ÷ max trades
-// …plus a share of today's profit (default 25%) once the day is green
+// "Max trades" in the plan means max LOSSES: only losing trades use up an attempt; wins and breakevens don't.
+// Allowed risk per attempt = (loss budget left + a share of today's profit, default 25%) ÷ losses left
 function djProfitPct(p){return p.profitPct===undefined||p.profitPct===''?25:+p.profitPct;}
-function djRiskAt(r,p,pnl){const base=+p.lossPct?Math.max(0,(r.acct+pnl)*(+p.lossPct)/100/r.n):r.perTrade;return base+Math.max(0,pnl)*djProfitPct(p)/100;}
-// Loss left plus the profit share you've chosen to put back at risk
-function djCapAt(p,lossLeft,pnl){return lossLeft+Math.max(0,pnl)*djProfitPct(p)/100;}
-function djSize(r,each,lossLeft,perTrade){let ct=Math.round(Math.min(perTrade??r.perTrade,lossLeft)/each);if(ct*each>lossLeft+.005)ct=Math.floor((lossLeft+.005)/each);return Math.max(0,ct);}
-// Trade size scenarios from where the day stands now. Wins aim for (target left ÷ trades left), so each win re-paces the rest.
+function djAllowed(p,lossLeft,pnl,lossesLeft){return lossesLeft>0?(lossLeft+Math.max(0,pnl)*djProfitPct(p)/100)/lossesLeft:0;}
+// Whole contracts: never above the allowed risk (rounded down), and cut to just what a 2R win needs for the pace
+function djCt(each,allowed,pace){
+  const exact=each?allowed/each:0,riskCt=Math.max(0,Math.floor(exact+1e-9));
+  const tgtCt=pace>.005&&each?Math.max(1,Math.ceil(pace/(2*each)-1e-9)):0,byTarget=!!tgtCt&&tgtCt<riskCt;
+  return{ct:byTarget?tgtCt:riskCt,exact,riskCt,tgtCt,byTarget};
+}
+// Trade size scenarios from where the day stands now. Sizes pace on target left ÷ losses left, so a big win re-paces the rest.
 function djScenHTML(p,r,key){
   if(!r.maxLoss||!r.stop)return'';
   const sym=p.riskSym||'ES',each=r.stop*r.pv,lv=dayLive(key,r);
   const live=`<div class="sc-live${lv.pnl>0?' up':lv.pnl<0?' dn':''}"><b>${lv.taken?`${lv.taken} trade${lv.taken>1?'s':''} taken · ${lv.pnl>=0?'+':''}${fmoney(lv.pnl)}`:'No trades yet today'}</b>
-    <span>${r.target?`${fmoney(lv.targetLeft)} to target`:'no target set'} · ${fmoney(lv.lossLeft)} loss left · ${lv.tradesLeft} trade${lv.tradesLeft===1?'':'s'} left</span></div>`;
-  if(lv.stop){const msg={target:'🎯 Daily target hit · stop trading for the day',loss:'⛔ Max loss reached · stop trading for the day',trades:'Max trades taken · done for the day'}[lv.stop];
+    <span>${r.target?`${fmoney(lv.targetLeft)} to target`:'no target set'} · ${fmoney(lv.lossLeft)} loss left · ${lv.lossesLeft} loss${lv.lossesLeft===1?'':'es'} left</span></div>`;
+  if(lv.stop){const msg={target:'🎯 Daily target hit · stop trading for the day',loss:'⛔ Max loss reached · stop trading for the day',losses:'⛔ Max losses taken · done for the day'}[lv.stop];
     return`<div class="dj-sub">Trade size scenarios</div>${djGoalHTML(r,lv)}<div class="sc-stop ${lv.stop}">${msg}</div>`;}
+  // Loss: each loss uses an attempt. Win: a 2R win at the paced size, attempts unchanged, until the target. BE: uses nothing.
   const run=kind=>{
-    let left=lv.lossLeft,pnl=lv.pnl;const rows=[];let end='';
-    for(let i=lv.taken;i<r.n;i++){
-      const rpt=djRiskAt(r,p,pnl),ct=djSize(r,each,djCapAt(p,left,pnl),rpt);
-      if(ct<1){end=i>lv.taken?`Max loss reached · done after trade ${i}`:`Stop too wide for 1 ${sym} within the loss left`;break;}
-      const risk=ct*each,tleft=r.target?Math.max(0,r.target-pnl):risk*2*(r.n-i),need=tleft/(r.n-i);
-      const res=kind==='loss'?-risk:kind==='win'?need:0;
-      pnl+=res;if(res<0)left+=res;
-      rows.push({i:i+1,ct,risk,rpt,res,pnl,pts:need/(ct*r.pv),rr:need/risk});
+    let left=lv.lossLeft,pnl=lv.pnl,ll=lv.lossesLeft;const rows=[];let end='';
+    for(let i=lv.taken;i<lv.taken+12;i++){
+      if(kind==='loss'&&!ll){end=`Max losses taken · done after trade ${i}`;break;}
+      const rpt=djAllowed(p,left,pnl,ll),tleft=r.target?Math.max(0,r.target-pnl):0,pace=tleft/Math.max(1,ll),c=djCt(each,rpt,pace),ct=c.ct;
+      if(ct<1){end=i>lv.taken?`Max loss reached · done after trade ${i}`:`Stop too wide for 1 ${sym} within the allowed risk`;break;}
+      const risk=ct*each,res=kind==='loss'?-risk:kind==='win'?risk*2:0;
+      pnl+=res;if(res<0){left+=res;ll--;}
+      rows.push({i:i+1,ct,risk,rpt,res,pnl,pts:pace/(ct*r.pv)});
+      if(kind==='be'){end='Breakevens don\'t use an attempt';break;}
       if(kind==='win'&&r.target&&pnl>=r.target-.005){end=`🎯 Target hit after trade ${i+1}`;break;}
     }
-    if(!end)end=kind==='loss'?(pnl<0?`Day ends ${fmoney(pnl)} of ${fmoney(-r.maxLoss)} max loss`:`Day still ends +${fmoney(pnl)}`):kind==='win'?`Day ends ${fmoney(pnl)}`:`All trades used · day ends ${fmoney(pnl)}`;
+    if(!end)end=kind==='loss'?(pnl<0?`Day ends ${fmoney(pnl)} of ${fmoney(-r.maxLoss)} max loss`:`Day still ends +${fmoney(pnl)}`):`Day ends ${fmoney(pnl)}`;
     return{rows,end};
   };
   const col=(kind,title,cls)=>{const x=run(kind);return`<div class="sc-col ${cls}"><div class="sc-h">${title}</div>
     ${x.rows.map(o=>`<div class="sc-row"><span class="sc-n">#${o.i}</span><span class="sc-ct">${o.ct} ${sym}<i title="Allowed risk this trade: ${fmoney(o.rpt)}">${kind==='win'?`aim ${+o.pts.toFixed(2)} pts · `:''}allow ${fmoney(o.rpt)}</i></span><span class="sc-res">${o.res>0?'+':''}${fmoney(o.res)}<i>${fmoney(o.pnl)}</i></span></div>`).join('')}
     <div class="sc-end">${x.end}</div></div>`;};
-  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· risk = (account + day P&L) × ${p.lossPct||'—'}% ÷ ${r.n} trades + ${djProfitPct(p)}% of today's profit, capped by loss left · wins aim for target left ÷ trades left</span></div>${djGoalHTML(r,lv)}${live}
-    <div class="sc-grid">${col('loss','✕ Every trade loses','l')}${col('be','– Every trade breakeven','b')}${col('win','✓ Every trade wins','w')}</div>`;
+  return`<div class="dj-sub">Trade size scenarios <span style="text-transform:none;letter-spacing:0;font-weight:500">· risk = (loss left + ${djProfitPct(p)}% of today's profit) ÷ losses left (max ${r.n}) · size cut to what a 2R win needs for target left ÷ losses left · wins &amp; BE don't use an attempt</span></div>${djGoalHTML(r,lv)}${live}
+    <div class="sc-grid">${col('loss','✕ Every trade loses','l')}${col('be','– Breakeven','b')}${col('win','✓ Every trade wins','w')}</div>`;
 }
 function djStratHTML(key){
   const d=djGet(key),named=strategies.filter(x=>(x.name||'').trim());
@@ -2795,29 +2806,46 @@ const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL
 // Tilt Meter + Risk Plan run only on the what-if log (Win / BE / Loss buttons). Real trades never feed in, and the log is never saved as trades.
 function tiltLive(key,r){
   const sim=(noteCharts[key]?.sim||[]).map(simPnl),pnl=sim.reduce((a,v)=>a+v,0);
-  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,tradesLeft=Math.max(0,r.n-sim.length);
-  return{taken:sim.length,sims:sim.length,pnl,lossLeft,targetLeft,tradesLeft};
+  const losses=sim.filter(v=>v<0).length;
+  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,lossesLeft=Math.max(0,r.n-losses);
+  return{taken:sim.length,sims:sim.length,losses,pnl,lossLeft,targetLeft,lossesLeft};
 }
 function djState(key,atPnl){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
   let lv=tiltLive(key,r);if(atPnl!==undefined)lv={...lv,pnl:atPnl,lossLeft:Math.max(0,r.maxLoss+Math.min(atPnl,0)),targetLeft:r.target?Math.max(0,r.target-atPnl):0};
-  const planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),djCapAt(p,lv.lossLeft,lv.pnl)):0;
+  const planRisk=r.maxLoss?djAllowed(p,lv.lossLeft,lv.pnl,lv.lossesLeft):0;
   const st={p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:planRisk||0,tick:TICK_SZ[sym]||.25};
   return Object.assign(st,djSizeFor(st));
 }
-// Contracts for the next trade: the risk cap, cut down to just what a 2R win needs to stay on pace for the
-// daily target (target left ÷ trades left, or all of it once past max trades). Never sizes above the risk cap.
+// Contracts for the next trade: allowed risk rounded down, cut to what a 2R win needs for the pace
+// (target left ÷ losses left — a big win shrinks the target left but doesn't use up an attempt)
 function djSizeFor(st){
-  const{r,lv,stop,risk,pv}=st;if(!stop||!risk)return{ct:0,exact:0,riskCt:0,tgtCt:0,pace:0,byTarget:false};
-  const each=stop*pv,exact=risk/each,riskCt=Math.round(exact);
-  const pace=lv.targetLeft>.005?lv.targetLeft/Math.max(1,lv.tradesLeft):0,tgtCt=pace?Math.max(1,Math.ceil(pace/(2*each)-1e-9)):0;
-  const byTarget=!!tgtCt&&tgtCt<riskCt;
-  return{ct:byTarget?tgtCt:riskCt,exact,riskCt,tgtCt,pace,byTarget};
+  const{lv,stop,risk,pv}=st,pace=lv.targetLeft>.005?lv.targetLeft/Math.max(1,lv.lossesLeft):0;
+  if(!stop||!risk)return{ct:0,exact:0,riskCt:0,tgtCt:0,pace,byTarget:false};
+  return{...djCt(stop*pv,risk,pace),pace};
+}
+// Mini ↔ micro pairs (micro = 1/10 the point value)
+const MICRO={ES:'MES',NQ:'MNQ',YM:'MYM',RTY:'M2K',CL:'MCL',GC:'MGC'},MINI=Object.fromEntries(Object.entries(MICRO).map(([a,b])=>[b,a]));
+function djSwapBtn(sym){return`<button class="btn" onclick="djPos.sym='${sym}';djRender('djPos',djPosHTML)">Switch to ${sym}</button>`;}
+// Prompt to go down to micros when whole minis leave the allowed risk badly unused (or don't fit at all),
+// or up to minis once the micro count reaches 10+
+function djSwapTipHTML(st){
+  const{sym,stop,risk,pace,ct,pv}=st;if(!stop||!risk)return'';
+  if(MICRO[sym]){
+    const ms=MICRO[sym],me=stop*PT_VAL[ms],m=djCt(me,risk,pace),cur=ct*stop*pv,alt=m.ct*me;
+    if(!m.ct||(ct&&alt-cur<.3*stop*pv))return'';
+    return`<div class="pc-tip"><div><b>↓ Go down to micros</b><span>${ct?`${ct} ${sym} only uses ${fmoney(cur)} of the ${fmoney(risk)} allowed.`:`1 ${sym} risks ${fmoney(stop*pv)}, over the ${fmoney(risk)} allowed.`} <b>${m.ct} ${ms}</b> risks ${fmoney(alt)}.</span></div>${djSwapBtn(ms)}</div>`;
+  }
+  if(MINI[sym]&&ct>=10){
+    const big=MINI[sym],n=Math.floor(ct/10),rem=ct%10,each=stop*pv;
+    return`<div class="pc-tip"><div><b>↑ Go up to minis</b><span>${ct} ${sym} = <b>${n} ${big}${rem?` + ${rem} ${sym}`:''}</b> · same ${fmoney(ct*each)} risk, fewer contracts.</span></div>${djSwapBtn(big)}</div>`;
+  }
+  return'';
 }
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
   const st=djState(key),chips=[1,2,3,4,5,6,7,8,9,10];
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.perTrade?fmoney(st.r.perTrade)+' / trade · from premarket plan':'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)" title="Back to the plan's instrument and stop">↻ Plan</button></div>
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.maxLoss?`${st.risk?fmoney(st.risk):'$0'} / attempt · ${st.lv.lossesLeft} of ${st.r.n} loss${st.r.n>1?'es':''} left`:'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)" title="Back to the plan's instrument and stop">↻ Plan</button></div>
     <div class="pc-riskline"><span>Risk per trade</span><b class="pc-risk" id="djRiskVal">${st.risk?fmoney(st.risk):'—'}</b></div>
     <div class="pc-f"><span>Instrument</span><select class="pc-sym" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)">${Object.keys(PT_VAL).map(x=>`<option value="${x}"${x===st.sym?' selected':''}>${x} · $${PT_VAL[x]}/pt</option>`).join('')}</select></div>
     <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
@@ -2907,15 +2935,15 @@ function djChipSync(){const v=+djPos.stop;document.querySelectorAll('#djPos .pc-
 function djPosOutHTML(key){
   const st=djState(key),{r,lv,sym,pv,stop,risk,tick}=st;
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
-  if(!risk)return screen('—','Set a max loss % in the premarket plan');
+  if(!risk)return screen('—',r.maxLoss?(lv.lossesLeft?'Max loss reached · done for the day':'Max losses taken · done for the day'):'Set a max loss % in the premarket plan','',r.maxLoss?'bad':'');
   if(!stop)return screen('—','Pick a stop size above');
   const each=stop*pv,{exact,ct,byTarget,pace,riskCt}=st,real=ct*each;
-  const sub=byTarget?`sized to target · 2R win = ${fmoney(ct*each*2)} of ${fmoney(pace)} needed · risk allows ${riskCt}`:ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
+  const sub=byTarget?`sized to target · 2R win = ${fmoney(ct*each*2)} of ${fmoney(pace)} needed · risk allows ${riskCt}`:ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded down`;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
   const bal=r.acct+lv.pnl; // for the R tiles' % of account
-  return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')
+  return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')+djSwapTipHTML(st)
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
-      ${row('Total risk',ct?fmoney(real)+(real>risk?` <small style="color:#f5a524">+${fmoney(real-risk)}</small>`:''):'—',real>risk?'#f5a524':'var(--red)')}${row('Allowed',fmoney(risk))}</div>
+      ${row('Total risk',ct?fmoney(real):'—','var(--red)')}${row('Allowed',fmoney(risk))}</div>
     <div class="pc-tps">${[1,2,3].map(x=>{const g=ct*each*x,ap=bal>0?g/bal*100:0;
       return`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(g):''}</i>${ct?`<em title="Gain as % of the account balance">+${+ap.toFixed(2)}% acct</em>`:''}</div>`;}).join('')}</div>
     ${djPtsScaleHTML(st)}`;
@@ -2928,10 +2956,10 @@ function djPtsScaleHTML(st){
   if(lv.targetLeft<=.005)return`<div class="ps"><div class="ps-top">Points to target</div><div class="ps-done">🎯 Target hit · 0 pts needed</div></div>`;
   const perPt=ct*pv,tPts=pace/perPt,dPts=lv.targetLeft/perPt,same=Math.abs(tPts-dPts)<.005,fx=n=>+n.toFixed(2);
   const max=Math.max(dPts,stop*3)*1.06,at=v=>Math.max(3,Math.min(97,v/max*100)).toFixed(2);
-  const left=lv.tradesLeft||1;
+  const left=lv.lossesLeft||1;
   return`<div class="ps"><div class="ps-top">Points to target<small>${ct} ${sym} · ${fmoney(perPt)}/pt</small></div>
     <div class="ps-nums"><div><span>This trade</span><b>${fx(tPts)} pts</b><i>${fmoney(pace)} · ${(tPts/stop).toFixed(1)}R</i></div>
-      ${same?'':`<div><span>Rest of day · ${left} trade${left>1?'s':''}</span><b class="d">${fx(dPts)} pts</b><i>${fmoney(lv.targetLeft)} left</i></div>`}</div>
+      ${same?'':`<div><span>Rest of day · ${left} loss${left>1?'es':''} left</span><b class="d">${fx(dPts)} pts</b><i>${fmoney(lv.targetLeft)} left</i></div>`}</div>
     <div class="ps-axis"><div class="ln"></div>${same?'':`<div class="fd" style="width:${at(dPts)}%"></div>`}<div class="ft" style="width:${at(tPts)}%"></div>
       ${[1,2,3].map(x=>`<div class="rk" style="left:${at(stop*x)}%">${x}R<br>${fx(stop*x)}</div>`).join('')}
       <div class="mk" style="left:${at(tPts)}%">${fx(tPts)}</div>${same?'':`<div class="mk d" style="left:${at(dPts)}%">🎯 ${fx(dPts)}</div>`}</div></div>`;
@@ -2997,7 +3025,7 @@ function pmRiskHTML(p){
       <div class="fg"><label>Account size ($)</label>${num('acctSize',String(settings.startingBalance||50000))}</div>
       <div class="fg"><label>Max daily loss</label>${sel('lossPct','','Select %')}</div>
       <div class="fg"><label>Daily target</label>${sel('targetPct','','Select %')}</div>
-      <div class="fg"><label>Max trades</label>${num('maxTrades','e.g. 3')}</div>
+      <div class="fg"><label>Max losses</label>${num('maxTrades','e.g. 3')}</div>
       <div class="fg"><label>Instrument</label><select data-r="riskSym" onchange="pmSet('riskSym',this.value);pmRiskRender()">${syms.map(x=>`<option${x===sym?' selected':''}>${x}</option>`).join('')}</select></div>
       <div class="fg"><label>Stop size (pts)</label>${num('stopPts','e.g. 6')}</div>
       <div class="fg"><label>Add profit to risk</label><select onchange="pmSet('profitPct',this.value);pmRiskRender()">${['0','10','25','50','75','100'].map(v=>`<option value="${v}"${String(djProfitPct(p))===v?' selected':''}>${v}% of today's profit</option>`).join('')}</select></div>
@@ -3009,7 +3037,7 @@ function pmRiskNums(p){
   const acct=+p.acctSize||+settings.startingBalance||50000,lp=+p.lossPct||0,tp=+p.targetPct||0,n=Math.max(1,Math.floor(+p.maxTrades||1));
   const maxLoss=lp?acct*lp/100:(+p.maxLoss||0),target=tp?acct*tp/100:(+p.target||0);
   const perTrade=maxLoss?maxLoss/n:0,pv=PT_VAL[p.riskSym||'ES']||50,stop=+p.stopPts||0;
-  const contracts=perTrade&&stop?Math.round(perTrade/(stop*pv)):null; // nearest whole contract (.5 rounds up)
+  const contracts=perTrade&&stop?Math.floor(perTrade/(stop*pv)+1e-9):null; // whole contracts, never above risk per attempt
   return{acct,maxLoss,target,perTrade,n,stop,pv,contracts,perTradeTarget:target?target/n:0};
 }
 function pmRiskOutHTML(p){
@@ -3018,7 +3046,7 @@ function pmRiskOutHTML(p){
   const ctr=r.contracts==null?'—':r.contracts<1?'0':r.contracts;
   return c('Max loss today',m(r.maxLoss),'var(--red)',p.lossPct?`${p.lossPct}% of ${fmoney(r.acct)}`:'pick a %')
     +c('Daily target',m(r.target),'var(--green)',p.targetPct?`${p.targetPct}% of ${fmoney(r.acct)}`:'pick a %')
-    +c('Risk per trade',m(r.perTrade),'',r.maxLoss?`${fmoney(r.maxLoss)} ÷ ${r.n} trade${r.n>1?'s':''}`:'')
+    +c('Risk per trade',m(r.perTrade),'',r.maxLoss?`${fmoney(r.maxLoss)} ÷ ${r.n} loss${r.n>1?'es':''}`:'')
     +c('Max contracts',ctr,r.contracts===0?'var(--red)':'',pmCtrSub(p,r))
     +c('Target per trade',m(r.perTradeTarget),'',r.maxLoss&&r.target?`Target is ${(r.target/r.maxLoss).toFixed(1)}× max loss`:'');
 }
@@ -3036,7 +3064,7 @@ const METER_COLS=['#6c5dd3','#3898ec','#14b8a6','#2db87d','#a3c93a','#f5a524','#
 function pmMeterHTML(p){
   const head='<div class="pm-meter-top"><label>Trade size meter</label></div>';
   const stop=+p.stopPts||0;
-  if(!stop)return head+'<div class="pm-meter-note">Enter a stop size above. Each trade counts as 2 × the stop in points.</div>';
+  if(!stop)return head+'<div class="pm-meter-note">Enter a stop size above. Each attempt counts as 2 × the stop in points.</div>';
   const r=pmRiskNums(p),maxT=r.n,slot=stop*2,total=slot*maxT;
   const segs=Array.from({length:maxT},(_,i)=>`<div class="pm-seg-m" style="background:${METER_COLS[i%METER_COLS.length]}"><b>${i+1}</b><span>${+(slot*(i+1)).toFixed(2)} pts</span></div>`).join('');
   const ctr=r.contracts>0?r.contracts:1,perPt=ctr*r.pv;
@@ -3044,11 +3072,11 @@ function pmMeterHTML(p){
   if(r.target){
     const tot=r.target/perPt,per=tot/maxT,x=Math.min(100,tot/total*100),hit=per<=slot;
     mark=`<div class="pm-meter-mark${tot>total?' over':''}" style="left:${x}%" title="Target: ${+tot.toFixed(2)} pts"><span><small>${fmoney(r.target)}</small>🎯 ${+tot.toFixed(2)} pts</span></div>`;
-    need=`<div class="pm-meter-need"><div><span>Points per trade to hit target</span><b style="color:${hit?'var(--green)':'#f5a524'}">${+per.toFixed(2)} pts</b></div>
-      <i>${fmoney(r.target)} ÷ (${ctr} ${p.riskSym||'ES'} contract${ctr>1?'s':''} × $${r.pv}/pt) = ${+tot.toFixed(2)} pts ÷ ${maxT} trade${maxT>1?'s':''}${r.contracts>0?'':' · using 1 contract'} · ${hit?`within your ${slot}-pt trade size`:`${+(per/slot).toFixed(2)}× your ${slot}-pt trade size`}</i></div>`;
+    need=`<div class="pm-meter-need"><div><span>Points per attempt to hit target</span><b style="color:${hit?'var(--green)':'#f5a524'}">${+per.toFixed(2)} pts</b></div>
+      <i>${fmoney(r.target)} ÷ (${ctr} ${p.riskSym||'ES'} contract${ctr>1?'s':''} × $${r.pv}/pt) = ${+tot.toFixed(2)} pts ÷ ${maxT} attempt${maxT>1?'s':''}${r.contracts>0?'':' · using 1 contract'} · ${hit?`within your ${slot}-pt trade size`:`${+(per/slot).toFixed(2)}× your ${slot}-pt trade size`}</i></div>`;
   }else need='<div class="pm-meter-note">Pick a daily target % to see the points you need per trade.</div>';
   return`${head}<div class="pm-meter-track">${segs}${mark}</div>
-    <div class="pm-meter-note" style="margin-top:6px">1 trade = ${slot} pts (2 × ${stop}-pt stop) · ${maxT} trade${maxT>1?'s':''} = ${total} pts</div>${need}`;
+    <div class="pm-meter-note" style="margin-top:6px">1 attempt = ${slot} pts (2 × ${stop}-pt stop) · ${maxT} attempt${maxT>1?'s':''} (max losses) = ${total} pts</div>${need}`;
 }
 function pmMeterRender(){const el=document.getElementById('pmMeterOut');if(el)el.innerHTML=pmMeterHTML(pmGet());}
 function pmRiskRender(){
