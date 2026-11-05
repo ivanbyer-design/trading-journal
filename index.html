@@ -940,6 +940,21 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .ps-axis .mk::after{content:'';display:block;width:2px;height:16px;margin:2px auto 0;background:currentColor;}
 .ps-axis .rk{position:absolute;top:33px;transform:translateX(-50%);font-size:9.5px;font-weight:700;color:var(--text3);white-space:nowrap;text-align:center;line-height:1.2;}
 .ps-axis .rk::before{content:'';display:block;width:1px;height:5px;margin:0 auto 1px;background:var(--text3);}
+.ps-nums b.l{color:var(--red);}
+.ps-axis.f{height:74px;margin-top:8px;}
+.ps-axis.f .ln{top:26px;height:8px;}
+.ps-axis.f .fl,.ps-axis.f .fw,.ps-axis.f .bk{position:absolute;top:26px;height:8px;}
+.ps-axis.f .fl{background:repeating-linear-gradient(45deg,rgba(240,87,90,.45) 0 4px,rgba(240,87,90,.18) 4px 8px);}
+.ps-axis.f .fw{background:repeating-linear-gradient(45deg,rgba(45,184,125,.45) 0 4px,rgba(45,184,125,.18) 4px 8px);}
+.ps-axis.f .bk.g{background:var(--green);}.ps-axis.f .bk.r{background:var(--red);}
+.ps-axis.f .z{position:absolute;top:22px;width:2px;height:16px;margin-left:-1px;background:var(--text3);}
+.ps-axis.f .mk{top:0;font-size:10.5px;}
+.ps-axis.f .mk.n{color:var(--text);}.ps-axis.f .mk.t{color:var(--green);}
+.ps-axis.f .mk::after{height:8px;}
+.ps-axis.f .rk{top:36px;font-weight:800;}
+.ps-axis.f .rk.l{color:var(--red);}.ps-axis.f .rk.l::before{background:var(--red);}
+.ps-axis.f .rk.w{color:var(--green);}.ps-axis.f .rk.w::before{background:var(--green);}
+.ps-axis.f .rk.hit{color:#0e8a50;}
 .ps-done{margin-top:6px;font-size:13px;font-weight:800;color:var(--green);}
 .pc-plan{margin-top:8px;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:8px 10px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
 .pc-plan span{font-size:12px;color:var(--text2);font-weight:600;}
@@ -3026,21 +3041,28 @@ function djRiskCheckHTML(st,each,real){
     <div class="pc-rk-bar"><i style="width:${over?100:pct}%"></i></div>
     <div class="pc-rk-v">${verdict}</div></div>`;
 }
-// Points-to-target scale: points this trade needs (its share of the target left) and points to finish the day,
-// at the current size, against 1R/2R/3R. Re-renders with every logged result, so it re-paces as P&L moves.
+// Day forecast scale: where the day stands now, and where it lands after a 1R loss or a 1R/2R/3R win at the
+// current size, against the daily target. Re-renders with every logged result and every size change.
 function djPtsScaleHTML(st){
-  const{r,lv,stop,pv,ct,pace,sym}=st;
+  const{r,lv,stop,pv,ct,sym}=st;
   if(!r.target||!ct||!stop)return'';
-  if(lv.targetLeft<=.005)return`<div class="ps"><div class="ps-top">Points to target</div><div class="ps-done">🎯 Target hit · 0 pts needed</div></div>`;
-  const perPt=ct*pv,tPts=pace/perPt,dPts=lv.targetLeft/perPt,same=Math.abs(tPts-dPts)<.005,fx=n=>+n.toFixed(2);
-  const max=Math.max(dPts,stop*3)*1.06,at=v=>Math.max(3,Math.min(97,v/max*100)).toFixed(2);
-  const left=lv.lossesLeft||1;
-  return`<div class="ps"><div class="ps-top">Points to target<small>${ct} ${sym} · ${fmoney(perPt)}/pt</small></div>
-    <div class="ps-nums"><div><span>This trade</span><b>${fx(tPts)} pts</b><i>${fmoney(pace)} · ${(tPts/stop).toFixed(1)}R</i></div>
-      ${same?'':`<div><span>Rest of day · ${left} loss${left>1?'es':''} left</span><b class="d">${fx(dPts)} pts</b><i>${fmoney(lv.targetLeft)} left</i></div>`}</div>
-    <div class="ps-axis"><div class="ln"></div>${same?'':`<div class="fd" style="width:${at(dPts)}%"></div>`}<div class="ft" style="width:${at(tPts)}%"></div>
-      ${[1,2,3].map(x=>`<div class="rk" style="left:${at(stop*x)}%">${x}R<br>${fx(stop*x)}</div>`).join('')}
-      <div class="mk" style="left:${at(tPts)}%">${fx(tPts)}</div>${same?'':`<div class="mk d" style="left:${at(dPts)}%">🎯 ${fx(dPts)}</div>`}</div></div>`;
+  if(lv.targetLeft<=.005)return`<div class="ps"><div class="ps-top">Day forecast</div><div class="ps-done">🎯 Target hit · 0 pts needed</div></div>`;
+  const perPt=ct*pv,oneR=ct*stop*pv,now=lv.pnl,T=r.target,fx=n=>+n.toFixed(2),m=fmoney,sg=v=>(v<0?'−':'+')+m(Math.abs(v));
+  const lo=Math.min(0,now-oneR),hi=Math.max(T,now+3*oneR),pad=(hi-lo)*.05,at=v=>Math.max(2,Math.min(98,(v-lo+pad)/(hi-lo+2*pad)*100)).toFixed(2);
+  const seg=(a,b,c)=>`<div class="${c}" style="left:${at(Math.min(a,b))}%;width:${(at(Math.max(a,b))-at(Math.min(a,b))).toFixed(2)}%"></div>`;
+  const needPts=lv.targetLeft/perPt,needR=lv.targetLeft/oneR,loss=now-oneR;
+  return`<div class="ps"><div class="ps-top">Day forecast<small>${ct} ${sym} · ${m(perPt)}/pt · 1R = ${fx(stop)} pts</small></div>
+    <div class="ps-nums"><div><span>To target</span><b>${fx(needPts)} pts</b><i>${m(lv.targetLeft)} · ${needR.toFixed(1)}R</i></div>
+      <div><span>Win 2R lands at</span><b class="d">${sg(now+2*oneR)}</b><i>+${fx(stop*2)} pts</i></div>
+      <div><span>Loss 1R lands at</span><b class="l">${sg(loss)}</b><i>−${fx(stop)} pts</i></div></div>
+    <div class="ps-axis f">
+      <div class="ln"></div>${seg(loss,now,'fl')}${seg(now,now+3*oneR,'fw')}${now?seg(0,now,now>0?'bk g':'bk r'):''}
+      <div class="z" style="left:${at(0)}%"></div>
+      <div class="mk n" style="left:${at(now)}%">Now ${sg(now)}</div>
+      <div class="mk t" style="left:${at(T)}%">🎯 ${m(T)}</div>
+      <div class="rk l" style="left:${at(loss)}%">−1R<br>${sg(loss)}</div>
+      ${(oneR/(hi-lo+2*pad)>=.11?[1,2,3]:[2]).map(x=>{const v=now+x*oneR;return`<div class="rk w${v>=T-.005?' hit':''}" style="left:${at(v)}%">+${x}R${v>=T-.005?' 🎯':''}<br>${sg(v)}</div>`;}).join('')}
+    </div></div>`;
 }
 function djRiskPh(){const st=djState(selectedDay),el=document.getElementById('djRiskVal');if(el)el.textContent=st.risk?fmoney(st.risk):'—';}
 function djSimOut(){const el=document.getElementById('djSim');if(el&&selectedDay)el.innerHTML=djSimHTML(selectedDay);djRender('djProg',djProgHTML);}
