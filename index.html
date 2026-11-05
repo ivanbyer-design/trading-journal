@@ -891,6 +891,19 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-dir{font-size:11px;letter-spacing:.5px;padding:2px 8px;border-radius:6px;}
 .pc-dir.l{color:var(--green);background:rgba(45,184,125,.15);}
 .pc-dir.s{color:var(--red);background:rgba(240,87,90,.15);}
+.pc-rk{margin-top:10px;padding:10px 12px;border-radius:11px;border:2px solid;font-family:var(--font-d);}
+.pc-rk.ok{border-color:rgba(45,184,125,.6);background:rgba(45,184,125,.07);}
+.pc-rk.over{border-color:var(--red);background:rgba(240,87,90,.09);box-shadow:0 0 0 4px rgba(240,87,90,.12);}
+.pc-rk-top{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:6px;text-align:center;align-items:end;}
+.pc-rk-top span{display:block;font-size:10px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;}
+.pc-rk-top b{font-size:15px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--text);}
+.pc-rk-top b.big{font-size:22px;font-weight:900;}
+.pc-rk.ok b.big{color:var(--green);}.pc-rk.over b.big{color:var(--red);}
+.pc-rk-bar{height:7px;border-radius:4px;background:var(--border);margin:8px 0 6px;overflow:hidden;}
+.pc-rk-bar i{display:block;height:100%;border-radius:4px;}
+.pc-rk.ok .pc-rk-bar i{background:var(--green);}.pc-rk.over .pc-rk-bar i{background:var(--red);}
+.pc-rk-v{font-size:12.5px;font-weight:800;text-align:center;}
+.pc-rk.ok .pc-rk-v{color:var(--green);}.pc-rk.over .pc-rk-v{color:var(--red);}
 .pc-rows{margin-top:10px;border-top:1px dashed var(--border2);padding-top:6px;font-family:var(--font-d);}
 .pc-row{display:flex;justify-content:space-between;align-items:baseline;padding:5px 0;font-size:12.5px;color:var(--text2);border-bottom:1px dashed var(--border);}
 .pc-row b{font-variant-numeric:tabular-nums;color:var(--text);}
@@ -2921,7 +2934,7 @@ function djTiltHTML(st,tot){
       <text x="${(cx+(R+14)*Math.cos(Math.PI*(1-fz))).toFixed(1)}" y="${(cy-(R+14)*Math.sin(Math.PI*(1-fz))).toFixed(1)}" class="tl0">$0</text>
     </svg>
     <div class="tilt-ends"><span class="r">${byR?'−3R':'−'+fmoney(L).replace('.00','')}<small>max loss</small></span><span class="g">${byR?'+3R':fmoney(T).replace('.00','')}<small>target</small></span></div>
-    <div class="tilt-val" style="color:${col}">${pnl>=0?'+':'−'}${fmoney(Math.abs(pnl))}</div><div class="tilt-msg">${msg}</div></div>`;
+    <div class="tilt-val" style="color:${col}">${pnl>=0?'+':'−'}${fmoney(Math.abs(pnl))}</div>${!byR&&T&&pnl>=T-.005?`<div class="pc-hit" style="margin-top:10px"><div class="e">🎯</div><b>Target hit for the day</b><span>Protect the account</span></div>`:`<div class="tilt-msg">${msg}</div>`}</div>`;
 }
 function djProgHTML(key){
   const st=djState(key),sim=noteCharts[key]?.sim||[],rows=djLogRows(key,st,sim),fx=n=>(n>0?'+':n<0?'−':'')+Math.abs(n).toFixed(2).replace(/\.?0+$/,'');
@@ -2980,11 +2993,20 @@ function djPosOutHTML(key){
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
   const bal=r.acct+lv.pnl; // for the R tiles' % of account
   return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')+djSwapTipHTML(st)
-    +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
-      ${row('Total risk',ct?fmoney(real):'—','var(--red)')}${row('Allowed',fmoney(risk))}</div>
+    +djRiskCheckHTML(st,each,real)
+    +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}</div>
     <div class="pc-tps">${[1,2,3].map(x=>{const g=ct*each*x,ap=bal>0?g/bal*100:0;
       return`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(g):''}</i>${ct?`<em title="Gain as % of the account balance">+${+ap.toFixed(2)}% acct</em>`:''}</div>`;}).join('')}</div>
     ${djPtsScaleHTML(st)}`;
+}
+// Contract cost vs allowed risk, front and centre: green when the size fits, red when even 1 contract is over
+function djRiskCheckHTML(st,each,real){
+  const{sym,risk,ct}=st,over=each>risk+.005,m=fmoney,use=over?each:real,pct=Math.min(100,risk?use/risk*100:0);
+  const verdict=over?`✕ 1 ${sym} costs ${m(each)} · ${m(each-risk)} over the allowed risk`:`✓ Within allowed · ${m(risk-real)} to spare`;
+  return`<div class="pc-rk ${over?'over':'ok'}">
+    <div class="pc-rk-top"><div><span>1 contract</span><b>${m(each)}</b></div><div><span>${over?`1 ${sym}`:`Total · ${ct} ${sym}`}</span><b class="big">${m(use)}</b></div><div><span>Allowed</span><b>${m(risk)}</b></div></div>
+    <div class="pc-rk-bar"><i style="width:${over?100:pct}%"></i></div>
+    <div class="pc-rk-v">${verdict}</div></div>`;
 }
 // Points-to-target scale: points this trade needs (its share of the target left) and points to finish the day,
 // at the current size, against 1R/2R/3R. Re-renders with every logged result, so it re-paces as P&L moves.
