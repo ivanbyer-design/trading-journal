@@ -798,8 +798,10 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .dj-runs span{display:inline-flex;align-items:center;gap:4px;font-family:var(--font-d);font-size:11px;font-weight:700;padding:3px 4px 3px 8px;border-radius:6px;}
 .dj-runs button{border:none;background:none;color:inherit;cursor:pointer;font-size:13px;line-height:1;padding:0 3px;opacity:.7;}
 .dj-runs button:hover{opacity:1;}
-.dj-runs .ok{color:var(--green);background:rgba(45,184,125,.12);}
-.dj-runs .miss{color:#f5a524;background:rgba(245,165,36,.12);}
+.dj-runs span{color:var(--gc);background:color-mix(in srgb,var(--gc) 12%,transparent);}
+#djRules .tp-ck{border-color:color-mix(in srgb,var(--gc) 45%,var(--border));}
+#djRules .tp-ck-item.on{border-color:color-mix(in srgb,var(--gc) 35%,transparent);background:color-mix(in srgb,var(--gc) 8%,transparent);}
+#djRules .tp-ck-item.on .tp-ck-box{background:var(--gc);border-color:var(--gc);}
 .gm{margin:12px 0 4px;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
 .gm-top{display:flex;justify-content:space-between;align-items:baseline;font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .gm-top b{font-size:16px;letter-spacing:0;color:var(--text);} .gm-top b.g{color:var(--green);} .gm-top b.r{color:var(--red);}
@@ -2729,16 +2731,16 @@ function djRulesHTML(key){
     <button class="btn" style="margin-top:8px" onclick="rulesAdd()">+ Add rule</button>`;
   const items=rules.filter(x=>(x.text||'').trim());
   if(!items.length)return head+'<div class="pm-meter-note">No rules yet. Tap ✎ Edit to write your trading rules.</div>';
-  const n=items.filter(x=>on.has(x.id)).length,pct=n/items.length,col=pct===1?'var(--green)':pct>=.5?'#f5a524':'var(--red)';
+  const n=items.filter(x=>on.has(x.id)).length,pct=n/items.length,col=djGrade(n,items.length).col;
   const tick='<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
   const runs=d.rRuns||[];
-  return head+`<div class="tp-ck${pct===1?' all':''}">
+  return head+`<div class="tp-ck${pct===1?' all':''}" style="--gc:${col}">
     <div class="tp-ck-head"><span>Trade #${runs.length+1} · ${pct===1?'ready to enter':'before entry'}</span><b style="color:${col}">${pct===1?'✓ ':''}${n}/${items.length}</b></div>
     <div class="tp-ck-bar"><i style="width:${pct*100}%;background:${col}"></i></div>
     <div class="tp-ck-list">${items.map((x,i)=>`<button type="button" role="checkbox" aria-checked="${on.has(x.id)}" class="tp-ck-item${on.has(x.id)?' on':''}" onclick="djRuleCheck('${x.id}')"><span class="tp-ck-box">${on.has(x.id)?tick:i+1}</span><span class="tp-ck-txt">${esc(x.text)}</span></button>`).join('')}</div>
     <button class="dj-next${n?' go':''}" style="--gc:${djGrade(n,items.length).col}" onclick="djRulesNext()" ${n?'':'disabled'}>${pct===1?'✓ Took the trade · next trade':'Log trade & reset'} →</button></div>
     ${djGradeHTML(n,items.length)}
-    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span class="${r.n===r.t?'ok':'miss'}" title="${r.time}: ${r.n} of ${r.t} rules · grade ${djGrade(r.n,r.t).g}">Trade #${i+1} · ${djGrade(r.n,r.t).g} · ${r.n}/${r.t}<button onclick="djRunDel(${i})" title="Remove">×</button></span>`).join('')}</div>`:''}`;
+    ${runs.length?`<div class="dj-runs">${runs.map((r,i)=>`<span style="--gc:${djGrade(r.n,r.t).col}" title="${r.time}: ${r.n} of ${r.t} rules · grade ${djGrade(r.n,r.t).g}">Trade #${i+1} · ${djGrade(r.n,r.t).g} · ${r.n}/${r.t}<button onclick="djRunDel(${i})" title="Remove">×</button></span>`).join('')}</div>`:''}`;
 }
 // Trade grade from how many rules are ticked: all = A+, then A/B/C/D by share, none = F
 function djGrade(n,t){const p=t?n/t:0,g=!n?'F':ckGrade(p,n).replace('✓ ','');
@@ -2771,11 +2773,27 @@ function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay
 let djPos={stop:'',risk:'',sym:''};
 const DJ_MAIN=['ES','NQ','MES','MNQ'];
 const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
+// Tilt Meter + Risk Plan run only on the what-if log (Win / BE / Loss buttons). Real trades never feed in, and the log is never saved as trades.
+function tiltLive(key,r){
+  const sim=(noteCharts[key]?.sim||[]).map(simPnl),pnl=sim.reduce((a,v)=>a+v,0);
+  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,tradesLeft=Math.max(0,r.n-sim.length);
+  return{taken:sim.length,sims:sim.length,pnl,lossLeft,targetLeft,tradesLeft};
+}
 function djState(key,atPnl){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
-  let lv=dayLive(key,r);if(atPnl!==undefined)lv={...lv,pnl:atPnl,lossLeft:Math.max(0,r.maxLoss+Math.min(atPnl,0))};
+  let lv=tiltLive(key,r);if(atPnl!==undefined)lv={...lv,pnl:atPnl,lossLeft:Math.max(0,r.maxLoss+Math.min(atPnl,0)),targetLeft:r.target?Math.max(0,r.target-atPnl):0};
   const planRisk=r.maxLoss?Math.min(djRiskAt(r,p,lv.pnl),djCapAt(p,lv.lossLeft,lv.pnl)):0;
-  return{p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:planRisk||0,tick:TICK_SZ[sym]||.25};
+  const st={p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:planRisk||0,tick:TICK_SZ[sym]||.25};
+  return Object.assign(st,djSizeFor(st));
+}
+// Contracts for the next trade: the risk cap, cut down to just what a 2R win needs to stay on pace for the
+// daily target (target left ÷ trades left, or all of it once past max trades). Never sizes above the risk cap.
+function djSizeFor(st){
+  const{r,lv,stop,risk,pv}=st;if(!stop||!risk)return{ct:0,exact:0,riskCt:0,tgtCt:0,pace:0,byTarget:false};
+  const each=stop*pv,exact=risk/each,riskCt=Math.round(exact);
+  const pace=lv.targetLeft>.005?lv.targetLeft/Math.max(1,lv.tradesLeft):0,tgtCt=pace?Math.max(1,Math.ceil(pace/(2*each)-1e-9)):0;
+  const byTarget=!!tgtCt&&tgtCt<riskCt;
+  return{ct:byTarget?tgtCt:riskCt,exact,riskCt,tgtCt,pace,byTarget};
 }
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
@@ -2806,7 +2824,7 @@ function djGoalHTML(r,lv){
 // What-if results: log a trade's outcome here and the next trade re-sizes (also feeds Today's plan). Not saved as trades.
 function djSimHTML(key){
   const st=djState(key),sim=noteCharts[key]?.sim||[],lv=st.lv;
-  const ct=st.stop&&st.risk?Math.round(st.risk/(st.stop*st.pv)):0,risk=ct*st.stop*st.pv;
+  const ct=st.ct,risk=ct*st.stop*st.pv;
   const win=risk*2,pts=st.stop; // Win = +2R, Loss = −1R on the current size; anything else gets typed
   return`${djGoalHTML(st.r,lv)}<div class="pc-sim"><div class="pc-sim-h"><span>Trade #${lv.taken+1} result</span></div>
     <div class="pc-sim-btns"><button class="w" onclick="djSimAdd(${+win.toFixed(2)})" ${win?'':'disabled'}>✓ Win 2R<small>+${fmoney(win)}${win?` · +${+(pts*2).toFixed(2)} pts`:''}</small></button>
@@ -2820,7 +2838,7 @@ function djLogRows(key,st,sim){
   let run=st.lv.pnl-sim.reduce((a,x)=>a+simPnl(x),0);
   return sim.map((x,i)=>{const v=simPnl(x);let r,pts,ct,sym;
     if(x&&typeof x==='object'&&isFinite(x.r)){r=+x.r;pts=+x.pts;ct=x.ct;sym=x.sym;}
-    else{const s0=djState(key,run);ct=s0.stop&&s0.risk?Math.round(s0.risk/(s0.stop*s0.pv)):0;const oneR=ct*s0.stop*s0.pv;r=oneR?v/oneR:NaN;pts=ct?v/(ct*s0.pv):NaN;sym=s0.sym;}
+    else{const s0=djState(key,run);ct=s0.ct;const oneR=ct*s0.stop*s0.pv;r=oneR?v/oneR:NaN;pts=ct?v/(ct*s0.pv):NaN;sym=s0.sym;}
     run+=v;return{i,v,r,pts,ct,sym,n:st.lv.taken-sim.length+i+1};});
 }
 // Daily Progress card: tilt meter (needle leans toward max loss or target), day stats, and a card per logged trade
@@ -2862,7 +2880,7 @@ function djProgHTML(key){
 function djSimSet(fn){const d=djGet(selectedDay,true);d.sim=fn(d.sim||[]);if(!d.sim.length)delete d.sim;djSave();djRender('djPos',djPosHTML);djRender('djProg',djProgHTML);djRender('djOverview',djOverviewHTML);}
 function djSimAdd(v){if(!isFinite(v))return;
   // record the result in points and R using the size shown when it was logged
-  const st=djState(selectedDay),ct=st.stop&&st.risk?Math.round(st.risk/(st.stop*st.pv)):0,oneR=ct*st.stop*st.pv,p=+(+v).toFixed(2);
+  const st=djState(selectedDay),ct=st.ct,oneR=ct*st.stop*st.pv,p=+(+v).toFixed(2);
   djSimSet(a=>[...a,ct?{p,pts:+(p/(ct*st.pv)).toFixed(2),r:+(p/oneR).toFixed(2),ct,sym:st.sym}:p]);}
 function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i));}
 function djSimClear(){djSimSet(()=>[]);}
@@ -2872,10 +2890,10 @@ function djPosOutHTML(key){
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
   if(!risk)return screen('—','Set a max loss % in the premarket plan');
   if(!stop)return screen('—','Pick a stop size above');
-  const each=stop*pv,exact=risk/each,ct=Math.round(exact),real=ct*each;
-  const sub=ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
+  const each=stop*pv,{exact,ct,byTarget,pace,riskCt}=st,real=ct*each;
+  const sub=byTarget?`sized to target · 2R win = ${fmoney(ct*each*2)} of ${fmoney(pace)} needed · risk allows ${riskCt}`:ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded ${ct>exact?'up':'down'}`;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
-  const pace=r.target&&lv.tradesLeft?lv.targetLeft/lv.tradesLeft:0,need=pace&&ct?pace/(ct*pv):0;
+  const need=pace&&ct?pace/(ct*pv):0;
   const bal=r.acct+lv.pnl,tgt=pace; // for the R tiles' % indicators
   return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}${row('Risk per contract',fmoney(each))}
