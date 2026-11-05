@@ -886,6 +886,12 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-scr-top{display:flex;justify-content:space-between;align-items:center;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#8e8aa6;}
 .pc-big{font-size:44px;font-weight:900;color:#fff;line-height:1.05;margin-top:2px;font-variant-numeric:tabular-nums;text-align:right;}
 .pc-screen.bad .pc-big{color:var(--red);}
+.pc-ctstep{display:inline-flex;flex-direction:column;gap:3px;vertical-align:middle;margin-right:10px;}
+.pc-ctstep button{width:34px;height:22px;border-radius:6px;border:1px solid rgba(108,93,211,.5);background:rgba(108,93,211,.18);color:#fff;font-size:11px;cursor:pointer;line-height:1;}
+.pc-ctstep button:hover{background:rgba(108,93,211,.4);}.pc-ctstep button:disabled{opacity:.3;cursor:default;}
+.pc-scr-sub a{color:#b6acff;margin-left:6px;}
+.pc-fill{width:100%;margin-top:8px;height:36px;border-radius:9px;border:1px dashed rgba(45,184,125,.6);background:rgba(45,184,125,.08);color:var(--green);font-family:var(--font-d);font-weight:800;font-size:12.5px;cursor:pointer;}
+.pc-fill:hover{background:rgba(45,184,125,.16);}
 .pc-big small{font-size:15px;font-weight:700;color:#8e8aa6;margin-left:6px;}
 .pc-scr-sub{font-size:11px;color:#8e8aa6;text-align:right;}
 .pc-dir{font-size:11px;letter-spacing:.5px;padding:2px 8px;border-radius:6px;}
@@ -2843,7 +2849,12 @@ function djState(key,atPnl){
   let lv=tiltLive(key,r);if(atPnl!==undefined)lv={...lv,pnl:atPnl,lossLeft:Math.max(0,r.maxLoss+Math.min(atPnl,0)),targetLeft:r.target?Math.max(0,r.target-atPnl):0};
   const planRisk=r.maxLoss?djAllowed(p,lv.lossLeft,lv.pnl,lv.lossesLeft):0;
   const st={p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:planRisk||0,tick:TICK_SZ[sym]||.25};
-  return Object.assign(st,djSizeFor(st));
+  Object.assign(st,djSizeFor(st));
+  // Manual contract count (▲/▼ on the contracts screen). Only holds for this day + instrument + stop + result count,
+  // so changing any of those, or logging a result, goes back to the calculated size.
+  st.auto=st.ct;st.ctKey=`${key}|${sym}|${st.stop}|${(noteCharts[key]?.sim||[]).length}`;
+  if(djPos.ct!=null&&djPos.ctKey===st.ctKey){st.ct=Math.max(0,djPos.ct);st.manual=st.ct!==st.auto;}
+  return st;
 }
 // Contracts for the next trade: allowed risk rounded down, cut to what a 2R win needs for the pace
 // (target left ÷ losses left — a big win shrinks the target left but doesn't use up an attempt)
@@ -2870,10 +2881,12 @@ function djSwapTipHTML(st){
   }
   return'';
 }
+function djCtStep(d){const st=djState(selectedDay);djPos.ct=Math.max(0,st.ct+d);djPos.ctKey=st.ctKey;djRender('djPos',djPosHTML);}
+function djCtSet(n){const st=djState(selectedDay);djPos.ct=n;djPos.ctKey=st.ctKey;djRender('djPos',djPosHTML);}
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
   const st=djState(key),chips=[1,2,3,4,5,6,7,8,9,10];
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.maxLoss?`${st.risk?fmoney(st.risk):'$0'} / attempt · ${st.lv.lossesLeft} of ${st.r.n} loss${st.r.n>1?'es':''} left`:'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:''};djRender('djPos',djPosHTML)" title="Back to the plan's instrument and stop">↻ Plan</button></div>
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.maxLoss?`${st.risk?fmoney(st.risk):'$0'} / attempt · ${st.lv.lossesLeft} of ${st.r.n} loss${st.r.n>1?'es':''} left`:'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',ct:null};djRender('djPos',djPosHTML)" title="Back to the plan's instrument and stop">↻ Plan</button></div>
     <div class="pc-riskline"><span>Risk per trade</span><b class="pc-risk" id="djRiskVal">${st.risk?fmoney(st.risk):'—'}</b></div>
     <div class="pc-f"><span>Instrument</span><select class="pc-sym" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)">${Object.keys(PT_VAL).map(x=>`<option value="${x}"${x===st.sym?' selected':''}>${x} · $${PT_VAL[x]}/pt</option>`).join('')}</select></div>
     <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
@@ -2992,7 +3005,11 @@ function djPosOutHTML(key){
   const sub=byTarget?`sized to target · 2R win = ${fmoney(ct*each*2)} of ${fmoney(pace)} needed · risk allows ${riskCt}`:ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded down`;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
   const bal=r.acct+lv.pnl; // for the R tiles' % of account
-  return screen(`${ct}<small>${sym}</small>`,sub,'',ct?'':'bad')+djSwapTipHTML(st)
+  const fit=Math.floor(risk/each+1e-9);
+  const big=`<span class="pc-ctstep"><button onclick="djCtStep(1)" title="One more contract">▲</button><button onclick="djCtStep(-1)" ${ct?'':'disabled'} title="One less contract">▼</button></span>${ct}<small>${sym}</small>`;
+  const sub2=st.manual?`set by you · calculated ${st.auto} <a href="#" onclick="event.preventDefault();djPos.ct=null;djRender('djPos',djPosHTML)">↺ reset</a>`:sub;
+  const fill=fit>ct?`<button class="pc-fill" onclick="djCtSet(${fit})">Fill to max allowed · ${fit} ${sym} = ${fmoney(fit*each)}</button>`:'';
+  return screen(big,sub2,'',ct&&real<=risk+.005?'':'bad')+fill+djSwapTipHTML(st)
     +djRiskCheckHTML(st,each,real)
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}</div>
     <div class="pc-tps">${[1,2,3].map(x=>{const g=ct*each*x,ap=bal>0?g/bal*100:0;
@@ -3001,10 +3018,10 @@ function djPosOutHTML(key){
 }
 // Contract cost vs allowed risk, front and centre: green when the size fits, red when even 1 contract is over
 function djRiskCheckHTML(st,each,real){
-  const{sym,risk,ct}=st,over=each>risk+.005,m=fmoney,use=over?each:real,pct=Math.min(100,risk?use/risk*100:0);
-  const verdict=over?`✕ 1 ${sym} costs ${m(each)} · ${m(each-risk)} over the allowed risk`:`✓ Within allowed · ${m(risk-real)} to spare`;
+  const{sym,risk,ct}=st,m=fmoney,use=ct?real:each,over=use>risk+.005,pct=Math.min(100,risk?use/risk*100:0);
+  const verdict=!over?`✓ Within allowed · ${m(risk-real)} to spare`:ct?`✕ ${ct} ${sym} = ${m(real)} · ${m(real-risk)} over the allowed risk`:`✕ 1 ${sym} costs ${m(each)} · ${m(each-risk)} over the allowed risk`;
   return`<div class="pc-rk ${over?'over':'ok'}">
-    <div class="pc-rk-top"><div><span>1 contract</span><b>${m(each)}</b></div><div><span>${over?`1 ${sym}`:`Total · ${ct} ${sym}`}</span><b class="big">${m(use)}</b></div><div><span>Allowed</span><b>${m(risk)}</b></div></div>
+    <div class="pc-rk-top"><div><span>1 contract</span><b>${m(each)}</b></div><div><span>${ct?`Total · ${ct} ${sym}`:`1 ${sym}`}</span><b class="big">${m(use)}</b></div><div><span>Allowed</span><b>${m(risk)}</b></div></div>
     <div class="pc-rk-bar"><i style="width:${over?100:pct}%"></i></div>
     <div class="pc-rk-v">${verdict}</div></div>`;
 }
