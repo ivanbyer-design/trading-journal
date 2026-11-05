@@ -779,6 +779,14 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-tip>div>b{color:#f5a524;font-size:12.5px;}
 .pc-tip span{color:var(--text2);}.pc-tip span b{color:var(--text);}
 .pc-tip .btn{white-space:nowrap;}
+.pc-hit{margin-top:12px;padding:26px 16px;border-radius:14px;text-align:center;font-family:var(--font-d);color:#fff;
+  background:linear-gradient(135deg,#1fbf75,#13a35f 55%,#0e8a50);border:2px solid #34e08f;
+  box-shadow:0 0 0 5px rgba(45,184,125,.18),0 10px 30px rgba(45,184,125,.35);animation:pcHit 1.8s ease-in-out infinite;}
+.pc-hit .e{font-size:44px;line-height:1;}
+.pc-hit b{display:block;font-size:26px;font-weight:900;letter-spacing:.3px;margin-top:8px;line-height:1.15;}
+.pc-hit span{display:block;font-size:17px;font-weight:800;margin-top:6px;text-transform:uppercase;letter-spacing:1px;opacity:.95;}
+.pc-hit i{display:block;font-style:normal;font-size:12px;font-weight:600;margin-top:10px;opacity:.85;}
+@keyframes pcHit{0%,100%{box-shadow:0 0 0 5px rgba(45,184,125,.18),0 10px 30px rgba(45,184,125,.35);}50%{box-shadow:0 0 0 10px rgba(45,184,125,.08),0 10px 40px rgba(45,184,125,.55);}}
 .pc-adj{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);font-family:var(--font-d);font-size:12px;}
 .pc-adj.up{border-color:rgba(45,184,125,.5);background:rgba(45,184,125,.07);}.pc-adj.down{border-color:rgba(240,87,90,.45);background:rgba(240,87,90,.06);}
 .pc-adj-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
@@ -864,7 +872,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .tl-row.w .tl-bar i{background:var(--green);}.tl-row.l .tl-bar i{background:var(--red);}.tl-row.b .tl-bar i{background:var(--accent);}
 .tl-bar u{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--text3);}
 .tl-sub{font-size:11px;color:var(--text3);font-weight:600;font-variant-numeric:tabular-nums;}
-.pc-riskline{margin-bottom:10px;padding:2px 2px 8px;border-bottom:1px dashed var(--border2);display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-d);}
+.pc-riskline{margin-bottom:10px;padding:6px 12px;border:2px solid var(--red);border-radius:10px;background:color-mix(in srgb,var(--red) 6%,transparent);display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--font-d);}
 .pc-riskline>span{font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--text3);}
 .pc-riskline .pc-in input{font-size:14px;padding:7px 0;}
 .pc-f{display:block;}
@@ -2964,6 +2972,7 @@ function djChipSync(){const v=+djPos.stop;document.querySelectorAll('#djPos .pc-
 function djPosOutHTML(key){
   const st=djState(key),{r,lv,sym,pv,stop,risk,tick}=st;
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
+  if(r.target&&lv.targetLeft<=.005)return`<div class="pc-hit"><div class="e">🎯</div><b>Target hit for the day</b><span>Protect the account</span><i>+${fmoney(lv.pnl)} of ${fmoney(r.target)} target · no more size from here</i></div>`;
   if(!risk)return screen('—',r.maxLoss?(lv.lossesLeft?'Max loss reached · done for the day':'Max losses taken · done for the day'):'Set a max loss % in the premarket plan','',r.maxLoss?'bad':'');
   if(!stop)return screen('—','Pick a stop size above');
   const each=stop*pv,{exact,ct,byTarget,pace,riskCt}=st,real=ct*each;
