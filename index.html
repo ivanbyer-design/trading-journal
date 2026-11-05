@@ -779,6 +779,15 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-tip>div>b{color:#f5a524;font-size:12.5px;}
 .pc-tip span{color:var(--text2);}.pc-tip span b{color:var(--text);}
 .pc-tip .btn{white-space:nowrap;}
+.pc-adj{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--border2);background:var(--surface2);font-family:var(--font-d);font-size:12px;}
+.pc-adj.up{border-color:rgba(45,184,125,.5);background:rgba(45,184,125,.07);}.pc-adj.down{border-color:rgba(240,87,90,.45);background:rgba(240,87,90,.06);}
+.pc-adj-h{display:flex;align-items:baseline;gap:8px;margin-bottom:4px;}
+.pc-adj-h b{font-size:13px;}.pc-adj.up .pc-adj-h b{color:var(--green);}.pc-adj.down .pc-adj-h b{color:var(--red);}
+.pc-adj-h span{color:var(--text3);font-weight:600;flex:1;}
+.pc-adj-h button{border:none;background:none;color:var(--text3);font-size:16px;cursor:pointer;line-height:1;}
+.pc-adj-r{display:grid;grid-template-columns:92px 1fr;gap:0 8px;padding:3px 0;border-top:1px dashed var(--border);}
+.pc-adj-r span{color:var(--text3);font-weight:600;}.pc-adj-r em{font-style:normal;color:var(--text2);font-variant-numeric:tabular-nums;}
+.pc-adj-r em b{color:var(--text);}.pc-adj-r i{grid-column:2;font-style:normal;font-size:10.5px;color:var(--text3);}
 .pc-stop input{width:90px;border:none;background:transparent;padding:0;text-align:right;font-size:28px;font-weight:900;font-variant-numeric:tabular-nums;color:var(--text);-moz-appearance:textfield;}
 .pc-stop input::-webkit-outer-spin-button,.pc-stop input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
 .pc-risk{font-family:var(--font-d);font-size:17px;font-weight:800;color:var(--text);padding:6px 0;}
@@ -2652,13 +2661,11 @@ function djOverviewHTML(key){
 // Live state of the day from its actual trades: P&L so far, loss budget left, target left, losses left
 // What-if results: old entries are plain $ numbers; new ones are {p:$, pts, r:R-multiple, ct, sym}
 function simPnl(x){return x&&typeof x==='object'?+x.p||0:+x||0;}
-// Today's plan counts real trades only; what-if results stay inside the Risk Plan + Tilt Meter (see tiltLive)
+// Day progress follows the Risk Plan's own result log (Win / BE / Loss), never logged trades
 function dayLive(key,r){
-  const dt=tradesByDay(filteredTrades())[key]||[],pnl=dt.reduce((a,t)=>a+t.pnl,0);
-  const losses=dt.filter(t=>t.pnl<0).length;
-  const lossLeft=Math.max(0,r.maxLoss+Math.min(pnl,0)),targetLeft=r.target?Math.max(0,r.target-pnl):0,lossesLeft=Math.max(0,r.n-losses);
+  const lv=tiltLive(key,r),{pnl,lossLeft,lossesLeft}=lv;
   const stop=r.target&&pnl>=r.target-.005?'target':r.maxLoss&&lossLeft<=.005?'loss':r.n&&!lossesLeft?'losses':'';
-  return{taken:dt.length,losses,pnl,lossLeft,targetLeft,lossesLeft,stop};
+  return{...lv,stop};
 }
 // "Max trades" in the plan means max LOSSES: only losing trades use up an attempt; wins and breakevens don't.
 // Allowed risk per attempt = (loss budget left + a share of today's profit, default 25%) ÷ losses left
@@ -2853,6 +2860,7 @@ function djPosHTML(key){
         <label class="pc-stop"><input type="number" inputmode="decimal" min="0" step="any" value="${st.stop?+st.stop.toFixed(2):''}" placeholder="—" oninput="djPos.stop=this.value;djPosOut();djChipSync()"><small>pts</small></label>
         <button onclick="djStep(1)" aria-label="Bigger stop">+</button></div></div>
     <div class="pc-chips">${chips.map(c=>`<button class="${c===st.stop?'on':''}" onclick="djPos.stop='${c}';djRender('djPos',djPosHTML)">${c}</button>`).join('')}</div>
+    <div id="djAdj">${djAdjHTML(key)}</div>
     <div id="djPosOut">${djPosOutHTML(key)}</div>
     <div id="djSim">${djSimHTML(key)}</div>`;
 }
@@ -2924,13 +2932,34 @@ function djProgHTML(key){
       :'<div class="pm-meter-note">No trades logged yet — log each result with Win / BE / Loss in the Risk Plan.</div>'}
     ${rows.length?'<div class="pm-meter-note" style="margin-top:2px">What-if results · not saved as trades</div>':''}</div>`;
 }
-function djSimSet(fn){const d=djGet(selectedDay,true);d.sim=fn(d.sim||[]);if(!d.sim.length)delete d.sim;djSave();djRender('djPos',djPosHTML);djRender('djProg',djProgHTML);djRender('djOverview',djOverviewHTML);}
-function djSimAdd(v){if(!isFinite(v))return;
+function djSimSet(fn,label){const before=djState(selectedDay),d=djGet(selectedDay,true);d.sim=fn(d.sim||[]);if(!d.sim.length)delete d.sim;djSave();
+  djAdjNote(before,djState(selectedDay),label);djRender('djPos',djPosHTML);djRender('djProg',djProgHTML);djRender('djOverview',djOverviewHTML);}
+// Size-adjustment prompt: after every logged / removed result, explain what the calculator changed and why
+let djAdj=null;
+function djAdjNote(a,b,label){
+  if(!label)return;
+  const m=fmoney,lines=[],ctTxt=st=>`${st.ct} ${st.sym}`;
+  if(a.lv.lossesLeft!==b.lv.lossesLeft)lines.push(['Losses left',`${a.lv.lossesLeft} → <b>${b.lv.lossesLeft}</b>`]);
+  if(Math.abs(a.risk-b.risk)>.005)lines.push(['Allowed risk',`${m(a.risk)} → <b>${m(b.risk)}</b>`,`(${m(b.lv.lossLeft)} loss left${b.lv.pnl>0?` + ${djProfitPct(b.p)}% of ${m(b.lv.pnl)} profit`:''}) ÷ ${b.lv.lossesLeft} loss${b.lv.lossesLeft===1?'':'es'} left`]);
+  if(b.r.target&&Math.abs(a.pace-b.pace)>.005)lines.push(['Target pace',`${m(a.pace)} → <b>${m(b.pace)}</b> / attempt`,`${m(b.lv.targetLeft)} target left ÷ ${Math.max(1,b.lv.lossesLeft)}`]);
+  const why=!b.risk?(b.lv.lossesLeft?'max loss reached':'max losses taken'):b.byTarget?`a 2R win (${m(b.ct*b.stop*b.pv*2)}) covers the ${m(b.pace)} pace`:b.ct?`${m(b.ct*b.stop*b.pv)} risk fits the ${m(b.risk)} allowed`:'1 contract is over the allowed risk';
+  const dir=b.ct>a.ct?'up':b.ct<a.ct?'down':'same';
+  lines.push(['Contracts',dir==='same'?`<b>${ctTxt(b)}</b> · no change`:`${ctTxt(a)} → <b>${ctTxt(b)}</b>`,why]);
+  djAdj={key:selectedDay,label,dir,lines};
+  toast(dir==='same'?`${label} · size stays ${ctTxt(b)}`:`${label} · size ${dir} to ${ctTxt(b)}`,'success');
+}
+function djAdjHTML(key){
+  if(!djAdj||djAdj.key!==key)return'';
+  const A=djAdj,t={up:'↑ Size up',down:'↓ Size down',same:'Size unchanged'}[A.dir];
+  return`<div class="pc-adj ${A.dir}"><div class="pc-adj-h"><b>${t}</b><span>${esc(A.label)}</span><button onclick="djAdj=null;djRender('djPos',djPosHTML)" title="Dismiss">×</button></div>
+    ${A.lines.map(([k,v,w])=>`<div class="pc-adj-r"><span>${k}</span><em>${v}</em>${w?`<i>${w}</i>`:''}</div>`).join('')}</div>`;
+}
+function djSimAdd(v){if(!isFinite(v))return;const lbl=`${v>0?'Win':v<0?'Loss':'Breakeven'} ${v?(v>0?'+':'−')+fmoney(Math.abs(v)):''} logged`;
   // record the result in points and R using the size shown when it was logged
   const st=djState(selectedDay),ct=st.ct,oneR=ct*st.stop*st.pv,p=+(+v).toFixed(2);
-  djSimSet(a=>[...a,ct?{p,pts:+(p/(ct*st.pv)).toFixed(2),r:+(p/oneR).toFixed(2),ct,sym:st.sym}:p]);}
-function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i));}
-function djSimClear(){djSimSet(()=>[]);}
+  djSimSet(a=>[...a,ct?{p,pts:+(p/(ct*st.pv)).toFixed(2),r:+(p/oneR).toFixed(2),ct,sym:st.sym}:p],lbl);}
+function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i),`Trade #${i+1} removed`);}
+function djSimClear(){djSimSet(()=>[],'Results cleared');}
 function djChipSync(){const v=+djPos.stop;document.querySelectorAll('#djPos .pc-chips button').forEach(b=>b.classList.toggle('on',+b.textContent===v));}
 function djPosOutHTML(key){
   const st=djState(key),{r,lv,sym,pv,stop,risk,tick}=st;
