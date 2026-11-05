@@ -915,10 +915,11 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-row b{font-variant-numeric:tabular-nums;color:var(--text);}
 .pc-tps{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px;}
 .pc-tps div{border:1px solid rgba(45,184,125,.3);background:rgba(45,184,125,.07);border-radius:9px;padding:7px 8px;text-align:center;font-family:var(--font-d);display:flex;flex-direction:column;}
-.pc-tps span{font-size:10px;font-weight:800;color:var(--green);}
-.pc-tps b{font-size:14px;font-variant-numeric:tabular-nums;}
+.pc-tps div{padding:10px 6px;border-width:2px;}
+.pc-tps span{font-size:11.5px;font-weight:800;color:var(--green);letter-spacing:.2px;}
+.pc-tps b{font-size:22px;font-weight:900;color:var(--green);font-variant-numeric:tabular-nums;line-height:1.15;margin:3px 0 1px;}
 .pc-tps i{font-style:normal;font-size:10.5px;color:var(--text3);}
-.pc-tps em{font-style:normal;font-size:10px;font-weight:700;color:var(--green);margin-top:3px;}
+.pc-tps em{font-style:normal;font-size:11.5px;font-weight:800;color:var(--text2);margin-top:2px;}
 .pc-tps u{display:block;height:3px;border-radius:2px;background:rgba(45,184,125,.18);margin-top:3px;overflow:hidden;text-decoration:none;}
 .pc-tps u i{display:block;height:100%;background:var(--green);}
 .ps{margin-top:8px;padding:10px 12px 8px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);}
@@ -3013,7 +3014,7 @@ function djPosOutHTML(key){
     +djRiskCheckHTML(st,each,real)
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}</div>
     <div class="pc-tps">${[1,2,3].map(x=>{const g=ct*each*x,ap=bal>0?g/bal*100:0;
-      return`<div><span>${x}R</span><b>${+(stop*x).toFixed(2)} pts</b><i>${ct?'+'+fmoney(g):''}</i>${ct?`<em title="Gain as % of the account balance">+${+ap.toFixed(2)}% acct</em>`:''}</div>`;}).join('')}</div>
+      return`<div><span>${x}R · ${+(stop*x).toFixed(2)} pts</span><b>${ct?'+'+fmoney(g):'—'}</b>${ct?`<em title="Gain as % of the account balance">+${+ap.toFixed(2)}% acct</em>`:''}</div>`;}).join('')}</div>
     ${djPtsScaleHTML(st)}`;
 }
 // Contract cost vs allowed risk, front and centre: green when the size fits, red when even 1 contract is over
