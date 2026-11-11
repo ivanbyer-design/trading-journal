@@ -779,6 +779,26 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-tip>div>b{color:#f5a524;font-size:12.5px;}
 .pc-tip span{color:var(--text2);}.pc-tip span b{color:var(--text);}
 .pc-tip .btn{white-space:nowrap;}
+/* chart-based stop: entry + absorption candle extreme + buffer */
+.pc-dirs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
+.pc-dirs button{height:36px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:13px;cursor:pointer;}
+.pc-dirs button.on.l{border-color:var(--green);color:var(--green);background:rgba(45,184,125,.14);}
+.pc-dirs button.on.s{border-color:var(--red);color:var(--red);background:rgba(240,87,90,.14);}
+.pc-struct{display:grid;grid-template-columns:1fr 1fr 96px;gap:6px;}
+.pc-struct .pc-in{flex-direction:column;align-items:stretch;padding:5px 9px;}
+.pc-struct .pc-in em{font-size:10px;text-transform:uppercase;letter-spacing:.4px;margin:0;}
+.pc-struct .pc-in input{font-size:16px;padding:2px 0 3px;text-align:left;width:100%;}
+.pc-struct-out{margin:8px 0 12px;padding:8px 11px;border-radius:9px;background:var(--surface2);border:1px solid var(--border);font-family:var(--font-d);font-size:12px;color:var(--text2);line-height:1.5;}
+.pc-struct-out b{color:var(--text);font-variant-numeric:tabular-nums;}
+.pc-struct-out .px{font-size:16px;font-weight:900;color:var(--red);}
+.pc-struct-out.err{border-color:var(--red);color:var(--red);}
+.pc-struct-out a{color:var(--accent);margin-left:4px;}
+.pc-squeeze{display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;border-radius:10px;border:2px solid var(--red);background:rgba(240,87,90,.09);font-family:var(--font-d);font-size:12px;}
+.pc-squeeze>div{flex:1;display:flex;flex-direction:column;gap:2px;}
+.pc-squeeze b{color:var(--red);font-size:13px;}
+.pc-squeeze span{color:var(--text2);}
+.pc-squeeze .btn{white-space:nowrap;}
+@media(max-width:520px){.pc-struct{grid-template-columns:1fr 1fr;}.pc-struct .pc-in:last-child{grid-column:1/-1;}}
 .pc-hit{margin-top:12px;padding:26px 16px;border-radius:14px;text-align:center;font-family:var(--font-d);color:#fff;
   background:linear-gradient(135deg,#1fbf75,#13a35f 55%,#0e8a50);border:2px solid #34e08f;
   box-shadow:0 0 0 5px rgba(45,184,125,.18),0 10px 30px rgba(45,184,125,.35);animation:pcHit 1.8s ease-in-out infinite;}
@@ -2850,7 +2870,16 @@ function djReset(){const d=djGet(selectedDay,true);delete d.jChecks;djSave();djR
 function djRender(id,fn){const el=document.getElementById(id);if(el&&selectedDay)el.innerHTML=fn(selectedDay);}
 // Position size calculator: entry + stop price → contracts from the plan's risk per trade
 // Position size calculator: driven by the day's risk plan (risk per trade + stop size). Adjust the stop with chips / ± — no typing prices.
-let djPos={stop:'',risk:'',sym:''};
+let djPos={stop:'',risk:'',sym:'',dir:'LONG',entry:'',ext:'',buf:''};
+// Stop from the chart: entry + the absorption candle's low (long) or high (short), pushed past it by a buffer in ticks
+function djBufTicks(){const v=djPos.buf;return v===''||v==null||!isFinite(+v)||+v<0?2:+v;}
+function djStruct(tick){
+  const e=parseFloat(djPos.entry),x=parseFloat(djPos.ext);if(!isFinite(e)||!isFinite(x))return null;
+  const long=(djPos.dir||'LONG')==='LONG',bt=djBufTicks();
+  if(long?x>e:x<e)return{err:`Candle ${long?'low must be at or below':'high must be at or above'} your entry for a ${long?'long':'short'}`,long};
+  const sp=long?x-bt*tick:x+bt*tick,pts=+(Math.round(Math.abs(e-sp)/tick)*tick).toFixed(4);
+  return{sp:+sp.toFixed(4),pts,long,bt,e,x};
+}
 const DJ_MAIN=['ES','NQ','MES','MNQ'];
 const TICK_SZ={ES:.25,NQ:.25,MES:.25,MNQ:.25,YM:1,MYM:1,RTY:.1,M2K:.1,CL:.01,MCL:.01,GC:.1,MGC:.1};
 // Tilt Meter + Risk Plan run only on the what-if log (Win / BE / Loss buttons). Real trades never feed in, and the log is never saved as trades.
@@ -2864,12 +2893,17 @@ function djState(key,atPnl){
   const p=premarket[key]||{},r=pmRiskNums(p),sym=djPos.sym||p.riskSym||'ES';
   let lv=tiltLive(key,r);if(atPnl!==undefined)lv={...lv,pnl:atPnl,lossLeft:Math.max(0,r.maxLoss+Math.min(atPnl,0)),targetLeft:r.target?Math.max(0,r.target-atPnl):0};
   const planRisk=r.maxLoss?djAllowed(p,lv.lossLeft,lv.pnl,lv.lossesLeft):0;
-  const st={p,r,lv,sym,pv:PT_VAL[sym]||50,stop:+djPos.stop||r.stop||0,risk:planRisk||0,tick:TICK_SZ[sym]||.25};
+  const tick=TICK_SZ[sym]||.25,struct=djStruct(tick),okStruct=struct&&!struct.err?struct:null;
+  // Stop priority: one you typed / picked → the chart stop → the premarket plan's stop
+  const stop=+djPos.stop||(okStruct?okStruct.pts:0)||r.stop||0;
+  const st={p,r,lv,sym,pv:PT_VAL[sym]||50,stop,risk:planRisk||0,tick,struct,
+    stopSrc:+djPos.stop?'manual':okStruct?'chart':r.stop?'plan':''};
   Object.assign(st,djSizeFor(st));
   // Manual contract count (▲/▼ on the contracts screen). Only holds for this day + instrument + stop + result count,
   // so changing any of those, or logging a result, goes back to the calculated size.
+  // It can go below the calculated size but never above what the stop allows (size comes from the stop, not the other way).
   st.auto=st.ct;st.ctKey=`${key}|${sym}|${st.stop}|${(noteCharts[key]?.sim||[]).length}`;
-  if(djPos.ct!=null&&djPos.ctKey===st.ctKey){st.ct=Math.max(0,djPos.ct);st.manual=st.ct!==st.auto;}
+  if(djPos.ct!=null&&djPos.ctKey===st.ctKey){st.ct=Math.min(Math.max(0,djPos.ct),st.riskCt);st.manual=st.ct!==st.auto;}
   return st;
 }
 // Contracts for the next trade: allowed risk rounded down, cut to what a 2R win needs for the pace
@@ -2897,15 +2931,45 @@ function djSwapTipHTML(st){
   }
   return'';
 }
-function djCtStep(d){const st=djState(selectedDay);djPos.ct=Math.max(0,st.ct+d);djPos.ctKey=st.ctKey;djRender('djPos',djPosHTML);}
-function djCtSet(n){const st=djState(selectedDay);djPos.ct=n;djPos.ctKey=st.ctKey;djRender('djPos',djPosHTML);}
+function djCtStep(d){
+  const st=djState(selectedDay),n=Math.max(0,st.ct+d);
+  if(d>0&&n>st.riskCt){toast(st.riskCt?`${st.riskCt} ${st.sym} is the most a ${+st.stop.toFixed(2)}-pt stop allows within ${fmoney(st.risk)}. Size comes from the stop.`:`Even 1 ${st.sym} is over the ${fmoney(st.risk)} allowed at this stop`,'error');return;}
+  djPos.ct=n;djPos.ctKey=st.ctKey;djRender('djPos',djPosHTML);
+}
+function djCtSet(n){const st=djState(selectedDay);djPos.ct=Math.min(n,st.riskCt);djPos.ctKey=st.ctKey;djRender('djPos',djPosHTML);}
+// Chart-stop inputs. Typing in them hands the stop back to the chart (clears any picked stop)
+function djStructSet(k,v,live){
+  djPos[k]=v;djPos.stop='';
+  if(!live){djRender('djPos',djPosHTML);return;}
+  const st=djState(selectedDay),o=document.getElementById('djStructOut');if(o)o.innerHTML=djStructOutHTML(st);
+  const si=document.querySelector('#djPos .pc-stop input');if(si)si.value=st.stop?+st.stop.toFixed(2):'';
+  const sl=document.getElementById('djStopSrc');if(sl)sl.textContent=djStopSrcTxt(st);
+  djChipSync();djPosOut();
+}
+function djStopSrcTxt(st){return{chart:' · from chart',plan:' · from plan',manual:' · picked by you'}[st.stopSrc]||'';}
+function djStructOutHTML(st){
+  const s=st.struct,long=(djPos.dir||'LONG')==='LONG';
+  if(!s)return`<div class="pc-struct-out">Enter your entry and the absorption candle's ${long?'low':'high'}. The stop goes ${djBufTicks()} tick${djBufTicks()===1?'':'s'} past it, where your idea is wrong.</div>`;
+  if(s.err)return`<div class="pc-struct-out err">${s.err}</div>`;
+  const used=st.stop,usedPx=long?s.e-used:s.e+used,same=Math.abs(used-s.pts)<1e-9;
+  return`<div class="pc-struct-out">Invalidation stop <span class="px">${s.sp.toFixed(2)}</span> · <b>${+s.pts.toFixed(2)} pts</b> from entry
+    <br>${long?'Low':'High'} ${s.x.toFixed(2)} ${long?'−':'+'} ${s.bt} tick${s.bt===1?'':'s'}${same?'':` · <b>using ${+used.toFixed(2)} pts (stop at ${usedPx.toFixed(2)})</b><a href="#" onclick="event.preventDefault();djPos.stop='';djRender('djPos',djPosHTML)">↺ use chart stop</a>`}</div>`;
+}
 function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
 function djPosHTML(key){
   const st=djState(key),chips=[1,2,3,4,5,6,7,8,9,10];
-  return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.maxLoss?`${st.risk?fmoney(st.risk):'$0'} / attempt · ${st.lv.lossesLeft} of ${st.r.n} loss${st.r.n>1?'es':''} left`:'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',ct:null};djRender('djPos',djPosHTML)" title="Back to the plan's instrument and stop">↻ Plan</button></div>
+  return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.maxLoss?`${st.risk?fmoney(st.risk):'$0'} / attempt · ${st.lv.lossesLeft} of ${st.r.n} loss${st.r.n>1?'es':''} left`:'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',ct:null,dir:djPos.dir,entry:'',ext:'',buf:''};djRender('djPos',djPosHTML)" title="Clear the chart stop and go back to the plan's instrument and stop">↻ Plan</button></div>
     <div class="pc-riskline"><span>Risk per trade</span><b class="pc-risk" id="djRiskVal">${st.risk?fmoney(st.risk):'—'}</b></div>
     <div class="pc-f"><span>Instrument</span><select class="pc-sym" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)">${Object.keys(PT_VAL).map(x=>`<option value="${x}"${x===st.sym?' selected':''}>${x} · $${PT_VAL[x]}/pt</option>`).join('')}</select></div>
-    <div class="pc-f"><span>Stop size${st.r.stop&&st.stop===st.r.stop?' · from plan':''}</span>
+    ${(()=>{const long=(djPos.dir||'LONG')==='LONG';return`<div class="pc-f"><span>Stop from the chart</span>
+      <div class="pc-dirs"><button class="${long?'on l':''}" onclick="djStructSet('dir','LONG')">Long</button><button class="${long?'':'on s'}" onclick="djStructSet('dir','SHORT')">Short</button></div>
+      <div class="pc-struct">
+        <label class="pc-in"><em>Entry</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.entry||'')}" placeholder="e.g. 7540.25" oninput="djStructSet('entry',this.value,1)"></label>
+        <label class="pc-in"><em>Candle ${long?'low':'high'}</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.ext||'')}" placeholder="${long?'e.g. 7537.50':'e.g. 7543.00'}" oninput="djStructSet('ext',this.value,1)"></label>
+        <label class="pc-in"><em>Buffer ticks</em><input type="number" inputmode="numeric" min="0" step="1" value="${esc(djPos.buf??'')}" placeholder="2" oninput="djStructSet('buf',this.value,1)"></label>
+      </div>
+      <div id="djStructOut">${djStructOutHTML(st)}</div></div>`;})()}
+    <div class="pc-f"><span>Stop size<span id="djStopSrc">${djStopSrcTxt(st)}</span></span>
       <div class="pc-stepper"><button onclick="djStep(-1)" aria-label="Smaller stop">−</button>
         <label class="pc-stop"><input type="number" inputmode="decimal" min="0" step="any" value="${st.stop?+st.stop.toFixed(2):''}" placeholder="—" oninput="djPos.stop=this.value;djPosOut();djChipSync()"><small>pts</small></label>
         <button onclick="djStep(1)" aria-label="Bigger stop">+</button></div></div>
@@ -3010,7 +3074,7 @@ function djSimAdd(v){if(!isFinite(v))return;const lbl=`${v>0?'Win':v<0?'Loss':'B
   djSimSet(a=>[...a,ct?{p,pts:+(p/(ct*st.pv)).toFixed(2),r:+(p/oneR).toFixed(2),ct,sym:st.sym}:p],lbl);}
 function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i),`Trade #${i+1} removed`);}
 function djSimClear(){djSimSet(()=>[],'Results cleared');}
-function djChipSync(){const v=+djPos.stop;document.querySelectorAll('#djPos .pc-chips button').forEach(b=>b.classList.toggle('on',+b.textContent===v));}
+function djChipSync(){const v=djState(selectedDay).stop;document.querySelectorAll('#djPos .pc-chips button').forEach(b=>b.classList.toggle('on',+b.textContent===v));}
 function djPosOutHTML(key){
   const st=djState(key),{r,lv,sym,pv,stop,risk,tick}=st;
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
@@ -3018,6 +3082,10 @@ function djPosOutHTML(key){
   if(!risk)return screen('—',r.maxLoss?(lv.lossesLeft?'Max loss reached · done for the day':'Max losses taken · done for the day'):'Set a max loss % in the premarket plan','',r.maxLoss?'bad':'');
   if(!stop)return screen('—','Pick a stop size above');
   const each=stop*pv,{exact,ct,byTarget,pace,riskCt}=st,real=ct*each;
+  // Squeezed stop: tighter than where the chart says the idea is wrong
+  const sq=st.struct&&!st.struct.err&&stop<st.struct.pts-1e-9?`<div class="pc-squeeze"><div><b>⚠ Stop is ${+(st.struct.pts-stop).toFixed(2)} pts tighter than your invalidation</b><span>That's sizing the stop to fit the trade. Your idea is wrong at ${st.struct.sp.toFixed(2)}, not before it. Trade fewer contracts instead.</span></div><button class="btn" onclick="djPos.stop='';djRender('djPos',djPosHTML)">Use chart stop</button></div>`:'';
+  // Even 1 contract at this stop is over the allowed risk: the answer is skip or micros, never a tighter stop
+  if(riskCt===0)return sq+screen('SKIP',`1 ${sym} at a ${+stop.toFixed(2)}-pt stop risks ${fmoney(each)} · over the ${fmoney(risk)} allowed. Skip it or go to micros, don't tighten the stop.`,'','bad')+djSwapTipHTML(st)+djRiskCheckHTML(st,each,0);
   const sub=byTarget?`sized to target · 2R win = ${fmoney(ct*each*2)} of ${fmoney(pace)} needed · risk allows ${riskCt}`:ct===0?`${+exact.toFixed(2)} → 0 · stop too wide`:+exact.toFixed(2)===ct?'exact fit':`${+exact.toFixed(2)} → rounded down`;
   const row=(l,v,c)=>`<div class="pc-row"><span>${l}</span><b${c?` style="color:${c}"`:''}>${v}</b></div>`;
   const bal=r.acct+lv.pnl; // for the R tiles' % of account
@@ -3025,7 +3093,7 @@ function djPosOutHTML(key){
   const big=`<span class="pc-ctstep"><button onclick="djCtStep(1)" title="One more contract">▲</button><button onclick="djCtStep(-1)" ${ct?'':'disabled'} title="One less contract">▼</button></span>${ct}<small>${sym}</small>`;
   const sub2=st.manual?`set by you · calculated ${st.auto} <a href="#" onclick="event.preventDefault();djPos.ct=null;djRender('djPos',djPosHTML)">↺ reset</a>`:sub;
   const fill=fit>ct?`<button class="pc-fill" onclick="djCtSet(${fit})">Fill to max allowed · ${fit} ${sym} = ${fmoney(fit*each)}</button>`:'';
-  return screen(big,sub2,'',ct&&real<=risk+.005?'':'bad')+fill+djSwapTipHTML(st)
+  return sq+screen(big,sub2,'',ct&&real<=risk+.005?'':'bad')+fill+djSwapTipHTML(st)
     +djRiskCheckHTML(st,each,real)
     +`<div class="pc-rows">${row('Stop',`${+stop.toFixed(2)} pts · ${Math.round(stop/tick)} ticks`)}</div>
     <div class="pc-tps">${[1,2,3].map(x=>{const g=ct*each*x,ap=bal>0?g/bal*100:0;
@@ -3066,7 +3134,13 @@ function djPtsScaleHTML(st){
 }
 function djRiskPh(){const st=djState(selectedDay),el=document.getElementById('djRiskVal');if(el)el.textContent=st.risk?fmoney(st.risk):'—';}
 function djSimOut(){const el=document.getElementById('djSim');if(el&&selectedDay)el.innerHTML=djSimHTML(selectedDay);djRender('djProg',djProgHTML);}
-function djPosOut(){const el=document.getElementById('djPosOut');if(el&&selectedDay)el.innerHTML=djPosOutHTML(selectedDay);djSimOut();}
+function djPosOut(){
+  const el=document.getElementById('djPosOut');if(!el||!selectedDay)return;
+  el.innerHTML=djPosOutHTML(selectedDay);
+  const st=djState(selectedDay),o=document.getElementById('djStructOut');if(o)o.innerHTML=djStructOutHTML(st);
+  const sl=document.getElementById('djStopSrc');if(sl)sl.textContent=djStopSrcTxt(st);
+  djSimOut();
+}
 
 // "Did I follow my plan?" lives in the daily journal; still stored on the day's premarket plan
 function pmReviewHTML(key){
