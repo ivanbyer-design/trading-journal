@@ -779,6 +779,19 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .pc-tip>div>b{color:#f5a524;font-size:12.5px;}
 .pc-tip span{color:var(--text2);}.pc-tip span b{color:var(--text);}
 .pc-tip .btn{white-space:nowrap;}
+.pc-qs{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;}
+.qs{display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 2px 5px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);cursor:pointer;font-family:var(--font-d);color:var(--text);min-width:0;}
+.qs:hover{border-color:var(--accent);}
+.qs span{font-size:10.5px;font-weight:700;color:var(--text3);}
+.qs b{font-size:20px;font-weight:900;line-height:1.1;font-variant-numeric:tabular-nums;}
+.qs i{font-style:normal;font-size:9.5px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;}
+.qs.on{border-color:var(--accent);background:rgba(108,93,211,.18);box-shadow:0 0 0 1px var(--accent) inset;}
+.qs.m b{color:#f5a524;} .qs.x b{color:var(--red);} .qs.x{opacity:.7;}
+.pc-exact{margin:10px 0 4px;border:1px dashed var(--border2);border-radius:10px;padding:8px 10px;}
+.pc-exact[open]{border-style:solid;}
+.pc-exact summary{cursor:pointer;font-family:var(--font-d);font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.4px;text-transform:uppercase;}
+.pc-exact[open] summary{margin-bottom:8px;}
+@media(max-width:520px){.pc-qs{grid-template-columns:repeat(4,1fr);}}
 /* chart-based stop: entry + absorption candle extreme + buffer */
 .pc-dirs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;}
 .pc-dirs button{height:36px;border-radius:9px;border:1px solid var(--border2);background:var(--surface2);color:var(--text2);font-family:var(--font-d);font-weight:800;font-size:13px;cursor:pointer;}
@@ -2955,25 +2968,39 @@ function djStructOutHTML(st){
   return`<div class="pc-struct-out">Invalidation stop <span class="px">${s.sp.toFixed(2)}</span> · <b>${+s.pts.toFixed(2)} pts</b> from entry
     <br>${long?'Low':'High'} ${s.x.toFixed(2)} ${long?'−':'+'} ${s.bt} tick${s.bt===1?'':'s'}${same?'':` · <b>using ${+used.toFixed(2)} pts (stop at ${usedPx.toFixed(2)})</b><a href="#" onclick="event.preventDefault();djPos.stop='';djRender('djPos',djPosHTML)">↺ use chart stop</a>`}</div>`;
 }
-function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(1,Math.round(st.stop)+d));djRender('djPos',djPosHTML);}
+function djStep(d){const st=djState(selectedDay);djPos.stop=String(Math.max(st.tick,Math.round((st.stop+d)/st.tick)*st.tick).toFixed(2));djRender('djPos',djPosHTML);}
+// Quick size table: every common stop with its contract count already worked out from the current allowed risk.
+// Eyeball the stop on the chart, tap the matching button. Updates after every logged result.
+const DJ_QS=Array.from({length:20},(_,i)=>1+i*.5);
+function djQuickHTML(st){
+  const{sym,pv,risk,pace,stop}=st;
+  if(!risk)return'<div class="pm-meter-note" style="grid-column:1/-1">Set a max loss % in the premarket plan to see sizes.</div>';
+  const ms=MICRO[sym];
+  return DJ_QS.map(s=>{
+    const c=djCt(s*pv,risk,pace).ct,mc=!c&&ms?djCt(s*PT_VAL[ms],risk,pace).ct:0,on=Math.abs(s-stop)<1e-9;
+    const cls=c?'':mc?' m':' x',sub=c?`${sym} · ${fmoney(c*s*pv,0)}`:mc?`${ms} only`:'skip';
+    return`<button class="qs${on?' on':''}${cls}" onclick="djQuick(${s})" title="${s}-pt stop: ${c?`${c} ${sym} risks ${fmoney(c*s*pv)}`:mc?`no ${sym} fits · ${mc} ${ms} risks ${fmoney(mc*s*PT_VAL[ms])}`:'nothing fits the allowed risk'}"><span>${s} pts</span><b>${c||mc||'—'}</b><i>${sub}</i></button>`;
+  }).join('');
+}
+function djQuick(s){djPos.stop=String(s);djRender('djPos',djPosHTML);}
 function djPosHTML(key){
-  const st=djState(key),chips=[1,2,3,4,5,6,7,8,9,10];
+  const st=djState(key);
   return`<div class="pc-top"><div class="pm-h" style="margin:0">Risk Plan<small>${st.r.maxLoss?`${st.risk?fmoney(st.risk):'$0'} / attempt · ${st.lv.lossesLeft} of ${st.r.n} loss${st.r.n>1?'es':''} left`:'Set a max loss % in the premarket plan'}</small></div><button class="dj-reset" onclick="djPos={stop:'',risk:'',sym:'',ct:null,dir:djPos.dir,entry:'',ext:'',buf:''};djRender('djPos',djPosHTML)" title="Clear the chart stop and go back to the plan's instrument and stop">↻ Plan</button></div>
     <div class="pc-riskline"><span>Risk per trade</span><b class="pc-risk" id="djRiskVal">${st.risk?fmoney(st.risk):'—'}</b></div>
     <div class="pc-f"><span>Instrument</span><select class="pc-sym" onchange="djPos.sym=this.value;djRender('djPos',djPosHTML)">${Object.keys(PT_VAL).map(x=>`<option value="${x}"${x===st.sym?' selected':''}>${x} · $${PT_VAL[x]}/pt</option>`).join('')}</select></div>
-    ${(()=>{const long=(djPos.dir||'LONG')==='LONG';return`<div class="pc-f"><span>Stop from the chart</span>
+    <div class="pc-f"><span>Quick size · tap your stop</span><div class="pc-qs" id="djQS">${djQuickHTML(st)}</div></div>
+    <div class="pc-f"><span>Stop size<span id="djStopSrc">${djStopSrcTxt(st)}</span></span>
+      <div class="pc-stepper"><button onclick="djStep(-.25)" aria-label="Smaller stop">−</button>
+        <label class="pc-stop"><input type="number" inputmode="decimal" min="0" step="any" value="${st.stop?+st.stop.toFixed(2):''}" placeholder="—" oninput="djPos.stop=this.value;djPosOut();djChipSync()"><small>pts</small></label>
+        <button onclick="djStep(.25)" aria-label="Bigger stop">+</button></div></div>
+    ${(()=>{const long=(djPos.dir||'LONG')==='LONG';return`<details class="pc-exact"${djPos.entry||djPos.ext||djPos._open?' open':''} ontoggle="djPos._open=this.open"><summary>Exact prices (optional)</summary>
       <div class="pc-dirs"><button class="${long?'on l':''}" onclick="djStructSet('dir','LONG')">Long</button><button class="${long?'':'on s'}" onclick="djStructSet('dir','SHORT')">Short</button></div>
       <div class="pc-struct">
         <label class="pc-in"><em>Entry</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.entry||'')}" placeholder="e.g. 7540.25" oninput="djStructSet('entry',this.value,1)"></label>
         <label class="pc-in"><em>Candle ${long?'low':'high'}</em><input type="number" inputmode="decimal" step="any" value="${esc(djPos.ext||'')}" placeholder="${long?'e.g. 7537.50':'e.g. 7543.00'}" oninput="djStructSet('ext',this.value,1)"></label>
         <label class="pc-in"><em>Buffer ticks</em><input type="number" inputmode="numeric" min="0" step="1" value="${esc(djPos.buf??'')}" placeholder="2" oninput="djStructSet('buf',this.value,1)"></label>
       </div>
-      <div id="djStructOut">${djStructOutHTML(st)}</div></div>`;})()}
-    <div class="pc-f"><span>Stop size<span id="djStopSrc">${djStopSrcTxt(st)}</span></span>
-      <div class="pc-stepper"><button onclick="djStep(-1)" aria-label="Smaller stop">−</button>
-        <label class="pc-stop"><input type="number" inputmode="decimal" min="0" step="any" value="${st.stop?+st.stop.toFixed(2):''}" placeholder="—" oninput="djPos.stop=this.value;djPosOut();djChipSync()"><small>pts</small></label>
-        <button onclick="djStep(1)" aria-label="Bigger stop">+</button></div></div>
-    <div class="pc-chips">${chips.map(c=>`<button class="${c===st.stop?'on':''}" onclick="djPos.stop='${c}';djRender('djPos',djPosHTML)">${c}</button>`).join('')}</div>
+      <div id="djStructOut">${djStructOutHTML(st)}</div></details>`;})()}
     <div id="djAdj">${djAdjHTML(key)}</div>
     <div id="djPosOut">${djPosOutHTML(key)}</div>
     <div id="djSim">${djSimHTML(key)}</div>`;
@@ -3074,7 +3101,7 @@ function djSimAdd(v){if(!isFinite(v))return;const lbl=`${v>0?'Win':v<0?'Loss':'B
   djSimSet(a=>[...a,ct?{p,pts:+(p/(ct*st.pv)).toFixed(2),r:+(p/oneR).toFixed(2),ct,sym:st.sym}:p],lbl);}
 function djSimDel(i){djSimSet(a=>a.filter((_,j)=>j!==i),`Trade #${i+1} removed`);}
 function djSimClear(){djSimSet(()=>[],'Results cleared');}
-function djChipSync(){const v=djState(selectedDay).stop;document.querySelectorAll('#djPos .pc-chips button').forEach(b=>b.classList.toggle('on',+b.textContent===v));}
+function djChipSync(){const el=document.getElementById('djQS');if(el&&selectedDay)el.innerHTML=djQuickHTML(djState(selectedDay));}
 function djPosOutHTML(key){
   const st=djState(key),{r,lv,sym,pv,stop,risk,tick}=st;
   const screen=(big,sub,tag,cls)=>`<div class="pc-screen ${cls||''}"><div class="pc-scr-top"><span>Contracts</span>${tag||''}</div><div class="pc-big">${big}</div><div class="pc-scr-sub">${sub}</div></div>`;
