@@ -623,6 +623,21 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .tick-pill{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:4px 10px;font-size:13px;color:var(--text2);}
 .replay-btn{width:22px;height:22px;border-radius:50%;border:none;background:var(--accent);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
 .replay-btn:hover{background:var(--accent2);}
+.ds{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ds-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-family:var(--font-d);font-size:13px;font-weight:800;color:var(--text);}
+.ds-h a{font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;}
+.ds-sec+.ds-sec{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
+.ds-l{font-family:var(--font-d);font-size:10.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--text3);margin-bottom:5px;}
+.ds-t{font-size:13px;color:var(--text2);line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.ds-t b{color:var(--text);}
+.ds-ul{margin:0;padding:0;list-style:none;}
+.ds-ul li{position:relative;padding-left:14px;font-size:13px;color:var(--text);line-height:1.55;}
+.ds-ul li::before{content:'';position:absolute;left:0;top:.6em;width:6px;height:6px;border-radius:1px;background:var(--accent);}
+.ds-empty{font-size:13px;color:var(--text3);line-height:1.5;}
+.ds-empty a{color:var(--accent);}
+.ds-rv{display:inline-block;padding:1px 8px;border-radius:6px;font-weight:700;font-size:12px;margin-right:6px;}
+.ds-rv.yes{background:rgba(45,184,125,.15);color:var(--green);}.ds-rv.partly{background:rgba(245,165,36,.15);color:#f5a524;}.ds-rv.no{background:rgba(240,87,90,.15);color:var(--red);}
+@media(max-width:760px){.ds{grid-template-columns:1fr;}}
 .dm-empty{text-align:center;padding:46px 20px;color:var(--text2);border:1px dashed var(--border2);border-radius:10px;}
 .dm-empty b{display:block;color:var(--text);font-size:15px;margin-bottom:6px;}
 .dm-foot{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:16px 16px;border-top:1px solid var(--border);}
@@ -2651,7 +2666,7 @@ function renderDayModal(){
   const body=document.getElementById('dmBody');
   if(dayView==='note'){body.innerHTML=noteViewHTML(key);mkHydrate();}
   else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();newsFill();}
-  else{newsLoad(newsWeekOf(key));body.innerHTML=newsDayStripHTML(key)+tradesViewHTML(dayTrades,st);if(dayTrades.length)drawDayChart(dayTrades);}
+  else{newsLoad(newsWeekOf(key));body.innerHTML=newsDayStripHTML(key)+tradesViewHTML(dayTrades,st)+daySummaryHTML(key,dayTrades);mkHydrate();if(dayTrades.length)drawDayChart(dayTrades);}
   body.scrollTop=0;
 }
 
@@ -2688,6 +2703,26 @@ function tradesViewHTML(dt,st){
           <td style="text-align:center"><button class="replay-btn" title="Open trade" onclick="event.stopPropagation();openTradeDetail('${t.id}')">${play}</button></td>
         </tr>`;}).join('')}</tbody>
     </table></div>`;
+}
+// Summary page: every note written for the day (journal, review, premarket plan, trades) + the day's outcome screenshots
+function daySummaryHTML(key,dt){
+  const p=premarket[key]||{},tx=v=>String(v||'').trim();
+  const go=(v,l)=>`<a href="#" onclick="event.preventDefault();setDayView('${v}')">${l}</a>`;
+  const secs=[];
+  const lines=(dayNotes[key]||'').split('\n').map(x=>x.trim()).filter(Boolean);
+  if(lines.length)secs.push(['Journal notes',`<ul class="ds-ul">${lines.map(l=>`<li>${esc(l)}</li>`).join('')}</ul>`]);
+  const RV={yes:'Yes',partly:'Partly',no:'No'};
+  if(RV[p.review]||tx(p.reviewWhy))secs.push(['Did I follow my plan?',`<div class="ds-t">${RV[p.review]?`<span class="ds-rv ${p.review}">${RV[p.review]}</span>`:''}${esc(tx(p.reviewWhy))}</div>`]);
+  [['conditionWhy','Market condition'],['biasWhy','Bias'],['news','News & events'],['setup','Game plan'],['scenarios','Scenarios'],['levels','Level notes'],['stopRule','Stop rule']]
+    .forEach(([f,l])=>{if(tx(p[f]))secs.push([`Premarket · ${l}`,`<div class="ds-t">${esc(tx(p[f]))}</div>`]);});
+  const tn=dt.filter(t=>tx(t.notes)||tx(t.quickNote));
+  if(tn.length)secs.push(['Trade notes',tn.map(t=>`<div class="ds-t" style="margin-bottom:6px"><b>${ftime(t.date)} · ${esc(t.symbol)} ${t.direction}</b>${t.pnl!=null?` <span style="color:${t.pnl>=0?'var(--green)':'var(--red)'}">${fmoney(t.pnl)}</span>`:''}<br>${esc([tx(t.quickNote),tx(t.notes)].filter(Boolean).join('\n'))}</div>`).join('')]);
+  const notes=secs.length?secs.map(([l,h])=>`<div class="ds-sec"><div class="ds-l">${esc(l)}</div>${h}</div>`).join('')
+    :`<div class="ds-empty">No notes for this day yet. Write them in the ${go('note','Daily journal')} or the ${go('plan','Premarket plan')}.</div>`;
+  return`<div class="ds">
+    <div class="pm-card"><div class="ds-h">Day notes${go('note','Edit in journal →')}</div>${notes}</div>
+    <div class="pm-card"><div class="ds-h">Outcome of the day</div>${mkBlockHTML('note')}</div>
+  </div>`;
 }
 function setQuickNote(id,v){const t=trades.find(x=>x.id===id);if(!t)return;v=v.trim();if(v)t.quickNote=v;else delete t.quickNote;saveTrades();}
 function drawDayChart(dt){
@@ -3658,7 +3693,7 @@ function mkUrlEntry(raw){const url=tvToImg(raw);if(!url){toast('Paste a TradingV
 const MK_TEXT={
   pm:['Add your premarket chart markup','Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.'],
   wk:['Add your weekly chart markup','Drop a screenshot here, paste it with Ctrl/⌘+V, choose a file, or paste a TradingView snapshot link.'],
-  note:['Add screenshots from the session','Your executions, what price did vs. your plan. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
+  note:['Add the outcome of the day','A screenshot of how the session played out: your executions, what price did vs. your plan. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
   st:['Add your A+ model chart','An annotated example of the perfect version of this setup. Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
   tr:['Add a chart screenshot','Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.'],
   mt:['Add a chart screenshot','Drop, paste (Ctrl/⌘+V), choose a file or paste a TradingView link.']
@@ -3678,7 +3713,7 @@ function mkSave(scope){
   if(scope==='st'){saveStrategies();return;}
   if(scope==='tr'){saveTrades();return;}
   if(scope==='mt')return;
-  if(scope==='note'&&selectedDay&&!noteCharts[selectedDay]?.charts)delete noteCharts[selectedDay];
+  if(scope==='note'&&selectedDay&&noteCharts[selectedDay]&&!Object.keys(noteCharts[selectedDay]).length)delete noteCharts[selectedDay];
   saveDayData();setDayStatus();
 }
 function mkTouch(scope){const o=mkObj(scope,true);if(!o)return;if(scope==='pm'||scope==='wk')o.updated=new Date().toISOString();mkSave(scope);mkRender(scope);}
@@ -3757,7 +3792,7 @@ function mkHydrate(){
 // Which image block a paste should land in
 function mkPasteScope(){
   if(document.getElementById('tradeModal')?.classList.contains('open'))return'mt';
-  if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':null;
+  if(document.getElementById('dayPanel')?.classList.contains('open'))return selectedWeek?'wk':dayView==='plan'?'pm':dayView==='trades'?'note':null;
   if(document.getElementById('tradePanel')?.classList.contains('open')&&activeTradePanelId)return'tr';
   if(document.getElementById('panel-strategies')?.classList.contains('active')&&stUI.id&&stUI.tab==='breakdown')return'st';
   return null;
