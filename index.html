@@ -623,7 +623,7 @@ body.sb-collapsed .main{border-top-left-radius:14px;}
 .tick-pill{display:inline-block;background:var(--surface2);border:1px solid var(--border);border-radius:14px;padding:4px 10px;font-size:13px;color:var(--text2);}
 .replay-btn{width:22px;height:22px;border-radius:50%;border:none;background:var(--accent);color:#fff;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;}
 .replay-btn:hover{background:var(--accent2);}
-.ds{margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.ds{margin:0 0 24px;display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .ds-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px;font-family:var(--font-d);font-size:13px;font-weight:800;color:var(--text);}
 .ds-h a{font-size:12px;font-weight:600;color:var(--accent);text-decoration:none;}
 .ds-sec+.ds-sec{margin-top:12px;padding-top:12px;border-top:1px solid var(--border);}
@@ -2666,12 +2666,12 @@ function renderDayModal(){
   const body=document.getElementById('dmBody');
   if(dayView==='note'){body.innerHTML=noteViewHTML(key);mkHydrate();}
   else if(dayView==='plan'){body.innerHTML=planViewHTML(key);mkHydrate();newsFill();}
-  else{newsLoad(newsWeekOf(key));body.innerHTML=newsDayStripHTML(key)+tradesViewHTML(dayTrades,st)+daySummaryHTML(key,dayTrades);mkHydrate();if(dayTrades.length)drawDayChart(dayTrades);}
+  else{newsLoad(newsWeekOf(key));body.innerHTML=newsDayStripHTML(key)+tradesViewHTML(dayTrades,st,daySummaryHTML(key,dayTrades));mkHydrate();if(dayTrades.length)drawDayChart(dayTrades);}
   body.scrollTop=0;
 }
 
-function tradesViewHTML(dt,st){
-  if(!dt.length)return`<div class="dm-empty"><b>No trades on this day</b>Use <b style="display:inline;color:var(--accent)">+ Add trade</b> to log one by hand, or <b style="display:inline;color:var(--accent)">Premarket plan</b> to map out the session before the open.</div>`;
+function tradesViewHTML(dt,st,notes=''){
+  if(!dt.length)return notes+`<div class="dm-empty"><b>No trades on this day</b>Use <b style="display:inline;color:var(--accent)">+ Add trade</b> to log one by hand, or <b style="display:inline;color:var(--accent)">Premarket plan</b> to map out the session before the open.</div>`;
   const vol=dt.reduce((s,t)=>s+(+t.contracts||0),0);
   const comm=dt.reduce((s,t)=>s+(+t.commission||+t.fees||0),0);
   const gross=st.netPnl+comm;
@@ -2686,6 +2686,7 @@ function tradesViewHTML(dt,st){
         ${stat('Win Rate',fpct(st.wr))}${stat('Volume',vol)}${stat('Profit Factor',isFinite(st.pf)?st.pf.toFixed(2):'∞')}
       </div>
     </div>
+    ${notes}
     <div class="dm-table"><table>
       <thead><tr><th>Open time</th><th>Ticker</th><th>Side</th><th>Instrument</th><th>Net P&amp;L</th><th>Net ROI</th><th class="dm-wrap">Realized R-Multiple</th><th>Grade</th><th>Quick Notes</th><th style="text-align:center">Replay</th></tr></thead>
       <tbody>${dt.map(t=>{
